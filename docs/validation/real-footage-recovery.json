@@ -1,0 +1,61 @@
+{
+  "scope": "User-uploaded local processing; no Gemini calls",
+  "assets": [
+    {
+      "asset_id": "0b6032fd-16a9-4ea6-9db2-c372b82a247e",
+      "status": "partial",
+      "job_state": "partial",
+      "preview": true,
+      "observations": 0,
+      "remaining": "Visual analysis needs a Gemini API key in local settings"
+    },
+    {
+      "asset_id": "d929cdc5-77d4-4bb7-a482-e325ea2bf03f",
+      "status": "partial",
+      "job_state": "partial",
+      "preview": true,
+      "observations": 1,
+      "remaining": "Visual analysis needs a Gemini API key in local settings"
+    },
+    {
+      "asset_id": "8559391c-9b14-4f57-a8b4-353e1fb78613",
+      "status": "partial",
+      "job_state": "partial",
+      "preview": true,
+      "observations": 0,
+      "remaining": "Visual analysis needs a Gemini API key in local settings"
+    },
+    {
+      "asset_id": "490f3a1b-c03e-4cd5-877e-aa4af8b587a3",
+      "status": "partial",
+      "job_state": "partial",
+      "preview": true,
+      "observations": 0,
+      "remaining": "Visual analysis needs a Gemini API key in local settings"
+    },
+    {
+      "asset_id": "23737c79-d20f-45ca-8dbb-93da2a3eac61",
+      "status": "partial",
+      "job_state": "partial",
+      "preview": true,
+      "observations": 1,
+      "remaining": "Visual analysis needs a Gemini API key in local settings"
+    },
+    {
+      "asset_id": "022a134b-3a3f-41ca-8195-8462429e5d24",
+      "status": "partial",
+      "job_state": "partial",
+      "preview": true,
+      "observations": 0,
+      "remaining": "Visual analysis needs a Gemini API key in local settings"
+    },
+    {
+      "asset_id": "11b127d0-fc6c-4396-856a-892832044a58",
+      "status": "partial",
+      "job_state": "partial",
+      "preview": true,
+      "observations": 0,
+      "remaining": "Visual analysis needs a Gemini API key in local settings"
+    }
+  ]
+}

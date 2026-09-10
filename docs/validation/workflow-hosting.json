@@ -1,0 +1,38 @@
+{
+  "checked_at": "2026-09-10T23:30:00.657125+00:00",
+  "passed": true,
+  "image": "sha256:295dde5f522d03e825ab7d3c8015f842e25b3e59c6484ef3cd0dfbcdc7abceb6",
+  "architecture": "amd64",
+  "production_source_mounted": false,
+  "temporal_server": "1.31.2",
+  "schema_setup_idempotent": true,
+  "verified_tls_postgres_bootstrap_and_runtime": true,
+  "workflow_resumed_after_container_recreation": true,
+  "api_upload_processed_by_worker": true,
+  "active_media_resumed_after_shutdown": true,
+  "active_processing_shutdown_seconds": 4.35,
+  "same_job_after_restart": true,
+  "source_preserved": true,
+  "sessions_and_preview_preserved": true,
+  "temporal_unreachable_from_peer": true,
+  "peak_container_memory_bytes": 672886784,
+  "shutdown_seconds": 1.83,
+  "lifecycle": {
+    "readiness": {
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 15.67
+    },
+    "worker": {
+      "passed": true,
+      "exit_code": 1,
+      "seconds": 1.69
+    },
+    "temporal": {
+      "passed": true,
+      "exit_code": 1,
+      "seconds": 0.55
+    }
+  },
+  "limits": "Local Docker, 2 GiB / 1 CPU. Synthetic two-second muted footage, no paid provider calls. Active media is held before FFmpeg executes, so this verifies job resumption but not interrupted partial-file cleanup. Not representative capacity or actual Render ingress verification."
+}

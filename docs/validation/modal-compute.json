@@ -1,0 +1,126 @@
+{
+  "checked_at": "2026-09-10T21:58:28.506994+00:00",
+  "app": "rushes-compute",
+  "environment": "rushes-production",
+  "scope": "Live private Modal functions through the application inference interfaces; synthetic fixture",
+  "embedding_vectors": 2,
+  "embedding_dimension": 384,
+  "transcript_segments": [
+    {
+      "start_us": 60000000,
+      "end_us": 65880000,
+      "text": "This is a synthetic timing fixture. The first shot is red. The second shot is blue.",
+      "language": "en",
+      "words": [
+        {
+          "start": 0.0,
+          "end": 0.42,
+          "word": " This",
+          "probability": 0.867457389831543
+        },
+        {
+          "start": 0.42,
+          "end": 0.64,
+          "word": " is",
+          "probability": 0.9973145127296448
+        },
+        {
+          "start": 0.64,
+          "end": 0.72,
+          "word": " a",
+          "probability": 0.9510074853897095
+        },
+        {
+          "start": 0.72,
+          "end": 1.04,
+          "word": " synthetic",
+          "probability": 0.976108968257904
+        },
+        {
+          "start": 1.04,
+          "end": 1.48,
+          "word": " timing",
+          "probability": 0.9757527709007263
+        },
+        {
+          "start": 1.48,
+          "end": 1.96,
+          "word": " fixture.",
+          "probability": 0.9582797884941101
+        },
+        {
+          "start": 2.68,
+          "end": 2.76,
+          "word": " The",
+          "probability": 0.9785208702087402
+        },
+        {
+          "start": 2.76,
+          "end": 3.0,
+          "word": " first",
+          "probability": 0.9927147030830383
+        },
+        {
+          "start": 3.0,
+          "end": 3.26,
+          "word": " shot",
+          "probability": 0.9944698810577393
+        },
+        {
+          "start": 3.26,
+          "end": 3.56,
+          "word": " is",
+          "probability": 0.9992063641548157
+        },
+        {
+          "start": 3.56,
+          "end": 3.78,
+          "word": " red.",
+          "probability": 0.9128643274307251
+        },
+        {
+          "start": 4.44,
+          "end": 4.58,
+          "word": " The",
+          "probability": 0.988310694694519
+        },
+        {
+          "start": 4.58,
+          "end": 4.94,
+          "word": " second",
+          "probability": 0.9902442097663879
+        },
+        {
+          "start": 4.94,
+          "end": 5.34,
+          "word": " shot",
+          "probability": 0.9887403845787048
+        },
+        {
+          "start": 5.34,
+          "end": 5.62,
+          "word": " is",
+          "probability": 0.9982873797416687
+        },
+        {
+          "start": 5.62,
+          "end": 5.88,
+          "word": " blue.",
+          "probability": 0.9849904179573059
+        }
+      ]
+    }
+  ],
+  "source_offset_us": 60000000,
+  "seconds": 14.71,
+  "passed": true,
+  "latest_deployment_unicode_check": {
+    "checked_at": "2026-09-10T22:14:41.744765+00:00",
+    "input_utf8_bytes": 16000,
+    "vectors": 1,
+    "dimension": 384,
+    "seconds": 6.3,
+    "passed": true,
+    "source_sha256": "e7e1f85134fc56f48197b2830c7060613e2b4cb61a6bf0aa407c98745a92fe91"
+  }
+}

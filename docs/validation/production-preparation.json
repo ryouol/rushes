@@ -1,0 +1,24 @@
+{
+  "scope": "Local production-build validation; not hosted production or live Gemini validation",
+  "backend": {
+    "command": "RUSHES_TEST_TEMPORAL=1 .venv/bin/pytest -q",
+    "passed": 66,
+    "skipped": 0,
+    "seconds": 42.42,
+    "warnings": [
+      "Upstream Hugging Face download API deprecation"
+    ]
+  },
+  "browser": {
+    "passed": 5,
+    "seconds": 37.4,
+    "real_core_journeys": 1,
+    "synthetic_regressions": 4
+  },
+  "web_build": "passed",
+  "ruff": "passed",
+  "production_npm_audit_known_vulnerabilities": 0,
+  "source_bundle_scan_findings": 0,
+  "source_bundle_files_scanned": 126,
+  "production_deployed": false
+}

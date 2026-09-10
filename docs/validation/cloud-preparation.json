@@ -1,0 +1,56 @@
+{
+  "checked_at": "2026-09-10T23:35:13.749933+00:00",
+  "public_production_deployed": false,
+  "backend": {
+    "passed": 91,
+    "skipped": 1,
+    "separate_temporal_passed": 1
+  },
+  "browser_local": {
+    "passed": 7,
+    "seconds": 54.7
+  },
+  "browser_live_provider": {
+    "passed": false,
+    "reason": "Gemini HTTP503"
+  },
+  "modal_private_validation": "passed",
+  "gemini_standalone_validation": "passed",
+  "production_web_build": "passed",
+  "typescript": "passed",
+  "ruff": "passed",
+  "migrations": {
+    "version": "0004",
+    "forced_rls_tables": 17
+  },
+  "credential_scan": {
+    "files": 158,
+    "routes": 48,
+    "findings": 0
+  },
+  "container_local_https": {
+    "passed": true,
+    "architecture": "linux/arm64",
+    "upload_seconds": 346.24
+  },
+  "pending": [
+    "Budget authorization",
+    "Affordable hosted database/service capacity",
+    "Render deployment and actual ingress",
+    "Provider-dollar controls",
+    "Successful full cloud browser journey"
+  ],
+  "durable_workflow_container": {
+    "passed": true,
+    "tls_verified": true,
+    "restart_recovery": true,
+    "startup_termination": true,
+    "child_crash_shutdown": true,
+    "production_source_mounted": false,
+    "architecture": "linux/amd64",
+    "scope": "Two-second synthetic muted upload; decoder invocation held before FFmpeg execution.",
+    "image": "sha256:295dde5f522d03e825ab7d3c8015f842e25b3e59c6484ef3cd0dfbcdc7abceb6"
+  },
+  "production_image_build": "passed",
+  "deployment_blocker": "Earlier $20/month combined hard cap is unchanged; investigated fixed hosting starts at $35/month before usage and no combined hard cap is enforced."
+}

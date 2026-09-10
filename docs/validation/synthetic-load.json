@@ -1,0 +1,299 @@
+{
+  "fixture": "SYNTHETIC repeated red/blue patterns; no audio; not representative footage",
+  "files": 50,
+  "source_hours": 10,
+  "resolution": "160x90",
+  "frame_rate": "24/1",
+  "hardware": "macOS-26.6.2-arm64-arm-64bit",
+  "architecture": "arm64",
+  "memory_bytes": 17179869184,
+  "provider_requests_expected": 0,
+  "semantic_evaluation": "not performed; requires representative footage and human labels",
+  "workspace_id": "1e32d1f0-5c22-436f-866b-e954110ef5ee",
+  "project_id": "03228ebb-50bb-4bdd-915e-2f2e694c66a3",
+  "elapsed_seconds": 168.03,
+  "job_states": {
+    "partial": 50
+  },
+  "jobs": [
+    {
+      "id": "63fe6f33-2a45-4df8-8a86-5be914f087c0",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "b11f52f0-600f-448a-87f1-161b98832364",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "aca6e140-9117-4a0c-a141-48b3e5354ef1",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "09b52ef4-c5c9-4d5a-b3be-f0b93215890f",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "d11af4b1-3bed-47b4-bbe4-c383635e1786",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "7a13174e-0c7e-4b07-a65b-637f875c3aea",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "fa312ec4-49b6-45c1-a47c-168ef65bdab2",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "81254910-a774-42ce-b642-7e73b04d6e1d",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "c6e4f949-fd0f-4bf1-9f67-d50c5c0c5c8d",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "53da8cf1-7e40-4e28-9603-a926ec42dfdc",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "902777f9-83bb-47f6-99e4-8878aeebf070",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "5c27a566-e8ed-4257-9a85-b71246840aba",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "ad97c601-c4f2-402b-ad2f-5f4d712312d0",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "7d93f8d1-7b75-408a-91f9-3d2db494919b",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "b8af7890-2f3d-4468-a137-1d31a475069e",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "b89a272f-78c9-41fe-a654-ac2644d71d31",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "b92f744b-cc61-4496-b8bc-a1389131b657",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "7b619743-aec5-483c-808b-190dccfd27c6",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "76d4a8f0-b1ba-486d-837f-68371ec6a4a2",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "4da9e0ef-07e9-4d9e-a0f6-6a8f237d6c95",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "14f201c3-d877-4290-a8c1-1f2475e04e13",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "7bdb6247-02ce-4a58-aa23-b1bd72d9f846",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "1b501663-f810-41b7-b466-69cd20efbba0",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "0163984a-9ccd-4572-84df-ebf8051678ff",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "de853b0e-8537-4c96-900e-06958d06d10b",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "944acdb1-4916-4b93-9b92-f32e5aa972eb",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "b65130dd-3604-476c-85a4-462749c60f65",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "acfdfa7a-ad0f-4a43-a097-7690fb4f2b54",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "a9cc7c0b-fb2e-46f2-b87d-e0553f8eb74e",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "3e332990-743b-48a3-a0af-7c62023c31b3",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "7a3548cc-ca25-4913-88a1-d5fd24e721b0",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "a06201ee-ca61-4d44-96fa-e5a2764b22ab",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "3c6707f3-25bf-4061-87ae-57c6b70d251e",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "ea337f6f-34b7-4735-9675-4959c1f1977f",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "af50b768-21a9-4fe8-aec8-ce0fb550ac3c",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "a77dc28d-c652-4f27-b3d9-e2e5c8aa9ec3",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "dd8da826-06fd-487e-b350-6b75564bdf30",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "0e36ab41-978a-4493-8d67-29087f6bcb67",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "9ec9f7d7-b5da-42e7-87a9-88b2071dfa1d",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "d559115f-d90e-452e-b426-70c8c061ec2e",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "455f5db5-44a5-4046-a24d-f572ef386c22",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "aef89b13-c4a6-4542-86be-a057e15fd80d",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "b3219f2c-c7a5-4ba4-88bd-b0dc504b9461",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "6ab6b651-8d9e-4799-aa66-4b0fcc577171",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "efb48678-48c1-4d0a-bda0-d7cf9826f759",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "017e6c22-03ba-4b08-bfc3-60cc4438712c",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "08ded2c1-e93f-4b10-9b0d-50061783f517",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "0f6b9cce-7416-46c6-8064-63b93c130e43",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "0d1754f1-dea1-4755-9a34-ce4d480d1676",
+      "state": "partial",
+      "error": null
+    },
+    {
+      "id": "acf7c23a-3cdb-49ce-babb-9d878894430c",
+      "state": "partial",
+      "error": null
+    }
+  ],
+  "usage": {
+    "unique_source_duration_us": 36000000000,
+    "metrics": [
+      {
+        "kind": "source",
+        "duration_us": 36000000000,
+        "bytes": 12405091,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "attempts": 50
+      }
+    ],
+    "ledger": [
+      {
+        "operation_key": "grant:1e32d1f0-5c22-436f-866b-e954110ef5ee",
+        "reservation_id": null,
+        "kind": "local_development_grant",
+        "delta_milli": 600000,
+        "balance_milli": 600000,
+        "description": "Explicit local development credits; no payment collected",
+        "workspace_id": "1e32d1f0-5c22-436f-866b-e954110ef5ee",
+        "id": "36608835-04aa-4620-818f-68a018b6ae2a",
+        "created_at": "2026-09-10T06:14:15.965267"
+      }
+    ]
+  },
+  "originals_preserved": true,
+  "complete": true,
+  "partial_reason": "Gemini deliberately not configured; no speech in fixture"
+}

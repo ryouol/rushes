@@ -1,0 +1,1 @@
+"""RUSHES local application."""

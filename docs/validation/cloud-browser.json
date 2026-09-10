@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-09-10T22:16:46.939385+00:00",
+  "passed": false,
+  "scope": "Real API, Temporal, Modal and Gemini browser upload of a 12-second synthetic fixture",
+  "gemini_result": "HTTP 503 Service Unavailable",
+  "asset_id": "8aeecb5c-3877-47eb-8925-0f847f30e169",
+  "asset_status": "partial",
+  "analysis_window_status": "ambiguous",
+  "automatic_provider_repeat": false,
+  "provider_file_deleted": true,
+  "modal_transcription_and_embeddings": "completed",
+  "limits": "Standalone Gemini validation passed separately; the full live provider browser journey did not pass."
+}

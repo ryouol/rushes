@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "image_id": "sha256:fdd7b1cca9fd6b4d1da76f8eddf46c1f0596a66d6e8babd736dbccd8da2774e4",
+  "architecture": "linux/arm64",
+  "tls": "Local CA verified without modifying system trust",
+  "secure_sessions": true,
+  "runtime_admin_credentials": false,
+  "source_preserved": true,
+  "upload_and_preview_after_restart": true,
+  "static_assets_served": 11,
+  "upload_seconds": 346.24,
+  "upload_exceeded_default_node_deadline": true,
+  "cross_workspace_denied": true,
+  "private_api_unreachable_from_ingress": true,
+  "spoofed_client_identity_did_not_bypass_limit": true,
+  "shutdown_with_sse_seconds": 0.64,
+  "limits": "Disposable local image verification at 1 GiB/1 CPU; preview prepared with the actual module directly. Not hosted production, Modal/Temporal worker integration, or a capacity benchmark.",
+  "checked_at": "2026-09-10T22:22:57.161327+00:00"
+}

@@ -1,0 +1,54 @@
+{
+  "scope": "User-uploaded MOV timing and proxy verification; no semantic accuracy claims",
+  "assets": [
+    {
+      "asset_id": "022a134b-3a3f-41ca-8195-8462429e5d24",
+      "frames": 328,
+      "duration_us": 5475000,
+      "mapping_error_us": 0,
+      "source_hash": "6d7de5f6a9a2fbf8e14e618d3223f29002acd42e2dda20484598ecd3e0aa4ac5"
+    },
+    {
+      "asset_id": "0b6032fd-16a9-4ea6-9db2-c372b82a247e",
+      "frames": 567,
+      "duration_us": 9458333,
+      "mapping_error_us": 0,
+      "source_hash": "49ea01423a5cb4506b93c5c019c2671bccff31944eed7d578d234d54fc267096"
+    },
+    {
+      "asset_id": "11b127d0-fc6c-4396-856a-892832044a58",
+      "frames": 318,
+      "duration_us": 11491667,
+      "mapping_error_us": 0,
+      "source_hash": "36e84366f6e360a54724f761e3531f9d9e300813e0fb171b6555a9ca9f3b1285"
+    },
+    {
+      "asset_id": "23737c79-d20f-45ca-8dbb-93da2a3eac61",
+      "frames": 21,
+      "duration_us": 1100000,
+      "mapping_error_us": 0,
+      "source_hash": "60078f96a0cfa8013a1825dd9b75431b6368d633ee760eee9cd37f9c561331e7"
+    },
+    {
+      "asset_id": "490f3a1b-c03e-4cd5-877e-aa4af8b587a3",
+      "frames": 840,
+      "duration_us": 14006667,
+      "mapping_error_us": 0,
+      "source_hash": "8c785ec0bd07c2104658a5df78023d433da2102f6966e6094634bcf807cde805"
+    },
+    {
+      "asset_id": "8559391c-9b14-4f57-a8b4-353e1fb78613",
+      "frames": 222,
+      "duration_us": 7403333,
+      "mapping_error_us": 0,
+      "source_hash": "e5906cecc2e3c18f69aee654b270c919c32b2325e6a04444b182eac124d878d6"
+    },
+    {
+      "asset_id": "d929cdc5-77d4-4bb7-a482-e325ea2bf03f",
+      "frames": 424,
+      "duration_us": 14133333,
+      "mapping_error_us": 0,
+      "source_hash": "1a87296d1d181081165145d44072da8e1cc771ce4378961a1b50a047a6ec0f45"
+    }
+  ]
+}

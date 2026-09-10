@@ -1,0 +1,65 @@
+{
+  "checked_at": "2026-09-10T22:01:48.849906+00:00",
+  "scope": "One synthetic video request; not representative semantic quality or hosted integration",
+  "model": "gemini-3.6-flash",
+  "source_sha256": "fe08748262be9e31a74153f2b1c55b74f1335e06d48544f4d6464e21c0503fac",
+  "duration_us": 12000000,
+  "passed": true,
+  "provider_outcome": "received",
+  "input_tokens": 1202,
+  "preflight_tokens": 1346,
+  "output_tokens": 201,
+  "usage_metadata": {
+    "cache_tokens_details": null,
+    "cached_content_token_count": null,
+    "candidates_token_count": 201,
+    "candidates_tokens_details": null,
+    "prompt_token_count": 1202,
+    "prompt_tokens_details": [
+      {
+        "modality": "VIDEO",
+        "token_count": 1092
+      },
+      {
+        "modality": "TEXT",
+        "token_count": 110
+      }
+    ],
+    "thoughts_token_count": null,
+    "tool_use_prompt_token_count": null,
+    "tool_use_prompt_tokens_details": null,
+    "total_token_count": 1403,
+    "traffic_type": null
+  },
+  "cleanup_pending": false,
+  "observations": [
+    {
+      "kind": "shot_description",
+      "start_seconds": 0.0,
+      "end_seconds": 5.0,
+      "description": "Solid red color screen.",
+      "uncertainty": "low"
+    },
+    {
+      "kind": "shot_description",
+      "start_seconds": 5.0,
+      "end_seconds": 12.0,
+      "description": "Solid blue color screen.",
+      "uncertainty": "low"
+    },
+    {
+      "kind": "speech",
+      "start_seconds": 0.0,
+      "end_seconds": 5.2,
+      "description": "Narrator states: 'This is a synthetic timing fixture. The first shot is red. The second shot is blue.'",
+      "uncertainty": "low"
+    }
+  ],
+  "interval_validation_passed": true,
+  "source_preserved": true,
+  "provider_files": [
+    "files/h56mvjjtspe9"
+  ],
+  "provider_file_deletion_verified": true,
+  "cleanup_verification": "Successful delete followed by authenticated Files list absence. Direct GET after deletion returns 403 rather than 404 for this authorization key."
+}

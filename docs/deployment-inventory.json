@@ -1,0 +1,87 @@
+{
+  "project": "RUSHES",
+  "render": {
+    "workspace_id": "tea-cv3ru4tumphs73elr4g0",
+    "project_id": "prj-dahh47mk1f9s73f99g70",
+    "environment_ids": [
+      "evm-dahh47mk1f9s73f99g7g"
+    ],
+    "services": [],
+    "databases": [
+      {
+        "id": "dpg-dahk1qek1f9s73fk9n5g-a",
+        "name": "rushes-db",
+        "status": "available",
+        "plan": "0.1c-256mb",
+        "region": "ohio"
+      }
+    ]
+  },
+  "budget": {
+    "combined_monthly_usd": 20,
+    "hard_cap_required": false,
+    "render_total_spend_cap_available": false,
+    "billable_resources_created": true,
+    "period": "calendar month",
+    "note": "User clarified $20/month is a target, not a hard cap; modest overage is acceptable. Keep recurring and variable spending low. Previous absolute-ceiling blocker is superseded.",
+    "combined_monthly_target_usd": 20,
+    "fixed_monthly_estimate_usd": 35,
+    "provider_monthly_allowance_usd": 2,
+    "allowance_scope": "Combined Gemini and Modal call reservations; excludes fixed hosting, build/deploy compute, egress and tax."
+  },
+  "other_projects_observed": [
+    {
+      "id": "prj-dahh0r2fngtc739mh2hg",
+      "name": "Wayline"
+    },
+    {
+      "id": "prj-dahh1gbl550s73840e5g",
+      "name": "UNRENDER"
+    }
+  ],
+  "modal": {
+    "profile": "royluo05",
+    "environment": "rushes-production",
+    "apps": [
+      {
+        "id": "ap-67aprLNM1JZAG0lWjzfdcQ",
+        "name": "rushes-compute",
+        "state": "deployed",
+        "url": "https://modal.com/apps/royluo05/rushes-production/deployed/rushes-compute",
+        "functions": [
+          "embed",
+          "transcribe_audio"
+        ],
+        "public_endpoints": [],
+        "min_containers": 0,
+        "max_containers_per_function": 1,
+        "timeout_seconds": 120,
+        "cpu_per_container": 1,
+        "memory_mib": 2048,
+        "active_tasks": 0,
+        "cpu_limit": 1,
+        "memory_limit_mib": 2048,
+        "startup_timeout_seconds": 60
+      }
+    ],
+    "volumes": [],
+    "default_environment_changed": false,
+    "project_budget_enforced": false
+  },
+  "production_deployed": false,
+  "checked_at": "2026-09-10T23:55:50.834977+00:00",
+  "gemini": {
+    "configured": true,
+    "model": "gemini-3.6-flash",
+    "project": "projects/50426910677",
+    "standalone_video_validation": "passed",
+    "full_browser_validation": "provider HTTP503; no automatic repeat; asset partial"
+  },
+  "production_image": {
+    "id": "sha256:295dde5f522d03e825ab7d3c8015f842e25b3e59c6484ef3cd0dfbcdc7abceb6",
+    "architecture": "linux/amd64",
+    "local_runtime_verified": true,
+    "published": false,
+    "matches_current_source": false
+  }
+}

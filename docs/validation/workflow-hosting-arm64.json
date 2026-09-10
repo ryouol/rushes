@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-09-10T22:49:08.401294+00:00",
+  "passed": true,
+  "temporal_server": "1.31.2",
+  "schema_setup_idempotent": true,
+  "verified_tls_postgres_bootstrap_and_runtime": true,
+  "workflow_resumed_after_container_recreation": true,
+  "api_upload_processed_by_worker": true,
+  "active_media_resumed_after_shutdown": true,
+  "active_processing_shutdown_seconds": 1.73,
+  "same_job_after_restart": true,
+  "source_preserved": true,
+  "sessions_and_preview_preserved": true,
+  "temporal_unreachable_from_peer": true,
+  "peak_container_memory_bytes": 586452992,
+  "shutdown_seconds": 1.69,
+  "lifecycle": {
+    "readiness": {
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 15.67
+    },
+    "worker": {
+      "passed": true,
+      "exit_code": 1,
+      "seconds": 2.0
+    },
+    "temporal": {
+      "passed": true,
+      "exit_code": 1,
+      "seconds": 0.43
+    }
+  },
+  "limits": "Local arm64 existing image with current backend/scripts and verified Temporal binaries mounted, 2 GiB / 1 CPU. Synthetic two-second muted footage, no paid provider calls; not an amd64 image build, representative capacity test or Render deployment."
+}
