@@ -1,0 +1,31 @@
+# Refinement review — 11 September 2026
+
+Reviewed the complete change from `f5ebeb4` with the requested Simplify workflow (reuse, quality, efficiency) and all four Code Review perspectives (breaking changes, testing, model context, change size). Reviews used independent xhigh agents; fixes were applied and checked before committing. No PR or merge was created, so no GitHub review comments or label were applicable.
+
+Every finding is retained below, including resolved findings and verification limits. Line references identify the final implementation unless an original reviewed location is explicitly named.
+
+1. **P3 — Duplicate spinner animation. Resolved.** `web/components/google-auth.css:31` now uses the global `spin` animation. Removed redundant local keyframes and reduced-motion rules.
+2. **P1 — Rejected OAuth callbacks could log query strings. Resolved.** The original `backend/rushes/security.py:105` rejection paths bypassed response-time redaction. `CallbackLogBoundary` at `backend/rushes/security.py:17` now scrubs the server's original request scope before any inner middleware, while passing a private copy to the callback. Tests cover host, Origin, ingress, and throttle rejection, plus successful query parsing. Next development request logging excludes the callback. External ingress logging remains a deployment responsibility.
+3. **P2 — Footage retry left the old alert visible. Resolved.** `web/components/project.tsx:682` clears the failure on explicit retry. Browser QA confirmed a forced category failure retained inactive rows, followed by a successful retry with 40 active rows and no old alert.
+4. **P2 — Repeated certificate downloads. Resolved.** `backend/rushes/google_oauth.py:24` caches public certificates within provider cache headers, subtracts Age, caps lifetime at one hour, and coalesces concurrent requests. Tests cover expiration and no-cache/no-store. Failed downloads are not cached.
+5. **P2 — Password hashing blocked the callback worker. Resolved.** `backend/rushes/routes_google_auth.py:194` offloads Argon2 hashing to a thread. Provider HTTP remains asynchronous.
+6. **P3 — Repeated unchanged transform writes. Resolved.** `web/lib/scroll-motion.ts:54` compares a cached serialized transform before writing. The comparison avoids browser CSS normalization differences.
+7. **P2 — Google/password registration could race on mixed-case email. Resolved.** `backend/rushes/auth.py:39` provides a transaction lock keyed by PostgreSQL `lower(email)`. Password registration and `backend/rushes/routes_google_auth.py:161` acquire it before checking account existence. The existing Google subject lock remains. This prevents new duplicate accounts across those flows without merging existing accounts or changing their stored email. The overlap regression passes.
+8. **P2 — Distinct OAuth attempt concurrency lacked coverage. Resolved.** `tests/test_google_auth.py:353` now exercises separate browser-bound attempts sharing a subject, different subjects sharing an email, and two subjects linking through separate sessions to one user. It verifies one identity/account or explicit refusal as appropriate, rather than only racing reuse of one state.
+9. **P2 — Logout during provider exchange lacked coverage. Resolved.** `tests/test_google_auth.py:456` suspends the exchange, logs out, then releases the response. It verifies that no Google identity or replacement session is created.
+10. **P3 — Browser Back recovery requires live navigation verification. Pending.** `web/components/auth.tsx:98` and `web/components/google-account.tsx:28` reset pending state on persisted pageshow; Settings also reloads connection status. Real provider navigation and Back recovery have not been verified because OAuth client creation awaits user confirmation. The authored browser suite was typechecked, not executed.
+11. **P3 — Motion behavior needed verification. Partly resolved.** `web/components/landing.tsx:34` and `web/lib/scroll-motion.ts:83` were checked through native scrolling: pause held all four image transforms unchanged while the page moved; resume and reverse scrolling changed them correctly. Desktop light/dark and mobile screenshots were inspected. Reduced-motion switching, hidden-tab scheduling, and repeated history restoration were reviewed in code but were not dynamically exercised by the available browser controls.
+12. **P2 — The combined change is too large for one review stage. Resolved by staged commits.** Representative integration point: `backend/rushes/api.py:32`. The review snapshot contained 2,985 authored/text changed lines (2,671 additions, 314 removals), plus four generated lockfile lines and four PNG binaries counted separately. Subsequent concurrency tests and QA documentation increase that total. The smallest coherent prerequisite is identity schema and migration validation (91 lines at review). Persistence, backend authentication, integration tests, signed-in navigation, Google form UI, account linking, library/collection fixes, landing motion, and validation records are separated in dependency order. The complete set was validated together before push. Tests are kept in the same pushed change set; the 742-line integration test file has its own reviewable commit.
+
+The model-context review found no new prompts, context fragments, history rewrites, or inference payload changes. Existing note and suggestion limits remain intact. No additional actionable breaking-boundary findings were reported.
+
+## Validation
+
+- Full backend: **247 passed, 1 skipped**, one existing Hugging Face dependency deprecation warning, 39.73 seconds.
+- Focused OAuth/database/security after race fixes: **65 passed**, 3.30 seconds.
+- Production Next build and TypeScript passed. No-network analytics checks passed earlier in this refinement.
+- Ruff and `git diff --check` passed.
+- Fresh migration verification: schema `0006`, 17 forced-RLS tables, two global OAuth tables, cascading identity/session references.
+- Browser evidence and exact limits: [QA](QA.md), [design audit](AUDIT.md).
+
+No claim of successful live Google sign-in or hosted deployment is made. Provider configuration presence and mocked cryptographic tests do not establish live consent or deployed credentials.
