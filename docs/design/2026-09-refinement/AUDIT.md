@@ -40,4 +40,10 @@ The disposable workspace and all 41 synthetic records/25 collection entries were
 
 ## Accessibility and evidence limits
 
-Native links, buttons, headings, form labels, focus restoration and inactive stale content were inspected. Screenshots alone do not establish accessibility compliance. No horizontal overflow was observed at 1280 or 390 pixels. Pause held every image transform unchanged while scrolling, and resume/reverse motion worked. Reduced-motion CSS and listener cleanup were inspected in code; runtime reduced-motion switching, hidden-tab scheduling and repeated history restoration still need a dedicated browser pass. Real Google consent, provider Back recovery, and hosted behavior remain unverified pending credential confirmation and any separately authorized deployment.
+Native links, buttons, headings, form labels, focus restoration and inactive stale content were inspected. Screenshots alone do not establish accessibility compliance. No horizontal overflow was observed at 1280 or 390 pixels. Pause held every image transform unchanged while scrolling, and resume/reverse motion worked. A subsequent browser pass verified actual reduced-motion preference switching and restoration, plus repeated landing-page history navigation. Controlled Node checks verified hidden-document scheduling, idle stopping and cleanup; these are simulation evidence, not native background-rendering measurements. Real Google consent, provider Back recovery, and hosted behavior remain unverified pending credential confirmation and any separately authorized deployment.
+
+## Follow-up: reduced motion and browser history
+
+6. **Motion accessibility and history — verified, with a navigation fix.** Enabling the real system preference made every image transform `none` and hid the motion control, including while navigating down to the workflow section. Restoring the original preference brought motion back. A native section anchor exposed a Back-navigation mismatch after Privacy; using the existing Next Link fixed it in two repeated browser round trips. The control also remained usable after returning. Exact observations and controlled lifecycle limits are in [QA](QA.md).
+
+   ![Static landing page with reduced motion enabled](qa/09-reduced-motion.png)

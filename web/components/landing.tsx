@@ -72,9 +72,9 @@ export function Landing() {
             <Link className="primary" href="/signup">
               Organize your footage <ArrowRight size={19} />
             </Link>
-            <a className="text-link" href="#workflow">
+            <Link className="text-link" href="#workflow">
               See how it works
-            </a>
+            </Link>
           </div>
         </section>
         <section

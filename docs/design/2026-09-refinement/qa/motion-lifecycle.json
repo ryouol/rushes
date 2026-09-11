@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "assertions": 15,
+  "controlledHz": 60,
+  "startupFrames": 48,
+  "farScrollFrames": 53,
+  "noopFrames": 1,
+  "visibleFrames": 52,
+  "results": [
+    "Startup registers one scroll/resize/visibility handler, observes root, and queues one RAF",
+    "Scroll handler is passive",
+    "Twenty scroll events plus resize notifications coalesce into the pending RAF",
+    "Initial motion settles, leaves no RAF, and reaches all four expected targets",
+    "Subsequent scroll restarts motion and settles with all layers at the +60px clamp",
+    "Scrolling farther beyond an unchanged clamp runs one RAF with zero transform writes",
+    "Hiding during motion cancels the pending RAF immediately",
+    "Hidden scroll, window resize, and ResizeObserver notifications queue no RAF and write no transforms",
+    "Becoming visible schedules exactly one restart RAF",
+    "Visible restart remeasures changed geometry and settles at current targets",
+    "Cleanup during motion cancels RAF, removes all listeners, and disconnects ResizeObserver",
+    "Events after cleanup cannot restart animation or write transforms",
+    "Ten start/cleanup cycles retain exactly one live handler per event and no old observers or RAFs",
+    "Starting while hidden installs lifecycle handlers but schedules no RAF",
+    "Cleanup of a hidden start also removes every handler and observer"
+  ],
+  "method": "Temporary Node harness using transpiled production scroll-motion.ts and controlled DOM, RAF, ResizeObserver and visibility events; not a native rendering or React integration test.",
+  "source_git_blob": "f34eb95d76ac7c7e5d0000fa26826fd01f1c2da8"
+}

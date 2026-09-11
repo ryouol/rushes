@@ -1,5 +1,27 @@
 import { test, expect, type Page } from "@playwright/test";
 
+test("Back restores the landing page after section navigation and Privacy", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("link", { name: "See how it works", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/#workflow$/);
+  await page.getByRole("link", { name: "Privacy", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your footage and data." }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/#workflow$/);
+  await expect(
+    page.getByRole("heading", { name: "Your footage. Organized by AI." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Your footage and data." }),
+  ).toHaveCount(0);
+});
+
 async function authFixture(page: Page, signedIn = false) {
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;

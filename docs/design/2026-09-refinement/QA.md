@@ -21,7 +21,7 @@
 - Six no-network analytics checks passed earlier in this refinement.
 - Fresh database migration validation passed at `0006`; its disposable database was removed. See `../../validation/fresh-migrations.json`.
 - Known-value and credential-shape source/client-bundle audit: zero findings; 58 API routes. The final file count is in `../../validation/security-inventory.json`. This bounded scan is not a proof of absence of every possible secret.
-- The 12 new authentication browser cases and 2 state regression cases are authored and typechecked. **The Playwright suite was not executed.** Browser interactions used the selected in-app browser.
+- The 13 new authentication/history browser cases and 2 state regression cases are authored and typechecked. **The Playwright suite was not executed.** Browser interactions used the selected in-app browser.
 
 ## Browser results
 
@@ -38,8 +38,20 @@
 
 The existing Google Cloud project **Rushes** (`gen-lang-client-0912851229`) has RUSHES consent branding. The prepared Web application client **RUSHES Web** has local and hosted callback URLs ready, but **no OAuth client credential has been created**. Creating that persistent credential awaits the user's pending confirmation required by the browser tool's policy. No Wayline credential was copied, and no secret was committed.
 
-Live Google signup/login/linking, cancellation and browser Back recovery remain pending. Reduced-motion preference changes, hidden-tab behavior, and repeated history restoration were reviewed in code but not dynamically verified. Google provider availability only indicates configuration presence. No hosted deployment or merge was performed in this refinement.
+Live Google signup/login/linking, cancellation and browser Back recovery remain pending. Reduced-motion preference changes and repeated landing-page history restoration were subsequently verified in the browser. Hidden-document behavior, idle stopping and cleanup passed a controlled Node harness; that is simulation evidence, not a native background-rendering measurement. Google provider availability only indicates configuration presence. No hosted deployment or merge was performed in this refinement.
 
 The reviewed implementation commits are `74311be` (schema, 91 changed lines), `b883740` (backend, 449), `39f02cd` (integration coverage, 742), `b5fe9d9` (navigation, 139), `b8d9ff8` (sign-in UI and browser cases, 667 plus logo binary), `1e28951` (account Settings, 238), `7c00607` (library/collection fixes, 464), and `f8c64e5` (landing/motion, 378). Each stage stays below 800 text lines; the backend implementation stays below 500. Validation records follow in a separate documentation commit.
 
 After fixture cleanup, the normal local launcher was restored, and `/api/health` returned 200. `/api/auth/providers` returned `{ "google": false }`, confirming that live Google sign-in remains deliberately unavailable without its pending credentials. Source and bundle scanning covered **382 files**, with **zero findings** and **58 API routes**.
+
+## Continuation verification
+
+The preceding goal turn made concrete progress: nine reviewed commits were pushed at `003ad79`, the UI flows were verified, and the synthetic workspace was removed. This continuation closed motion-verification gaps and found/fixed one additional navigation defect.
+
+- Temporarily enabled macOS Reduce Motion from its original Off setting. The actual in-app browser reported `prefers-reduced-motion: reduce`, all four computed image transforms were `none`, and the motion button disappeared. Navigating to the workflow section moved the document to 1084 pixels while all transforms remained `none`. Restored the setting to Off, confirmed the preference became false, the Pause control returned and transforms resumed, then closed System Settings.
+- Inspected [reduced-motion screenshot](qa/09-reduced-motion.png); text and imagery remain visible, with no motion control.
+- [Controlled lifecycle evidence](qa/motion-lifecycle.json): 15 grouped assertions passed against the production module. Initial, scrolled and visible-restart loops settled in 48, 53 and 52 simulated frames at 60Hz. Tests covered coalescing, zero writes for unchanged clamped transforms, hidden-document cancellation/no scheduling, visible remeasure/restart, complete cleanup and ten start/cleanup cycles without duplicate listeners. This does not measure native rendering or React integration.
+- Reproduced a history defect twice: native hero section link → Privacy → Back restored `/#workflow` in the address bar while Privacy content remained. Direct landing → Privacy → Back worked. Installed Next router code ignores null history state; documented Next Link supports section hashes. Replaced the hero's native anchor with the already-imported Next Link.
+- After rebuilding and reloading, repeated the exact section link → Privacy → Back sequence twice. Both returned the landing heading, four motion layers and Pause control at `/#workflow`. The returned Pause control also worked. Added an authored browser regression that checks content as well as the URL; the suite remains unexecuted.
+- Production build/TypeScript and diff checks passed after the two-line UI fix. Follow-up Simplify and all Code Review perspectives reported no new issues. The implementation/regression diff was 26 changed lines.
+- Live `/api/auth/providers` still returned HTTP 200 with Google false. The Google Console still displayed the prepared Create OAuth client ID form, without a client-created dialog. The user has not answered the persistent-credential confirmation. Live signup, returning login, linking and provider Back recovery remain incomplete.
