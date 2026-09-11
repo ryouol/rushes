@@ -41,6 +41,7 @@ from rushes.models import (
     Shot,
     Usage,
 )
+from rushes.organization import ORGANIZATION_VERSION, category_records
 from rushes.pipeline import ensure_prepared, prepare_asset, prepare_chunk, transcribe_asset
 from rushes.provider_budget import ProviderBudgetError
 from rushes.timing import Interval, bounded_windows
@@ -340,6 +341,14 @@ async def apply_received_response(args):
         )
         run = await db.get(AnalysisRun, window.run_id)
         for index, (proposed, absolute) in enumerate(proposals):
+            attributes = (
+                {
+                    "organization_version": ORGANIZATION_VERSION,
+                    "categories": category_records(proposed.categories),
+                }
+                if run.schema_version == SCHEMA_VERSION
+                else {}
+            )
             existing = await db.scalar(
                 select(Observation.id)
                 .where(
@@ -347,6 +356,8 @@ async def apply_received_response(args):
                     Observation.run_id == window.run_id,
                     Observation.kind == proposed.kind,
                     Observation.description == proposed.description,
+                    # Distinct supported labels must survive overlapping evidence deduplication.
+                    Observation.attributes == attributes,
                     Observation.start_us < absolute.end_us,
                     Observation.end_us > absolute.start_us,
                 )
@@ -368,7 +379,7 @@ async def apply_received_response(args):
                     proposed_start_us=absolute.start_us,
                     proposed_end_us=absolute.end_us,
                     description=proposed.description,
-                    attributes={},
+                    attributes=attributes,
                     evidence=[{"window_id": str(window.id)}],
                     producer="gemini",
                     model=result.model,

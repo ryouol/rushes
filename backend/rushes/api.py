@@ -19,6 +19,7 @@ from rushes.models import LedgerEntry, Membership, Project, User, Workspace
 from rushes.routes_collections import router as collections_router
 from rushes.routes_exports import router as exports_router
 from rushes.routes_media import router as media_router
+from rushes.routes_organization import router as organization_router
 from rushes.routes_search import router as search_router
 from rushes.routes_settings import router as settings_router
 from rushes.security import OriginBoundary, RequestBodyBoundary
@@ -125,6 +126,7 @@ async def create_project(body: ProjectInput, db: DB, access: Access):
 
 
 app.include_router(media_router)
+app.include_router(organization_router)
 
 app.include_router(search_router)
 app.include_router(collections_router)

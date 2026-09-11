@@ -28,6 +28,7 @@ from rushes.models import (
     Project,
     Shot,
 )
+from rushes.organization import CATEGORY_SLUG_PATTERN, asset_organizations, category_asset_query
 from rushes.storage import StorageError, open_source, require_space, sync_file
 from rushes.timing import Interval
 
@@ -258,19 +259,39 @@ async def assets(
     offset: int = Query(0, ge=0),
     limit: int = Query(40, ge=1, le=100),
     uncategorized: bool = False,
+    uncollected: bool = False,
+    category: str | None = Query(None, min_length=1, max_length=36, pattern=CATEGORY_SLUG_PATTERN),
 ):
     await owned(db, Project, project_id, access)
     filters = [Asset.project_id == project_id]
-    if uncategorized:
+    # The original flag describes manual collection membership; AI groups use category=.
+    if uncategorized or uncollected:
         filters.append(~exists().where(CollectionItem.asset_id == Asset.id))
+    if category:
+        filters.append(
+            Asset.id.in_(category_asset_query(access.workspace_id, project_id, category))
+        )
     rows = await db.scalars(
-        select(Asset).where(*filters).order_by(Asset.created_at.desc()).offset(offset).limit(limit)
+        select(Asset)
+        .where(*filters)
+        .order_by(Asset.created_at.desc(), Asset.id)
+        .offset(offset)
+        .limit(limit)
     )
     total = await db.scalar(select(func.count()).select_from(Asset).where(*filters))
     rows = list(rows)
     capabilities = await retry_capabilities(db, [row.id for row in rows])
+    organization = await asset_organizations(
+        db, access.workspace_id, project_id, [row.id for row in rows]
+    )
     return {
-        "items": [public_asset(asset, capabilities.get(asset.id, False)) for asset in rows],
+        "items": [
+            {
+                **public_asset(asset, capabilities.get(asset.id, False)),
+                "organization": organization[asset.id],
+            }
+            for asset in rows
+        ],
         "total": total,
     }
 
@@ -287,8 +308,10 @@ async def asset_detail(asset_id: uuid.UUID, db: DB, access: Access):
         )
     )
     capability = await retry_capabilities(db, [asset.id])
+    organization = await asset_organizations(db, access.workspace_id, asset.project_id, [asset.id])
     return {
         **public_asset(asset, capability.get(asset.id, False)),
+        "organization": organization[asset.id],
         "timelines": [
             {
                 "id": t.id,
