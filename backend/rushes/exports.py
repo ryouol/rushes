@@ -22,6 +22,8 @@ from rushes.storage import (
     fingerprint,
     open_source,
     require_space,
+    run_storage_thread,
+    storage_activity,
 )
 from rushes.timing import Interval
 
@@ -158,6 +160,7 @@ def verify_sources(entries):
 
 
 @activity.defn(name="render_export")
+@storage_activity
 async def render_export(args: dict):
     heartbeat()
     await stage(args, "Rendering export into a separate output folder", 10)
@@ -196,7 +199,7 @@ async def render_export(args: dict):
         for key, entries in source_groups(plan["entries"]):
             outputs.extend(
                 await keep_alive(
-                    asyncio.to_thread(write_media_group, key, entries, folder, heartbeat)
+                    run_storage_thread(write_media_group, key, entries, folder, heartbeat)
                 )
             )
             await stage(
@@ -259,9 +262,9 @@ async def render_export(args: dict):
         outputs = [{"output": target.name, "bytes": target.stat().st_size}]
     elif kind in {"fcp7xml", "fcpxml"}:
         target = folder / ("selects.xml" if kind == "fcp7xml" else "selects.fcpxml")
-        await keep_alive(asyncio.to_thread(verify_sources, plan["entries"]))
+        await keep_alive(run_storage_thread(verify_sources, plan["entries"]))
         writer = fcp7_xml if kind == "fcp7xml" else fcpxml
-        data = await keep_alive(asyncio.to_thread(writer, plan["entries"], "RUSHES selects"))
+        data = await keep_alive(run_storage_thread(writer, plan["entries"], "RUSHES selects"))
         temporary = target.with_suffix(".partial")
         temporary.write_bytes(data)
         os.replace(temporary, target)

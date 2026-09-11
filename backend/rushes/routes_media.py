@@ -14,7 +14,7 @@ from starlette.requests import ClientDisconnect
 from rushes.api_common import DB, Access, owned, row_json
 from rushes.auth import require_editor, stream_access
 from rushes.config import settings
-from rushes.db import tenant_session
+from rushes.db import WorkspaceBusyError, tenant_session
 from rushes.job_actions import cancel_batch_children, queue_asset
 from rushes.models import (
     Asset,
@@ -29,7 +29,7 @@ from rushes.models import (
     Shot,
 )
 from rushes.organization import CATEGORY_SLUG_PATTERN, asset_organizations, category_asset_query
-from rushes.storage import StorageError, open_source, require_space, sync_file
+from rushes.storage import StorageError, open_source, require_space, sync_file, workspace_file_lease
 from rushes.timing import Interval
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}")
@@ -163,6 +163,14 @@ async def upload(
     filename: str = Query(min_length=1, max_length=255),
     relative_path: str = Query(default="", max_length=2000),
 ):
+    try:
+        with workspace_file_lease(access.workspace_id):
+            return await upload_file(project_id, request, access, filename, relative_path)
+    except WorkspaceBusyError as error:
+        raise HTTPException(409, str(error)) from error
+
+
+async def upload_file(project_id, request, access, filename, relative_path):
     require_editor(access)
     async with tenant_session(access.workspace_id) as db:
         await owned(db, Project, project_id, access)

@@ -1,9 +1,16 @@
+import asyncio
+import fcntl
 import hashlib
 import os
 import shutil
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
+from functools import wraps
 from pathlib import Path
 from typing import BinaryIO
+from uuid import UUID
+
+from rushes.config import settings
+from rushes.db import WorkspaceBusyError
 
 
 class StorageError(ValueError):
@@ -98,3 +105,65 @@ def artifact_path(root: Path, workspace_id: str, asset_id: str, name: str) -> Pa
     folder = root / str(UUID(workspace_id)) / str(UUID(asset_id))
     folder.mkdir(parents=True, exist_ok=True, mode=0o700)
     return folder / name
+
+
+@contextmanager
+def workspace_file_lease(workspace_id: UUID, *, exclusive=False):
+    """Uploads and activities hold a shared lease without occupying a DB connection."""
+    root = settings().storage_root
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    root_fd = lock_fd = folder_fd = None
+    try:
+        root_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.mkdir(".workspace-locks", mode=0o700, dir_fd=root_fd)
+        except FileExistsError:
+            pass
+        folder_fd = os.open(
+            ".workspace-locks", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=root_fd
+        )
+        lock_fd = os.open(
+            f"{UUID(str(workspace_id))}.lock",
+            os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+            mode=0o600,
+            dir_fd=folder_fd,
+        )
+        fcntl.flock(lock_fd, (fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH) | fcntl.LOCK_NB)
+        yield
+    except BlockingIOError as error:
+        raise WorkspaceBusyError(
+            "An upload, processing task, or deletion is active in this workspace. Let it finish, then retry."
+        ) from error
+    finally:
+        for fd in (lock_fd, folder_fd, root_fd):
+            if fd is not None:
+                os.close(fd)
+
+
+def storage_activity(function):
+    """Keep deletion out until an activity's filesystem/provider work has actually stopped."""
+
+    @wraps(function)
+    async def guarded(args: dict):
+        with workspace_file_lease(UUID(args["workspace_id"])):
+            return await function(args)
+
+    return guarded
+
+
+async def run_storage_thread(function, *args, **kwargs):
+    """Cancellation drains the thread before unwinding its surrounding activity/file lease."""
+    task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        while not task.done():
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        with suppress(Exception, asyncio.CancelledError):
+            task.result()
+        raise

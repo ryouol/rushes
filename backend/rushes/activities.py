@@ -44,6 +44,7 @@ from rushes.models import (
 from rushes.organization import ORGANIZATION_VERSION, category_records
 from rushes.pipeline import ensure_prepared, prepare_asset, prepare_chunk, transcribe_asset
 from rushes.provider_budget import ProviderBudgetError
+from rushes.storage import run_storage_thread, storage_activity
 from rushes.timing import Interval, bounded_windows
 
 
@@ -78,6 +79,8 @@ async def keep_alive(awaitable: Awaitable):
 async def stage(args: dict, message: str, progress: int):
     async with tenant_session(args["workspace_id"]) as db:
         job = await db.scalar(select(Job).where(Job.id == UUID(args["job_id"])).with_for_update())
+        if job is None:
+            raise ValueError("This job was deleted; no work can resume.")
         if job.state in {"failed", "canceled", "cancel_requested"}:
             raise asyncio.CancelledError()
         if job.state in {"completed", "ready", "partial"}:
@@ -92,12 +95,14 @@ async def stage(args: dict, message: str, progress: int):
 
 
 @activity.defn(name="prepare")
+@storage_activity
 async def prepare(args: dict):
     await stage(args, "Inspecting source and building preview", 10)
     return await keep_alive(prepare_asset(args["workspace_id"], args["asset_id"], heartbeat))
 
 
 @activity.defn(name="transcribe")
+@storage_activity
 async def transcribe_activity(args: dict):
     await stage(args, "Transcribing available speech", 35)
     return await keep_alive(transcribe_asset(args["workspace_id"], args["asset_id"], heartbeat))
@@ -270,6 +275,7 @@ async def mark_ambiguous(db, window, reason):
 
 
 @activity.defn(name="prepare_window")
+@storage_activity
 async def prepare_window(args: dict):
     await stage(args, "Preparing a bounded analysis clip", 55)
     async with tenant_session(args["workspace_id"]) as db:
@@ -280,7 +286,7 @@ async def prepare_window(args: dict):
         interval = Interval(start_us=window.start_us, end_us=window.end_us)
     await keep_alive(ensure_prepared(args["workspace_id"], args["asset_id"], heartbeat))
     await keep_alive(
-        asyncio.to_thread(
+        run_storage_thread(
             prepare_chunk, args["workspace_id"], args["asset_id"], interval, heartbeat
         )
     )
@@ -393,6 +399,7 @@ async def apply_received_response(args):
 
 
 @activity.defn(name="analyze_window")
+@storage_activity
 async def analyze_window(args: dict):
     heartbeat()
     await stage(args, "Analyzing derived footage with Gemini", 65)
@@ -401,7 +408,7 @@ async def analyze_window(args: dict):
         old_file = pending.provider_file if pending and pending.state == "pending" else None
     if old_file:
         try:
-            await asyncio.to_thread(delete_remote, old_file)
+            await run_storage_thread(delete_remote, old_file)
         except Exception as error:
             raise ProviderPreparationError(
                 "The previous Google upload could not be cleaned up. No new analysis was sent; resume processing later."
@@ -436,7 +443,7 @@ async def analyze_window(args: dict):
         return await apply_received_response(args)
     chunk = None
     try:
-        chunk = await asyncio.to_thread(
+        chunk = await run_storage_thread(
             prepare_chunk, args["workspace_id"], args["asset_id"], interval, heartbeat
         )
         loop = asyncio.get_running_loop()
@@ -452,7 +459,7 @@ async def analyze_window(args: dict):
         chunk_plan = json.loads(chunk.with_suffix(".timing.json").read_text())
         effective_window = effective_source_interval(chunk_plan, interval)
         result = await keep_alive(
-            asyncio.to_thread(
+            run_storage_thread(
                 GeminiAnalyzer(run_model).analyze, chunk, effective_window, transcript, uploaded
             )
         )
@@ -513,6 +520,7 @@ async def analyze_window(args: dict):
 
 
 @activity.defn(name="embed_asset")
+@storage_activity
 async def embed_asset(args: dict):
     await stage(args, "Indexing worklog for search", 90)
     async with tenant_session(args["workspace_id"]) as db:
@@ -547,7 +555,7 @@ async def embed_asset(args: dict):
         if not pending:
             continue
         vectors = await keep_alive(
-            asyncio.to_thread(
+            run_storage_thread(
                 lambda texts=[text for _, text, _ in pending]: embedder().embed(texts)
             )
         )
@@ -653,7 +661,7 @@ async def finish_asset(args: dict):
 
 async def finalize_failure(db, args):
     job = await db.scalar(select(Job).where(Job.id == UUID(args["job_id"])).with_for_update())
-    if job.state in {"completed", "ready", "partial"}:
+    if job is None or job.state in {"completed", "ready", "partial"}:
         return
     job.state = args["state"]
     job.error = args["error"]

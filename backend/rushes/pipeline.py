@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import json
 import os
@@ -29,6 +28,7 @@ from rushes.storage import (
     fingerprint,
     open_source,
     require_space,
+    run_storage_thread,
 )
 from rushes.timing import Interval, bounded_windows
 
@@ -120,7 +120,7 @@ async def prepare_asset(workspace_id: str, asset_id: str, progress=None) -> dict
             raise ValueError("Asset not found")
         asset.status = "processing"
         root, relative, expected_digest = asset.source_root, asset.relative_path, asset.fingerprint
-    result = await asyncio.to_thread(
+    result = await run_storage_thread(
         _prepare, workspace_id, asset_id, root, relative, progress, expected_digest
     )
     folder = asset_folder(workspace_id, asset_id)
@@ -236,11 +236,11 @@ def extraction_provenance(requested: Interval, extracted: Interval) -> dict:
 async def ensure_prepared(workspace_id: str, asset_id: str, progress=None) -> dict:
     path = asset_folder(workspace_id, asset_id) / "manifest.json"
     try:
-        return json.loads(await asyncio.to_thread(path.read_text))
+        return json.loads(await run_storage_thread(path.read_text))
     except FileNotFoundError:
         # A workflow may resume after prepare ran under a prior preprocessing version.
         await prepare_asset(workspace_id, asset_id, progress)
-        return json.loads(await asyncio.to_thread(path.read_text))
+        return json.loads(await run_storage_thread(path.read_text))
 
 
 def prepare_audio(workspace_id: str, asset_id: str, window: Interval, progress=None):
@@ -297,9 +297,11 @@ async def transcribe_asset(workspace_id: str, asset_id: str, progress=None) -> d
         try:
             rows = json.loads(transcript_file.read_text())
         except (OSError, ValueError):
-            chunk = await asyncio.to_thread(prepare_audio, workspace_id, asset_id, window, progress)
+            chunk = await run_storage_thread(
+                prepare_audio, workspace_id, asset_id, window, progress
+            )
             try:
-                rows = await asyncio.to_thread(transcribe, chunk, extracted)
+                rows = await run_storage_thread(transcribe, chunk, extracted)
             finally:
                 chunk.unlink(missing_ok=True)
             temporary = transcript_file.with_suffix(".partial.json")

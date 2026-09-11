@@ -26,11 +26,24 @@ async def get_session():
 
 
 @asynccontextmanager
-async def tenant_session(workspace_id: UUID | str):
+async def tenant_session(workspace_id: UUID | str, *, exclusive=False):
     """Used only after API membership authorization, or by trusted ID-only activities."""
     async with session_factory()() as session, session.begin():
+        lock = "pg_try_advisory_xact_lock" if exclusive else "pg_advisory_xact_lock_shared"
+        acquired = await session.scalar(
+            text(f"SELECT {lock}(hashtextextended(:key, 0))"),
+            {"key": f"rushes-workspace:{UUID(str(workspace_id))}"},
+        )
+        if exclusive and not acquired:
+            raise WorkspaceBusyError(
+                "Workspace activity is still finishing. Retry deletion shortly."
+            )
         await session.execute(
             text("SELECT set_config('rushes.workspace_id', :workspace, true)"),
             {"workspace": str(UUID(str(workspace_id)))},
         )
         yield session
+
+
+class WorkspaceBusyError(ValueError):
+    pass
