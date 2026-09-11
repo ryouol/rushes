@@ -14,6 +14,7 @@ import "./editor.css";
 import { storageSize } from "@/lib/format";
 import "./settings.css";
 import { AppearanceMenu } from "@/components/appearance";
+import { GoogleAccount } from "@/components/google-account";
 import {
   AnalyticsChoices,
   useAnalyticsConsent,
@@ -612,21 +613,22 @@ export function SettingsView({
               <a href="/terms">Terms</a> for details.
             </p>
           </section>
-          {workspace.role === "owner" && (
-            <section className="settings-card settings-delete-workspace">
-              <div>
-                <h2>Delete workspace</h2>
-                <p className="muted small">
-                  Remove this workspace and its projects. You’ll review what
-                  will be removed before confirming.
-                </p>
-              </div>
-              <button className="secondary" onClick={onDeleteWorkspace}>
-                <Trash2 size={16} /> Delete workspace
-              </button>
-            </section>
-          )}
         </>
+      )}
+      <GoogleAccount />
+      {workspace.role === "owner" && (
+        <section className="settings-card settings-delete-workspace">
+          <div>
+            <h2>Delete workspace</h2>
+            <p className="muted small">
+              Remove this workspace and its projects. You’ll review what will be
+              removed before confirming.
+            </p>
+          </div>
+          <button className="secondary" onClick={onDeleteWorkspace}>
+            <Trash2 size={16} /> Delete workspace
+          </button>
+        </section>
       )}
     </section>
   );
