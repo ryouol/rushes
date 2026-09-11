@@ -294,6 +294,7 @@ test("a completed deletion cannot redirect a newer project after browser Back", 
     await expect(
       page.getByRole("heading", { name: "Project 1", exact: true }),
     ).toBeVisible();
+    await expect(page).toHaveURL(/\/app\?workspace=a&project=p1$/);
     const destination = page.url();
     const completed = page.waitForResponse(
       (response) =>
@@ -992,9 +993,10 @@ test("footage paging preserves focus and stale category rows stay inactive after
   ).toBeVisible();
   await expect(grid).toHaveAttribute("inert", "");
   await expect(grid.locator(".asset-card")).toHaveCount(1);
-  await expect(
-    page.getByRole("button", { name: /Synthetic video-40/ }),
-  ).toHaveCount(0);
+  const staleOpen = grid.locator(".asset-open").first();
+  await staleOpen.evaluate((button) => (button as HTMLElement).focus());
+  await expect(staleOpen).not.toBeFocused();
+  await expect(staleOpen.click({ trial: true, timeout: 300 })).rejects.toThrow();
   failCategory = false;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await expect(grid).not.toHaveAttribute("inert", "");

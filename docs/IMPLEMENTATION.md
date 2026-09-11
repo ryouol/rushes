@@ -1,8 +1,8 @@
 # RUSHES phase checklist
 
-The production request supersedes the original hosting boundary. Current status, budget constraints and provider resources are in [PRODUCTION.md](PRODUCTION.md); the later simplify/review pass and current validation are in [PRODUCTION-REVIEW.md](PRODUCTION-REVIEW.md). Historical test totals below describe the earlier local snapshot. All seven user uploads now complete local preview/transcription processing; visual analysis and hosted deployment remain incomplete.
+The production request supersedes the original hosting boundary. Current status, budget constraints and provider resources are in [PRODUCTION.md](PRODUCTION.md); the later simplify/review pass and validation are in [PRODUCTION-REVIEW.md](PRODUCTION-REVIEW.md). The [11 September original-goal audit](GOAL-AUDIT.md) reconciles the requirements with the live deployment and newer work. RUSHES is deployed and Gemini has been exercised; the old missing-key and undeployed statements below belong to the historical local snapshot.
 
-Status: **implemented** means working code with the evidence stated here; **needs input** marks inaccessible external verification; **deferred** is not complete; **N/A** records a specific scope reason. **Overall release remains incomplete** while essential Gemini/representative-media verification is missing.
+Status: **implemented** means working code with the evidence stated here; **needs input** marks inaccessible external verification; **deferred** is not complete; **N/A** records a specific scope reason. **Overall qualification remains incomplete** while representative-media and provider-comparison verification is missing. The tables and historical counts below preserve the earlier evidence; use the current audit for superseded blockers.
 
 | Phase | Delivered files and behavior | Actual validation | Outstanding |
 | --- | --- | --- | --- |
