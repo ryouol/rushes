@@ -77,6 +77,41 @@
   gap: 24px;
 }
 
+.account-google {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.account-google .google-button {
+  width: 100%;
+}
+.account-content > .account-auth-error {
+  margin-bottom: 24px;
+}
+.account-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.account-divider::before,
+.account-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.account-provider-retry {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .account-field {
   display: flex;
   flex-direction: column;

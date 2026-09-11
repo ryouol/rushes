@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { AppearanceMenu } from "@/components/appearance";
 import { Brand } from "@/components/brand";
+import { GoogleButton, googleAuthError } from "@/components/google-button";
 import { api, ApiError } from "@/lib/api";
 import "./auth.css";
 
@@ -13,10 +14,17 @@ type Field = "name" | "email" | "password";
 type FieldErrors = Partial<Record<Field, string>>;
 
 function loginDestination() {
-  const fallback = "/onboarding";
-  const next = new URLSearchParams(window.location.search).get("next");
+  const params = new URLSearchParams(window.location.search);
+  const fallback =
+    params.get("error") === "google_link_required"
+      ? "/app?view=settings"
+      : "/onboarding";
+  const next = params.get("next");
   if (
     !next ||
+    next.length > 2048 ||
+    params.getAll("next").length !== 1 ||
+    /[\u0000-\u001f\u007f]/.test(next) ||
     !next.startsWith("/") ||
     next.startsWith("//") ||
     next.includes("\\")
@@ -29,7 +37,8 @@ function loginDestination() {
       destination.pathname !== "/app"
     )
       return fallback;
-    return `${destination.pathname}${destination.search}`;
+    const path = `${destination.pathname}${destination.search}`;
+    return path.length <= 2048 ? path : fallback;
   } catch {
     return fallback;
   }
@@ -64,10 +73,73 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [google, setGoogle] = useState<
+    "loading" | "available" | "unavailable" | "error"
+  >("loading");
+  const [providerRetry, setProviderRetry] = useState(0);
+  const [googleStarting, setGoogleStarting] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const request = useRef<AbortController | null>(null);
   const submitting = useRef(false);
+  const pending = busy || googleStarting;
 
   useEffect(() => () => request.current?.abort(), []);
+  useEffect(() => {
+    setError(
+      googleAuthError(new URLSearchParams(window.location.search).get("error")),
+    );
+    const controller = new AbortController();
+    void api("/auth/me", { signal: controller.signal }).then(
+      () => {
+        if (!controller.signal.aborted) setSignedIn(true);
+      },
+      () => {},
+    );
+    const returned = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        submitting.current = false;
+        setGoogleStarting(false);
+      }
+    };
+    window.addEventListener("pageshow", returned);
+    return () => {
+      controller.abort();
+      window.removeEventListener("pageshow", returned);
+    };
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    setGoogle("loading");
+    void api<{ google: boolean }>("/auth/providers", {
+      signal: controller.signal,
+    }).then(
+      (providers) => {
+        if (!controller.signal.aborted)
+          setGoogle(providers.google === true ? "available" : "unavailable");
+      },
+      () => {
+        if (!controller.signal.aborted) setGoogle("error");
+      },
+    );
+    return () => controller.abort();
+  }, [providerRetry]);
+
+  function continueWithGoogle() {
+    if (submitting.current || success || google !== "available") return;
+    submitting.current = true;
+    setGoogleStarting(true);
+    setError("");
+    try {
+      const next = signup ? "/onboarding" : loginDestination();
+      window.location.assign(
+        `/api/auth/google/authorize?${new URLSearchParams({ next })}`,
+      );
+    } catch {
+      submitting.current = false;
+      setGoogleStarting(false);
+      setError("Google sign-in couldn’t open. Please try again.");
+    }
+  }
 
   function validateOnBlur(field: Field, input: HTMLInputElement) {
     if (field !== "password") {
@@ -82,7 +154,10 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 
   function validateChangedField(field: Field, value: string) {
     if (errors[field]) {
-      setErrors((current) => ({ ...current, [field]: fieldError(field, value, signup && !registeredEmail) }));
+      setErrors((current) => ({
+        ...current,
+        [field]: fieldError(field, value, signup && !registeredEmail),
+      }));
     }
   }
 
@@ -178,7 +253,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
   return (
     <div className={`account-page account-page--${mode}`}>
       <header className="account-header">
-        <Brand />
+        <Brand href={signedIn ? "/app" : "/"} />
         <AppearanceMenu />
       </header>
       <main id="main" className="account-main">
@@ -191,11 +266,51 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 : "Sign in to your footage."}
             </p>
           </div>
+          {error && (
+            <p className="account-error account-auth-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="account-google">
+            {google === "available" ? (
+              <>
+                <GoogleButton
+                  onClick={continueWithGoogle}
+                  busy={googleStarting}
+                  disabled={busy || success}
+                />
+                <div className="account-divider">
+                  <span>or continue with email</span>
+                </div>
+              </>
+            ) : google === "loading" ? (
+              <p className="account-help" role="status">
+                Checking sign-in options…
+              </p>
+            ) : google === "error" ? (
+              <p className="account-help" role="status">
+                Google sign-in couldn’t load.{" "}
+                <button
+                  type="button"
+                  className="account-provider-retry"
+                  disabled={pending}
+                  onClick={() => setProviderRetry((value) => value + 1)}
+                >
+                  Try again
+                </button>{" "}
+                You can still use email.
+              </p>
+            ) : (
+              <p className="account-help">
+                Google sign-in is unavailable right now. Continue with email.
+              </p>
+            )}
+          </div>
           <form
             className="account-form"
             onSubmit={submit}
             noValidate
-            aria-busy={busy}
+            aria-busy={pending}
           >
             {signup && (
               <div className="account-field">
@@ -205,9 +320,11 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                   name="name"
                   autoComplete="name"
                   required
-                  disabled={busy}
+                  disabled={pending}
                   readOnly={Boolean(registeredEmail)}
-                  onChange={(event) => validateChangedField("name", event.currentTarget.value)}
+                  onChange={(event) =>
+                    validateChangedField("name", event.currentTarget.value)
+                  }
                   onBlur={(event) =>
                     validateOnBlur("name", event.currentTarget)
                   }
@@ -233,9 +350,11 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 autoCapitalize="none"
                 spellCheck={false}
                 required
-                disabled={busy}
+                disabled={pending}
                 readOnly={Boolean(registeredEmail)}
-                onChange={(event) => validateChangedField("email", event.currentTarget.value)}
+                onChange={(event) =>
+                  validateChangedField("email", event.currentTarget.value)
+                }
                 onBlur={(event) => validateOnBlur("email", event.currentTarget)}
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={
@@ -263,8 +382,10 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                   autoCapitalize="none"
                   spellCheck={false}
                   required
-                  disabled={busy}
-                  onChange={(event) => validateChangedField("password", event.currentTarget.value)}
+                  disabled={pending}
+                  onChange={(event) =>
+                    validateChangedField("password", event.currentTarget.value)
+                  }
                   onBlur={(event) =>
                     validateOnBlur("password", event.currentTarget)
                   }
@@ -284,7 +405,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                   onClick={() => setShowPassword((visible) => !visible)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   aria-pressed={showPassword}
-                  disabled={busy}
+                  disabled={pending}
                 >
                   {showPassword ? (
                     <EyeOff size={21} aria-hidden="true" />
@@ -304,15 +425,10 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 </p>
               )}
             </div>
-            {error && (
-              <p className="account-error" role="alert">
-                {error}
-              </p>
-            )}
             <button
               className="account-submit"
               type="submit"
-              disabled={busy || success}
+              disabled={pending || success}
             >
               {success
                 ? "Signed in"

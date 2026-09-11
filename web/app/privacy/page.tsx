@@ -41,6 +41,29 @@ export default function Privacy() {
           </p>
         </section>
         <section>
+          <h2>Signing in with Google</h2>
+          <p>
+            If you choose Google sign-in, RUSHES uses your verified email
+            address and a stable Google account identifier to recognize your
+            account and keep you signed in. When you create a new account this
+            way, RUSHES also uses your Google name as your display name. The
+            linked Google identifier and email are stored with your account.
+          </p>
+          <p>
+            Google sign-in requests only basic identity permissions: openid,
+            email and profile. It does not grant RUSHES access to your Gmail,
+            Google Drive or footage. RUSHES does not retain Google access or
+            refresh tokens. Video analysis, described below, is a separate
+            feature.
+          </p>
+          <p>
+            An existing password account is not automatically connected just
+            because its email matches Google. Sign in with your password, then
+            choose Connect Google in Settings to connect it explicitly. Your
+            password and existing workspace access continue to work.
+          </p>
+        </section>
+        <section>
           <h2>How processing works</h2>
           <p>
             When Gemini analysis is used, derived video and bounded transcript
