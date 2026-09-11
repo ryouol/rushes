@@ -21,9 +21,10 @@ from rushes.routes_exports import router as exports_router
 from rushes.routes_media import router as media_router
 from rushes.routes_search import router as search_router
 from rushes.routes_settings import router as settings_router
-from rushes.security import OriginBoundary
+from rushes.security import OriginBoundary, RequestBodyBoundary
 
 app = FastAPI(title="RUSHES API", docs_url=None, redoc_url=None, openapi_url=None)
+app.add_middleware(RequestBodyBoundary)
 app.add_middleware(OriginBoundary)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
 app.include_router(users.get_auth_router(backend), prefix="/api/auth")

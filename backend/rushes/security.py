@@ -1,10 +1,60 @@
+import re
 import time
 from collections import defaultdict, deque
 from ipaddress import ip_address
 
+from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
 from rushes.config import settings
+
+MAX_REQUEST_BYTES = 64 * 1024
+# Indexing accepts 200 paths; allow long filesystem paths even with JSON escaping.
+MAX_INDEX_REQUEST_BYTES = 8 * 1024 * 1024
+PROJECT_BODY_ROUTE = re.compile(r"/api/workspaces/[^/]+/projects/[^/]+/(upload|index)/?")
+
+
+class RequestBodyBoundary:
+    """Bound bytes before JSON/form parsing; media uploads enforce their own streaming limit."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        limit = MAX_REQUEST_BYTES
+        route = PROJECT_BODY_ROUTE.fullmatch(scope["path"])
+        if scope["method"] == "POST" and route:
+            if route[1] == "upload":
+                return await self.app(scope, receive, send)
+            limit = MAX_INDEX_REQUEST_BYTES
+        detail = "Request body is too large. Shorten the input or split the import batch."
+        length = dict(scope["headers"]).get(b"content-length")
+        if length is not None:
+            try:
+                declared = int(length)
+                if declared < 0:
+                    raise ValueError
+            except ValueError:
+                return await JSONResponse({"detail": "Invalid Content-Length"}, 400)(
+                    scope, receive, send
+                )
+            if declared > limit:
+                return await JSONResponse({"detail": detail}, 413)(scope, receive, send)
+        received = 0
+
+        async def bounded_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > limit:
+                    # Starlette handles this before the endpoint can act or echo validation input.
+                    raise HTTPException(413, detail)
+            return message
+
+        await self.app(scope, bounded_receive, send)
 
 
 class OriginBoundary:
