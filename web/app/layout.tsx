@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { applicationOrigin } from "../lib/server-config";
+import { AnalyticsProvider } from "@/components/analytics-consent";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -38,7 +39,7 @@ export default function RootLayout({
         <a className="skip-link" href="#main">
           Skip to content
         </a>
-        {children}
+        <AnalyticsProvider measurementId={process.env.RUSHES_GA_MEASUREMENT_ID}>{children}</AnalyticsProvider>
       </body>
     </html>
   );

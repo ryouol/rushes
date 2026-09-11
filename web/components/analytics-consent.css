@@ -1,0 +1,50 @@
+.analytics-banner {
+  position: fixed;
+  z-index: 45;
+  inset: auto 24px 24px;
+  margin: auto;
+  max-width: 1060px;
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 8px 40px #0002;
+}
+.analytics-banner h2 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.analytics-banner p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.analytics-banner a {
+  text-decoration: underline;
+}
+.analytics-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.analytics-actions button {
+  min-height: 44px;
+  flex: 1;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .analytics-banner {
+    inset: auto 12px 12px;
+    padding: 18px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .analytics-actions {
+    flex-wrap: wrap;
+  }
+}
