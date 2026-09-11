@@ -157,21 +157,22 @@ test("Google cancellation and existing-account recovery use explicit messages", 
 }) => {
   await authFixture(page);
   await page.goto("/login?error=google_cancelled");
-  await expect(page.getByRole("alert")).toContainText(
+  const authError = page.getByRole("main").getByRole("alert");
+  await expect(authError).toContainText(
     "Google sign-in was canceled",
   );
   await expect(
     page.getByRole("button", { name: "Continue with Google" }),
   ).toBeEnabled();
   await page.goto("/login?error=google_link_required");
-  await expect(page.getByRole("alert")).toContainText(
+  await expect(authError).toContainText(
     "Sign in with your password, then connect Google in Settings",
   );
   await page.goto("/login?error=%3Cscript%3Euntrusted-error%3C%2Fscript%3E");
   await expect(
     page.getByRole("button", { name: "Continue with Google" }),
   ).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(authError).toHaveCount(0);
 });
 
 test("signed-in public and auth logos lead to the dashboard", async ({
@@ -205,6 +206,92 @@ test("password sign-in after a Google email match opens connection settings", as
       .getByRole("button", { name: "Connect Google", exact: true }),
   ).toBeVisible();
   expect(new URL(page.url()).searchParams.get("view")).toBe("settings");
+});
+
+test("a password account without workspaces can connect Google before its first project", async ({
+  page,
+}) => {
+  await authFixture(page, true);
+  const workspaceWrites: string[] = [];
+  await page.route("**/api/workspaces", (route) => {
+    if (route.request().method() !== "GET")
+      workspaceWrites.push(route.request().method());
+    return route.fulfill({ json: [] });
+  });
+  await page.route("**/api/auth/login", (route) =>
+    route.fulfill({ json: { ok: true } }),
+  );
+  let connected = false;
+  await page.route("**/api/auth/google/account", (route) =>
+    route.fulfill({
+      json: {
+        available: true,
+        connected,
+        email: connected ? "connected@example.com" : null,
+      },
+    }),
+  );
+  let linkRequests = 0;
+  await page.route("**/api/auth/google/link", (route) => {
+    expect(route.request().method()).toBe("POST");
+    linkRequests += 1;
+    return route.fulfill({
+      json: {
+        authorization_url:
+          "https://accounts.google.com/o/oauth2/v2/auth?state=synthetic",
+      },
+    });
+  });
+  await page.goto("/login?error=google_link_required");
+  const origin = new URL(page.url()).origin;
+  await page.route("https://accounts.google.com/**", (route) => {
+    connected = true;
+    return route.fulfill({
+      status: 302,
+      headers: { location: `${origin}/app?view=settings&google=linked` },
+    });
+  });
+  await page.getByLabel("Email", { exact: true }).fill("account@example.com");
+  await page.getByLabel("Password", { exact: true }).fill("synthetic password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Account settings", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Choose workspace" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "New workspace", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Connect Google", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/app\?view=settings&google=linked$/);
+  await expect(
+    page.getByRole("region", { name: "Your sign-in" }).getByRole("status"),
+  ).toContainText("Google is connected");
+  expect(linkRequests).toBe(1);
+  await expect(
+    page.getByRole("link", { name: "Start your first project", exact: true }),
+  ).toHaveAttribute("href", "/onboarding");
+  await page
+    .getByRole("link", { name: "RUSHES first project", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByLabel("Project name", { exact: true })).toBeVisible();
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "Account settings", exact: true }),
+  ).toBeVisible();
+  await page.goto("/app");
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await page
+    .getByRole("link", { name: "Account settings", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Account settings", exact: true }),
+  ).toBeVisible();
+  expect(workspaceWrites).toEqual([]);
 });
 
 test("a failed account connection can retry and an expired session has a sign-in destination", async ({

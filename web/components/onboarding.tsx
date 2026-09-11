@@ -257,13 +257,25 @@ export function Onboarding() {
         <Brand href={user ? "/app" : "/"} />
         <div>
           {user && (
-            <button
-              className="workspace-quiet"
-              disabled={signingOut || busy}
-              onClick={() => void signOut()}
-            >
-              {signingOut ? "Signing out…" : "Sign out"}
-            </button>
+            <>
+              <Link
+                className="workspace-quiet"
+                href="/app?view=settings"
+                aria-disabled={signingOut || busy}
+                onClick={(event) => {
+                  if (signingOut || busy) event.preventDefault();
+                }}
+              >
+                Account settings
+              </Link>
+              <button
+                className="workspace-quiet"
+                disabled={signingOut || busy}
+                onClick={() => void signOut()}
+              >
+                {signingOut ? "Signing out…" : "Sign out"}
+              </button>
+            </>
           )}
           <AppearanceMenu />
         </div>

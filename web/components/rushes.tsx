@@ -36,6 +36,7 @@ import { AppearanceMenu } from "@/components/appearance";
 import { Dialog } from "@/components/dialog";
 import { ProjectView } from "@/components/project";
 import { SettingsView } from "@/components/settings";
+import { GoogleAccount } from "@/components/google-account";
 import { DeleteDialog, type DeleteTarget } from "@/components/delete-dialog";
 import "./workspace.css";
 
@@ -79,6 +80,7 @@ export function Rushes() {
       : 0;
   const [user, setUser] = useState<User | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const accountOnly = workspaces.length === 0;
   const [loading, setLoading] = useState(true);
   const [accountRetry, setAccountRetry] = useState(0);
   const [error, setError] = useState("");
@@ -152,7 +154,6 @@ export function Rushes() {
         if (request.signal.aborted) return;
         setUser(account);
         setWorkspaces(spaces);
-        if (!spaces.length) router.replace("/onboarding");
       } catch (failure) {
         if (!request.signal.aborted) handleFailure(failure);
       } finally {
@@ -163,6 +164,11 @@ export function Rushes() {
   }, [accountRetry, handleFailure, router]);
 
   useEffect(() => {
+    if (!loading && user && accountOnly && !settingsOpen)
+      router.replace("/onboarding");
+  }, [loading, user, accountOnly, settingsOpen, router]);
+
+  useEffect(() => {
     if (workspace && !workspaceId) {
       const destination = workspaceHref(workspace.id, {
         project: projectId || undefined,
@@ -170,12 +176,21 @@ export function Rushes() {
         page: projectPage,
       });
       const result =
-        settingsOpen && ["linked", "cancelled", "link_failed"].includes(googleResult || "")
+        settingsOpen &&
+        ["linked", "cancelled", "link_failed"].includes(googleResult || "")
           ? `&google=${googleResult}`
           : "";
       router.replace(destination + result, { scroll: false });
     }
-  }, [workspace, workspaceId, projectId, settingsOpen, projectPage, googleResult, router]);
+  }, [
+    workspace,
+    workspaceId,
+    projectId,
+    settingsOpen,
+    projectPage,
+    googleResult,
+    router,
+  ]);
 
   useEffect(() => {
     if (!user || !workspace) return;
@@ -366,7 +381,8 @@ export function Rushes() {
     }
   }
 
-  if (loading || (!user && !error)) return <WorkspaceLoading />;
+  if (loading || (!user && !error) || (user && accountOnly && !settingsOpen))
+    return <WorkspaceLoading />;
   if (!user)
     return (
       <main id="main" className="workspace-opening">
@@ -382,60 +398,76 @@ export function Rushes() {
       </main>
     );
 
+  const homeHref = workspace
+    ? workspaceHref(workspace.id)
+    : accountOnly
+      ? "/onboarding"
+      : "/app";
   const navigation = (
     <>
-      <label className="field workspace-select">
-        <span>Workspace</span>
-        <select
-          value={workspace?.id || ""}
-          onChange={(event) => {
-            router.push(workspaceHref(event.target.value));
-            setMobileOpen(false);
-          }}
-          aria-label="Choose workspace"
-        >
-          {!workspace && <option value="">Choose workspace</option>}
-          {workspaces.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <nav className="workspace-nav" aria-label="Workspace navigation">
+      {!accountOnly && (
+        <label className="field workspace-select">
+          <span>Workspace</span>
+          <select
+            value={workspace?.id || ""}
+            onChange={(event) => {
+              router.push(workspaceHref(event.target.value));
+              setMobileOpen(false);
+            }}
+            aria-label="Choose workspace"
+          >
+            {!workspace && <option value="">Choose workspace</option>}
+            {workspaces.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <nav
+        className="workspace-nav"
+        aria-label={accountOnly ? "Account navigation" : "Workspace navigation"}
+      >
         <Link
-          href={workspace ? workspaceHref(workspace.id) : "/app"}
+          href={homeHref}
           className={!projectId && !settingsOpen ? "active" : ""}
           aria-current={!projectId && !settingsOpen ? "page" : undefined}
           onClick={() => setMobileOpen(false)}
         >
-          <Layers3 size={19} />
-          Projects
+          {accountOnly ? <Plus size={19} /> : <Layers3 size={19} />}
+          {accountOnly ? "First project" : "Projects"}
         </Link>
-        {workspace && (
+        {(workspace || accountOnly) && (
           <Link
-            href={workspaceHref(workspace.id, { settings: true })}
+            href={
+              workspace
+                ? workspaceHref(workspace.id, { settings: true })
+                : "/app?view=settings"
+            }
             className={settingsOpen ? "active" : ""}
             aria-current={settingsOpen ? "page" : undefined}
             onClick={() => setMobileOpen(false)}
           >
             <Settings2 size={19} />
-            Settings & usage
+            {accountOnly ? "Account settings" : "Settings & usage"}
           </Link>
         )}
       </nav>
       <div className="workspace-nav-bottom">
-        <button
-          className="workspace-quiet"
-          onClick={() => {
-            setMobileOpen(false);
-            setFormError("");
-            setDialog("workspace");
-          }}
-        >
-          <Plus size={18} />
-          New workspace
-        </button>
+        {!accountOnly && (
+          <button
+            className="workspace-quiet"
+            onClick={() => {
+              setMobileOpen(false);
+              setFormError("");
+              setDialog("workspace");
+            }}
+          >
+            <Plus size={18} />
+            New workspace
+          </button>
+        )}
         <div className="workspace-account">
           <span>{user.name}</span>
           <small>{user.email}</small>
@@ -476,11 +508,11 @@ export function Rushes() {
       )}
       <header className="workspace-header">
         <Brand
-          href={workspace ? workspaceHref(workspace.id) : "/app"}
-          label="RUSHES dashboard"
+          href={homeHref}
+          label={accountOnly ? "RUSHES first project" : "RUSHES dashboard"}
         />
         <div className="workspace-header-context">
-          {workspace?.name || "Your workspace"}
+          {workspace?.name || (accountOnly ? "Your account" : "Your workspace")}
         </div>
         <AppearanceMenu />
         <DialogPrimitive.Root open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -495,9 +527,13 @@ export function Rushes() {
           <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="dialog-overlay" />
             <DialogPrimitive.Content className="workspace-mobile-sheet">
-              <DialogPrimitive.Title>Workspace</DialogPrimitive.Title>
+              <DialogPrimitive.Title>
+                {accountOnly ? "Your account" : "Workspace"}
+              </DialogPrimitive.Title>
               <DialogPrimitive.Description className="sr-only">
-                Choose your workspace or a destination.
+                {accountOnly
+                  ? "Manage your sign-in or start your first project."
+                  : "Choose your workspace or a destination."}
               </DialogPrimitive.Description>
               <DialogPrimitive.Close
                 className="icon-button dialog-close"
@@ -530,7 +566,21 @@ export function Rushes() {
               {notice}
             </p>
           )}
-          {!workspace ? (
+          {settingsOpen && accountOnly ? (
+            <section className="settings-view workspace-settings">
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">YOUR ACCOUNT</span>
+                  <h1>Account settings</h1>
+                  <p>Manage how you sign in to RUSHES.</p>
+                </div>
+                <Link className="secondary" href="/onboarding">
+                  Start your first project <ArrowRight size={18} />
+                </Link>
+              </div>
+              <GoogleAccount />
+            </section>
+          ) : !workspace ? (
             <section className="workspace-empty">
               <h1>Choose a workspace</h1>
               <p>

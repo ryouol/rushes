@@ -318,6 +318,7 @@
 }
 .onboarding-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
@@ -328,8 +329,13 @@
 }
 .onboarding-header > div {
   display: flex;
+  margin-left: auto;
   align-items: center;
   gap: 24px;
+}
+.onboarding-header a[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .onboarding-main {
   flex: 1;
