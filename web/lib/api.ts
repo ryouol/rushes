@@ -11,6 +11,30 @@ export type Project = {
   description: string;
   created_at: string;
 };
+export type OrganizationCategory = {
+  id: string;
+  name: string;
+  asset_count: number;
+};
+export type ProjectOrganization = {
+  categories: OrganizationCategory[];
+  category_total: number;
+  has_more: boolean;
+  total_assets: number;
+  categorized_assets: number;
+  uncategorized_assets: number;
+  processing_assets: number;
+  partial_assets: number;
+  not_analyzed_assets: number;
+  analysis_configured: boolean;
+};
+export type AssetOrganization = {
+  state: "processing" | "partial" | "organized" | "not_analyzed";
+  categories: { id: string; name: string; evidence_count: number }[];
+  category_total: number;
+  has_more: boolean;
+  run_id: string | null;
+};
 export type Asset = {
   id: string;
   project_id: string;
@@ -26,6 +50,7 @@ export type Asset = {
   has_thumbnail: boolean;
   source_size: number;
   fingerprint: string | null;
+  organization: AssetOrganization;
   timelines?: {
     id: string;
     kind: string;

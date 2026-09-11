@@ -1,0 +1,120 @@
+.workspace-settings .settings-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.workspace-settings .settings-capacity {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0 12px;
+}
+.workspace-settings .settings-capacity strong {
+  font-size: clamp(2.1rem, 5vw, 3.3rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 1.15;
+}
+.workspace-settings .settings-capacity > span,
+.workspace-settings .settings-explanation {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.workspace-settings .settings-explanation {
+  max-width: 76ch;
+  line-height: 1.7;
+}
+.workspace-settings .settings-explanation.small {
+  font-size: 0.8rem;
+}
+.workspace-settings .settings-storage-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  padding: 24px 0;
+  margin: 24px 0 0;
+  border-top: 1px solid var(--border);
+}
+.workspace-settings .settings-storage-stats dt {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.workspace-settings .settings-storage-stats dd {
+  margin: 0;
+  font-size: 1.35rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.workspace-settings .settings-storage-full,
+.workspace-settings .settings-guidance {
+  margin-top: 16px;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--warning);
+}
+.workspace-settings .settings-readiness {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.workspace-settings .settings-readiness::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.workspace-settings .settings-readiness.is-ready {
+  color: var(--success);
+}
+.workspace-settings .settings-support > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.workspace-settings .settings-delete-workspace {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.workspace-settings .settings-delete-workspace p {
+  margin-top: 10px;
+  max-width: 60ch;
+}
+.workspace-settings .settings-delete-workspace button {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .workspace-settings .settings-storage-stats {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .workspace-settings .settings-storage-stats > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .workspace-settings .settings-capacity {
+    gap: 6px 12px;
+  }
+  .workspace-settings .settings-delete-workspace {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.workspace-settings .settings-add-member {
+  margin-top: 16px;
+}
+.workspace-settings .settings-add-member > summary {
+  color: var(--accent);
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}

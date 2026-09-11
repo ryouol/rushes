@@ -1,7 +1,14 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
+
+async function openWorklog(page: Page) {
+  const toggle = page.getByRole("button", { name: /^Worklog\b/ });
+  if ((await toggle.getAttribute("aria-expanded")) === "false")
+    await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
 
 test("real account → import → persistent worklog → select → rendered export", async ({
   page,
@@ -9,32 +16,19 @@ test("real account → import → persistent worklog → select → rendered exp
 }) => {
   const email = `browser-${randomUUID()}@example.com`;
   const password = `Synthetic-${randomUUID()}`;
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "New to RUSHES? Create an account" })
-    .click();
+  await page.goto("/signup");
   await page.getByLabel("Name", { exact: true }).fill("Synthetic QA");
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Create workspace", exact: true })
-    .click();
-  await page
-    .getByLabel("Workspace name")
-    .fill("Synthetic browser verification");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Create workspace", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Create your first project" }).click();
+  await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByLabel("Project name").fill("Synthetic timing shoot");
   await page
-    .getByRole("dialog")
     .getByRole("button", { name: "Create project", exact: true })
     .click();
+  await expect(page).toHaveURL(/\/app\?.*project=/);
   await page
     .getByRole("button", { name: "Import footage", exact: true })
     .first()
@@ -49,9 +43,8 @@ test("real account → import → persistent worklog → select → rendered exp
     page.getByText("Queued for processing", { exact: true }),
   ).toBeVisible({ timeout: 30000 });
   await page.getByRole("button", { name: "Return to footage" }).click();
-  await expect(
-    page.locator(".asset-card").first().locator(".state"),
-  ).toHaveText(
+  await expect(page.locator(".asset-card").first()).toHaveAttribute(
+    "data-processing-state",
     process.env.RUSHES_TEST_LIVE_GEMINI === "1" ? "ready" : "partial",
     { timeout: 150000 },
   );
@@ -66,12 +59,14 @@ test("real account → import → persistent worklog → select → rendered exp
   await page
     .getByRole("button", { name: "Create collection", exact: true })
     .click();
-  await page.getByRole("tab", { name: "Footage", exact: true }).click();
+  await page.getByRole("tab", { name: "Library", exact: true }).click();
   await page.locator(".asset-open").first().click();
+  await openWorklog(page);
   await expect(page.locator(".worklog-item")).not.toHaveCount(0, {
     timeout: 30000,
   });
   await expect(page.locator("video")).toBeVisible();
+  await expect(page.getByLabel("Selection in seconds")).toBeHidden();
   await page.keyboard.press("l");
   await expect
     .poll(() =>
@@ -87,6 +82,7 @@ test("real account → import → persistent worklog → select → rendered exp
     )
     .toBeTruthy();
   await page.keyboard.press("i");
+  await expect(page.getByLabel("Selection in seconds")).toBeVisible();
   expect(
     Number(await page.getByLabel("Selection in seconds").inputValue()),
   ).toBeGreaterThan(0.3);
@@ -108,7 +104,7 @@ test("real account → import → persistent worklog → select → rendered exp
   await page.getByLabel("Save to collection").selectOption({
     label: "Selected moments",
   });
-  await page.getByRole("button", { name: "Add select", exact: true }).click();
+  await page.getByRole("button", { name: "Save select", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Saved", exact: true }),
   ).toBeVisible();
@@ -116,9 +112,7 @@ test("real account → import → persistent worklog → select → rendered exp
     path: "../.local/qa/player-desktop.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Export this range", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Export range", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Review export", exact: true }),
   ).toBeVisible();
@@ -137,14 +131,18 @@ test("real account → import → persistent worklog → select → rendered exp
   });
   const second = await context.newPage();
   await page.close();
-  await second.goto("/");
-  await second.getByRole("button", { name: /Synthetic timing shoot/ }).click();
+  await second.goto("/app");
+  await second
+    .locator(".workspace-project-row")
+    .filter({ hasText: "Synthetic timing shoot" })
+    .click();
   await second.locator(".asset-open").first().click();
+  await openWorklog(second);
   await expect(
     second.getByText("Human-verified synthetic red and blue timing fixture."),
   ).toBeVisible();
   await second
-    .getByRole("button", { name: "Close player", exact: true })
+    .getByRole("button", { name: "Close media review", exact: true })
     .click();
   await second
     .getByRole("textbox", { name: "Search footage", exact: true })
@@ -160,10 +158,14 @@ test("real account → import → persistent worklog → select → rendered exp
     second.getByText("Search saved. Open it again from Collections."),
   ).toBeVisible();
   await second.locator(".search-result").first().click();
+  await openWorklog(second);
   await second.locator(".observation-history summary").first().click();
   await expect(
     second.getByText("Version 1 → 2", { exact: true }),
   ).toBeVisible();
+  await second
+    .getByText("Save a selection or export a range", { exact: true })
+    .click();
   await second.getByLabel("Selection in seconds").fill("2");
   await second.getByLabel("Selection out seconds").fill("4");
   await second.getByText("Add a worklog note", { exact: true }).click();
@@ -174,7 +176,7 @@ test("real account → import → persistent worklog → select → rendered exp
   await expect(
     second.getByText("Manual synthetic red frame evidence.", { exact: true }),
   ).toBeVisible();
-  await second.getByText("Source & analysis", { exact: true }).click();
+  await second.getByText("Footage details & analysis", { exact: true }).click();
   await second
     .getByRole("button", { name: "Check source availability", exact: true })
     .click();
@@ -183,7 +185,8 @@ test("real account → import → persistent worklog → select → rendered exp
     .getByRole("button", { name: "Review analysis estimate", exact: true })
     .click();
   const startAnalysis = second.getByRole("button", {
-    name: "Start new analysis", exact: true,
+    name: "Start new analysis",
+    exact: true,
   });
   if (process.env.RUSHES_TEST_LIVE_GEMINI === "1") {
     await expect(startAnalysis).toBeEnabled();
@@ -191,9 +194,9 @@ test("real account → import → persistent worklog → select → rendered exp
     await expect(startAnalysis).toBeDisabled();
   }
   await second
-    .getByRole("button", { name: "Close player", exact: true })
+    .getByRole("button", { name: "Close media review", exact: true })
     .click();
-  await second.getByRole("tab", { name: "Footage", exact: true }).focus();
+  await second.getByRole("tab", { name: "Library", exact: true }).focus();
   await second.keyboard.press("ArrowRight");
   await expect(
     second.getByRole("tab", { name: "Collections", exact: true }),
@@ -249,7 +252,7 @@ test("real account → import → persistent worklog → select → rendered exp
       expect(JSON.parse(data).selections[0].start_us).toBe(3000000);
   }
   await second
-    .getByRole("button", { name: "Settings & usage", exact: true })
+    .getByRole("link", { name: "Settings & usage", exact: true })
     .click();
   await expect(
     second.getByRole("heading", { name: "Settings & usage", exact: true }),
@@ -279,8 +282,14 @@ test("real account → import → persistent worklog → select → rendered exp
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBeTruthy();
-  await second.getByRole("button", { name: "Sign out", exact: true }).click();
+  await second
+    .getByRole("button", { name: "Open navigation", exact: true })
+    .click();
+  await second
+    .getByRole("dialog")
+    .getByRole("button", { name: "Sign out", exact: true })
+    .click();
   await expect(
-    second.getByRole("heading", { name: "Welcome back", exact: true }),
+    second.getByRole("heading", { name: "Welcome back.", exact: true }),
   ).toBeVisible();
 });

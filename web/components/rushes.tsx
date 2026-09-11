@@ -7,12 +7,18 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   ArrowRight,
-  Film,
+  ChevronLeft,
+  ChevronRight,
   FolderOpen,
   Layers3,
+  Loader2,
   LogOut,
+  Menu,
   Plus,
   Settings2,
   X,
@@ -24,379 +30,707 @@ import {
   type User,
   type Workspace,
 } from "@/lib/api";
+import { track } from "@/lib/analytics";
+import { Brand } from "@/components/brand";
+import { AppearanceMenu } from "@/components/appearance";
 import { Dialog } from "@/components/dialog";
 import { ProjectView } from "@/components/project";
 import { SettingsView } from "@/components/settings";
+import { DeleteDialog, type DeleteTarget } from "@/components/delete-dialog";
+import "./workspace.css";
+
+const PAGE_SIZE = 40;
+type ProjectPage = { items: Project[]; total: number };
+
+export function workspaceHref(
+  workspace: string,
+  options: { project?: string; settings?: boolean; page?: number } = {},
+) {
+  const params = new URLSearchParams({ workspace });
+  if (options.project) params.set("project", options.project);
+  if (options.settings) params.set("view", "settings");
+  if (options.page) params.set("page", String(options.page));
+  return `/app?${params}`;
+}
+
+export function WorkspaceLoading() {
+  return (
+    <main id="main" className="workspace-opening">
+      <Brand />
+      <div role="status">
+        <Loader2 size={20} className="workspace-spinner" /> Opening your
+        workspace…
+      </div>
+    </main>
+  );
+}
 
 export function Rushes() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const workspaceId = searchParams.get("workspace") || "";
+  const projectId = searchParams.get("project") || "";
+  const settingsOpen = searchParams.get("view") === "settings";
+  const rawPage = Number(searchParams.get("page") || 0);
+  const projectPage =
+    Number.isSafeInteger(rawPage) && rawPage >= 0
+      ? Math.min(rawPage, 1000000)
+      : 0;
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectPage, setProjectPage] = useState(0);
-  const [projectTotal, setProjectTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [accountRetry, setAccountRetry] = useState(0);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [pageData, setPageData] = useState<
+    (ProjectPage & { key: string }) | null
+  >(null);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectsFailed, setProjectsFailed] = useState(false);
+  const [project, setProject] = useState<
+    (Project & { workspaceId: string }) | null
+  >(null);
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [revision, setRevision] = useState(0);
   const [dialog, setDialog] = useState<"project" | "workspace" | null>(null);
-  const [project, setProject] = useState<Project | null>(null);
+  const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const submitLock = useRef(false);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const workspace =
+    workspaces.find((item) => item.id === workspaceId) ||
+    (!workspaceId ? workspaces[0] : undefined);
+  const pageKey = `${user?.id}:${workspace?.id}:${projectPage}:${revision}`;
+  const projects = pageData?.key === pageKey ? pageData.items : [];
+  const projectTotal = pageData?.key === pageKey ? pageData.total : 0;
+  const activeProject =
+    project && project.workspaceId === workspace?.id && project.id === projectId
+      ? project
+      : null;
+  const hasRetainedProject = activeProject !== null;
+  const locationKey = `${workspaceId}:${projectId}:${settingsOpen}:${projectPage}`;
 
-  const refreshAccount = useCallback(async () => {
-    setLoading(true);
-    try {
-      const account = await api<User>("/auth/me");
-      setUser(account);
-      const spaces = await api<Workspace[]>("/workspaces");
-      setWorkspaces(spaces);
-      setWorkspace(
-        (current) =>
-          spaces.find((s) => s.id === current?.id) || spaces[0] || null,
-      );
-      setError("");
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) setUser(null);
-      else setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshAccount();
-  }, [refreshAccount]);
-  const projectRequest = useRef<AbortController | null>(null);
-  const refreshProjects = useCallback(async () => {
-    projectRequest.current?.abort();
-    const request = new AbortController();
-    projectRequest.current = request;
-    if (!workspace) return;
-    try {
-      const projects = await api<{ items: Project[]; total: number }>(
-        `/workspaces/${workspace.id}/projects?offset=${projectPage * 40}`,
-        { signal: request.signal },
-      );
-      if (!request.signal.aborted) {
-        setProjects(projects.items);
-        setProjectTotal(projects.total);
+  const handleFailure = useCallback(
+    (failure: unknown) => {
+      if (
+        failure instanceof ApiError &&
+        (failure.status === 401 || failure.status === 403)
+      ) {
+        setProject(null);
+        setPageData(null);
+        setProjectsFailed(true);
       }
-    } catch (e) {
-      if (!request.signal.aborted) setError((e as Error).message);
+      if (failure instanceof ApiError && failure.status === 401) {
+        const next = `${window.location.pathname}${window.location.search}`;
+        router.replace(`/login?next=${encodeURIComponent(next)}`);
+        setUser(null);
+        return;
+      }
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Something went wrong. Please try again.",
+      );
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    const request = new AbortController();
+    setLoading(true);
+    setError("");
+    void (async () => {
+      try {
+        const account = await api<User>("/auth/me", { signal: request.signal });
+        const spaces = await api<Workspace[]>("/workspaces", {
+          signal: request.signal,
+        });
+        if (request.signal.aborted) return;
+        setUser(account);
+        setWorkspaces(spaces);
+        if (!spaces.length) router.replace("/onboarding");
+      } catch (failure) {
+        if (!request.signal.aborted) handleFailure(failure);
+      } finally {
+        if (!request.signal.aborted) setLoading(false);
+      }
+    })();
+    return () => request.abort();
+  }, [accountRetry, handleFailure, router]);
+
+  useEffect(() => {
+    if (workspace && !workspaceId)
+      router.replace(
+        workspaceHref(workspace.id, {
+          project: projectId || undefined,
+          settings: settingsOpen,
+          page: projectPage,
+        }),
+        { scroll: false },
+      );
+  }, [workspace, workspaceId, projectId, settingsOpen, projectPage, router]);
+
+  useEffect(() => {
+    if (!user || !workspace) return;
+    const request = new AbortController();
+    setProjectsLoading(true);
+    setProjectsFailed(false);
+    void api<ProjectPage>(
+      `/workspaces/${workspace.id}/projects?offset=${projectPage * PAGE_SIZE}&limit=${PAGE_SIZE}`,
+      { signal: request.signal },
+    )
+      .then((data) => {
+        if (request.signal.aborted) return;
+        if (projectPage > 0 && projectPage * PAGE_SIZE >= data.total) {
+          // Keep a destination selected while this library request was pending.
+          const params = new URLSearchParams(window.location.search);
+          const lastPage = Math.max(0, Math.ceil(data.total / PAGE_SIZE) - 1);
+          if (lastPage) params.set("page", String(lastPage));
+          else params.delete("page");
+          router.replace(`/app?${params}`, { scroll: false });
+          return;
+        }
+        setPageData({ ...data, key: pageKey });
+      })
+      .catch((failure) => {
+        if (!request.signal.aborted) {
+          setProjectsFailed(true);
+          handleFailure(failure);
+        }
+      })
+      .finally(() => {
+        if (!request.signal.aborted) setProjectsLoading(false);
+      });
+    return () => request.abort();
+    // A project or settings change uses the same library page; it must not reload the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, workspace?.id, projectPage, revision, handleFailure, router]);
+
+  useEffect(() => {
+    if (!user || !workspace || !projectId || settingsOpen) return;
+    // Every library refresh gets a new key. Wait for its result before scanning.
+    if (pageData?.key !== pageKey || projectsFailed) {
+      setProjectLoading(!projectsFailed);
+      return;
     }
-  }, [workspace, projectPage]);
+    const request = new AbortController();
+    setProjectLoading(true);
+    const workspaceAtStart = workspace.id;
+    void (async () => {
+      try {
+        const cached = pageData.items.find((item) => item.id === projectId);
+        if (cached) {
+          setProject((current) =>
+            current?.workspaceId === workspaceAtStart &&
+            current.id === cached.id &&
+            current.name === cached.name &&
+            current.description === cached.description &&
+            current.created_at === cached.created_at
+              ? current
+              : { ...cached, workspaceId: workspaceAtStart },
+          );
+          return;
+        }
+        const completeLibrary = pageData.items.length >= pageData.total;
+        if (!completeLibrary && hasRetainedProject) return;
+        // Deep links can outlive their page position when newer projects are added.
+        let offset = 0;
+        while (!completeLibrary && !request.signal.aborted) {
+          const data = await api<ProjectPage>(
+            `/workspaces/${workspaceAtStart}/projects?offset=${offset}&limit=100`,
+            { signal: request.signal },
+          );
+          if (request.signal.aborted) return;
+          const found = data.items.find((item) => item.id === projectId);
+          if (found) {
+            setProject({ ...found, workspaceId: workspaceAtStart });
+            return;
+          }
+          offset += data.items.length;
+          if (!data.items.length || offset >= data.total) break;
+        }
+        setProject(null);
+        setError(
+          "This project is no longer available in this workspace. Return to Projects to choose another.",
+        );
+      } catch (failure) {
+        if (!request.signal.aborted) handleFailure(failure);
+      } finally {
+        if (!request.signal.aborted) setProjectLoading(false);
+      }
+    })();
+    return () => request.abort();
+  }, [
+    user?.id,
+    workspace?.id,
+    projectId,
+    settingsOpen,
+    pageData,
+    pageKey,
+    projectsFailed,
+    hasRetainedProject,
+    handleFailure,
+  ]);
+
   useEffect(() => {
-    void refreshProjects();
-    setProjects([]);
-    return () => projectRequest.current?.abort();
-  }, [refreshProjects]);
+    setMobileOpen(false);
+    setDeleteTarget(null);
+    setError("");
+    mainRef.current?.focus({ preventScroll: true });
+  }, [locationKey, user]);
+
   useEffect(() => {
-    setProject(null);
-    setProjectPage(0);
-    setProjectTotal(0);
-  }, [workspace?.id]);
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 6000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  async function signOut() {
+    if (signingOut || submitLock.current) return;
+    setSigningOut(true);
+    setError("");
+    try {
+      await api("/auth/logout", { method: "POST" });
+      router.replace("/login?signedOut=1");
+      setUser(null);
+    } catch (failure) {
+      handleFailure(failure);
+      setSigningOut(false);
+    }
+  }
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setBusy(true);
-    setError("");
+    if (
+      submitLock.current ||
+      !dialog ||
+      (dialog === "project" && (!workspace || workspace.role === "viewer"))
+    )
+      return;
     const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    if (!name) {
+      setFormError("Enter a name to continue.");
+      return;
+    }
+    submitLock.current = true;
+    setBusy(true);
+    setFormError("");
     try {
-      if (dialog === "workspace" || !workspace) {
+      if (dialog === "workspace") {
         const created = await api<Workspace>("/workspaces", {
           method: "POST",
-          body: JSON.stringify({ name: form.get("name") }),
+          body: JSON.stringify({ name }),
         });
+        track("workspace_created");
         setWorkspaces((current) => [...current, created]);
-        setWorkspace(created);
-      } else {
+        router.push(workspaceHref(created.id));
+        setNotice("Workspace created. Add a project when you’re ready.");
+      } else if (workspace) {
         const created = await api<Project>(
           `/workspaces/${workspace.id}/projects`,
           {
             method: "POST",
             body: JSON.stringify({
-              name: form.get("name"),
-              description: form.get("description") || "",
+              name,
+              description: String(form.get("description") || "").trim(),
             }),
           },
         );
-        setProjectPage(0);
-        setProjects((current) => [created, ...current].slice(0, 40));
-        setProjectTotal((current) => current + 1);
-        setProject(created);
+        track("project_created");
+        setProject({ ...created, workspaceId: workspace.id });
+        setRevision((value) => value + 1);
+        router.push(workspaceHref(workspace.id, { project: created.id }));
+        setNotice("Project created. Add footage to get started.");
       }
       setDialog(null);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 401)
+        handleFailure(failure);
+      else
+        setFormError(
+          failure instanceof Error
+            ? failure.message
+            : "Unable to create. Please try again.",
+        );
     } finally {
+      submitLock.current = false;
       setBusy(false);
     }
   }
 
-  if (loading)
+  if (loading || (!user && !error)) return <WorkspaceLoading />;
+  if (!user)
     return (
-      <main id="main" className="auth-shell">
-        <div className="loading" role="status">
-          Opening your workspace…
-        </div>
+      <main id="main" className="workspace-opening">
+        <Brand />
+        <div role="alert">{error}</div>
+        <button
+          className="secondary"
+          onClick={() => setAccountRetry((value) => value + 1)}
+        >
+          Try again
+        </button>
+        <Link href="/login">Sign in</Link>
       </main>
     );
-  if (!user) return <Auth onSuccess={refreshAccount} serviceError={error} />;
+
+  const navigation = (
+    <>
+      <label className="field workspace-select">
+        <span>Workspace</span>
+        <select
+          value={workspace?.id || ""}
+          onChange={(event) => {
+            router.push(workspaceHref(event.target.value));
+            setMobileOpen(false);
+          }}
+          aria-label="Choose workspace"
+        >
+          {!workspace && <option value="">Choose workspace</option>}
+          {workspaces.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <nav className="workspace-nav" aria-label="Workspace navigation">
+        <Link
+          href={workspace ? workspaceHref(workspace.id) : "/app"}
+          className={!projectId && !settingsOpen ? "active" : ""}
+          aria-current={!projectId && !settingsOpen ? "page" : undefined}
+          onClick={() => setMobileOpen(false)}
+        >
+          <Layers3 size={19} />
+          Projects
+        </Link>
+        {workspace && (
+          <Link
+            href={workspaceHref(workspace.id, { settings: true })}
+            className={settingsOpen ? "active" : ""}
+            aria-current={settingsOpen ? "page" : undefined}
+            onClick={() => setMobileOpen(false)}
+          >
+            <Settings2 size={19} />
+            Settings & usage
+          </Link>
+        )}
+      </nav>
+      <div className="workspace-nav-bottom">
+        <button
+          className="workspace-quiet"
+          onClick={() => {
+            setMobileOpen(false);
+            setFormError("");
+            setDialog("workspace");
+          }}
+        >
+          <Plus size={18} />
+          New workspace
+        </button>
+        <div className="workspace-account">
+          <span>{user.name}</span>
+          <small>{user.email}</small>
+        </div>
+        <button
+          className="workspace-quiet"
+          disabled={signingOut || busy}
+          onClick={() => void signOut()}
+        >
+          <LogOut size={18} />
+          {signingOut ? "Signing out…" : "Sign out"}
+        </button>
+      </div>
+    </>
+  );
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a href="/" className="brand" aria-label="RUSHES home">
-          <span className="brand-mark">
-            <Film size={20} />
-          </span>{" "}
-          RUSHES<span className="local-label">LIBRARY</span>
-        </a>
-        <label className="field workspace-picker">
-          <span>WORKSPACE</span>
-          <select
-            value={workspace?.id || ""}
-            onChange={(e) => {
-              setWorkspace(
-                workspaces.find((w) => w.id === e.target.value) || null,
-              );
-              setProjects([]);
-            }}
-          >
-            {!workspace && <option value="">Create a workspace</option>}
-            {workspaces.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <nav aria-label="Main navigation">
-          <button
-            className={
-              !project && !settingsOpen ? "nav-item active" : "nav-item"
-            }
-            onClick={() => {
-              setProject(null);
-              setSettingsOpen(false);
-            }}
-          >
-            <Layers3 size={19} /> Projects <span>{projectTotal}</span>
-          </button>
-          {workspace && (
-            <button
-              className={settingsOpen ? "nav-item active" : "nav-item"}
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings2 size={19} /> Settings & usage
-            </button>
-          )}
-        </nav>
-        <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => setDialog("workspace")}>
-            <Plus size={19} /> New workspace
-          </button>
-          <div className="local-note">
-            <span className="status-dot" /> Private workspace
-            <p>Gemini analysis sends derived video to Google.</p>
-          </div>
-          <div className="account">
-            <span className="avatar">{user.name.charAt(0).toUpperCase()}</span>
-            <div>
-              <strong>{user.name}</strong>
-              <span>{user.email}</span>
-            </div>
-            <button
-              className="icon-button"
-              title="Sign out"
-              aria-label="Sign out"
-              onClick={async () => {
-                try {
-                  await api("/auth/logout", { method: "POST" });
-                  setUser(null);
-                  setProjects([]);
-                } catch (e) {
-                  setError((e as Error).message);
-                }
-              }}
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
+    <div className="premium-workspace">
+      {deleteTarget && (
+        <DeleteDialog
+          key={deleteTarget.path}
+          target={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            const remaining = workspaces.filter(
+              (item) => `/workspaces/${item.id}` !== deleteTarget.path,
+            );
+            setDeleteTarget(null);
+            setWorkspaces(remaining);
+            setProject(null);
+            setPageData(null);
+            setNotice("Workspace deleted. Your account is still active.");
+            router.replace(
+              remaining.length ? workspaceHref(remaining[0].id) : "/onboarding",
+            );
+          }}
+        />
+      )}
+      <header className="workspace-header">
+        <Brand />
+        <div className="workspace-header-context">
+          {workspace?.name || "Your workspace"}
         </div>
-      </aside>
-      <main id="main" className="main">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <span>{workspace?.name || "Getting started"}</span>
-            <span>/</span>
-            <strong>
-              {settingsOpen ? "Settings & usage" : project?.name || "Projects"}
-            </strong>
-          </div>
-          <span className="credits">
-            {workspace
-              ? `${(workspace.balance_milli / 1000).toLocaleString()} credits`
-              : "Local setup"}
-          </span>
-        </header>
-        {error && (
-          <div className="error-banner" role="alert">
-            {error}
+        <AppearanceMenu />
+        <DialogPrimitive.Root open={mobileOpen} onOpenChange={setMobileOpen}>
+          <DialogPrimitive.Trigger asChild>
             <button
-              className="icon-button"
-              aria-label="Dismiss error"
-              onClick={() => setError("")}
+              className="workspace-menu icon-button"
+              aria-label="Open navigation"
             >
-              <X size={18} />
+              <Menu size={22} />
             </button>
-          </div>
-        )}
-        <div className="page-content">
-          {!workspace ? (
-            <section className="welcome">
-              <span className="eyebrow">YOUR EDIT STARTS HERE</span>
-              <h1>A home for your footage.</h1>
-              <p>
-                Create a workspace to keep your projects, worklogs, and selects
-                together.
-              </p>
-              <button
-                className="primary"
-                onClick={() => setDialog("workspace")}
+          </DialogPrimitive.Trigger>
+          <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay className="dialog-overlay" />
+            <DialogPrimitive.Content className="workspace-mobile-sheet">
+              <DialogPrimitive.Title>Workspace</DialogPrimitive.Title>
+              <DialogPrimitive.Description className="sr-only">
+                Choose your workspace or a destination.
+              </DialogPrimitive.Description>
+              <DialogPrimitive.Close
+                className="icon-button dialog-close"
+                aria-label="Close navigation"
               >
-                Create workspace <ArrowRight size={18} />
+                <X size={22} />
+              </DialogPrimitive.Close>
+              {navigation}
+            </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
+      </header>
+      <aside className="workspace-sidebar">{navigation}</aside>
+      <main id="main" className="workspace-main">
+        <div className="workspace-content" ref={mainRef} tabIndex={-1}>
+          {error && (
+            <div className="error-banner" role="alert">
+              {error}
+              <button
+                className="icon-button"
+                aria-label="Dismiss error"
+                onClick={() => setError("")}
+              >
+                <X size={18} />
               </button>
-              <div className="setup-note">
-                <Settings2 size={20} />
-                <div>
-                  <strong>Made for your footage library</strong>
-                  <p>
-                    Import selected files or connect an explicitly configured
-                    source folder. Your originals stay intact.
-                  </p>
-                </div>
-              </div>
+            </div>
+          )}
+          {notice && (
+            <p className="workspace-notice" role="status">
+              {notice}
+            </p>
+          )}
+          {!workspace ? (
+            <section className="workspace-empty">
+              <h1>Choose a workspace</h1>
+              <p>
+                The workspace in this link is unavailable. Choose one from the
+                workspace menu.
+              </p>
             </section>
           ) : settingsOpen ? (
-            <SettingsView key={workspace.id} workspace={workspace} />
-          ) : project ? (
-            <ProjectView
-              key={project.id}
-              project={project}
+            <SettingsView
+              key={workspace.id}
               workspace={workspace}
-              onBack={() => setProject(null)}
+              onManageFootage={() => router.push(workspaceHref(workspace.id))}
+              onDeleteWorkspace={() =>
+                setDeleteTarget({
+                  kind: "workspace",
+                  name: workspace.name,
+                  path: `/workspaces/${workspace.id}`,
+                })
+              }
             />
+          ) : projectId ? (
+            activeProject ? (
+              <ProjectView
+                key={activeProject.id}
+                project={activeProject}
+                workspace={workspace}
+                onDeleted={() => {
+                  setProject(null);
+                  setRevision((value) => value + 1);
+                  setNotice(
+                    "Project deleted. Its uploaded footage and exports have been removed.",
+                  );
+                  router.replace(workspaceHref(workspace.id));
+                }}
+                onBack={() =>
+                  router.push(
+                    workspaceHref(workspace.id, { page: projectPage }),
+                  )
+                }
+              />
+            ) : (
+              <section className="workspace-empty">
+                {projectLoading ? (
+                  <p role="status">Opening project…</p>
+                ) : (
+                  <>
+                    <h1>Project unavailable</h1>
+                    <Link
+                      className="secondary"
+                      href={workspaceHref(workspace.id)}
+                    >
+                      Back to Projects
+                    </Link>
+                  </>
+                )}
+              </section>
+            )
           ) : (
             <>
-              <div className="page-heading">
+              <div className="workspace-page-heading">
                 <div>
-                  <span className="eyebrow">YOUR LIBRARY</span>
-                  <h1>
-                    Projects
-                    <span className="heading-count">{projectTotal}</span>
-                  </h1>
-                  <p>From camera roll to the moments that matter.</p>
+                  <span className="workspace-eyebrow">Your library</span>
+                  <h1>Projects</h1>
+                  <p>Your footage, grouped into projects.</p>
                 </div>
                 {workspace.role !== "viewer" && (
                   <button
                     className="primary"
-                    onClick={() => setDialog("project")}
+                    onClick={() => {
+                      setFormError("");
+                      setDialog("project");
+                    }}
                   >
-                    <Plus size={18} /> New project
+                    <Plus size={18} />
+                    New project
                   </button>
                 )}
               </div>
-              {projectTotal > 40 && (
-                <div className="button-row" aria-label="Project pages">
+              {projectsLoading && !projects.length ? (
+                <div className="workspace-list-loading" role="status">
+                  <Loader2 size={20} className="workspace-spinner" />
+                  Loading projects…
+                </div>
+              ) : projectsFailed && !projects.length ? (
+                <section className="workspace-empty">
+                  <h2>We couldn’t load your projects.</h2>
+                  <p>Your library is still here. Try loading it again.</p>
                   <button
                     className="secondary"
-                    disabled={projectPage === 0}
-                    onClick={() => setProjectPage((page) => page - 1)}
+                    onClick={() => {
+                      setError("");
+                      setRevision((value) => value + 1);
+                    }}
                   >
+                    Try again
+                  </button>
+                </section>
+              ) : projects.length ? (
+                <section
+                  className="workspace-project-list"
+                  aria-label="Projects"
+                  aria-busy={projectsLoading}
+                >
+                  <div className="workspace-list-label">
+                    <span>
+                      {projectTotal}{" "}
+                      {projectTotal === 1 ? "project" : "projects"}
+                    </span>
+                    <span>Created</span>
+                  </div>
+                  {projects.map((item) => (
+                    <Link
+                      className="workspace-project-row"
+                      href={workspaceHref(workspace.id, {
+                        project: item.id,
+                        page: projectPage,
+                      })}
+                      key={item.id}
+                    >
+                      <span className="workspace-project-icon">
+                        <FolderOpen size={25} strokeWidth={1.5} />
+                      </span>
+                      <div className="workspace-project-copy">
+                        <h2>{item.name}</h2>
+                        <p>{item.description || "Your organized footage"}</p>
+                      </div>
+                      <time dateTime={item.created_at}>
+                        {new Date(item.created_at).toLocaleDateString(
+                          undefined,
+                          { month: "short", day: "numeric", year: "numeric" },
+                        )}
+                      </time>
+                      <ArrowRight size={19} />
+                    </Link>
+                  ))}
+                </section>
+              ) : (
+                <section className="workspace-empty">
+                  <FolderOpen size={32} strokeWidth={1.3} />
+                  <h2>A home for your next project.</h2>
+                  <p>
+                    {workspace.role === "viewer"
+                      ? "Projects will appear here when a workspace editor adds them."
+                      : "Create a project, then add the footage you want to explore."}
+                  </p>
+                </section>
+              )}
+              {projectTotal > PAGE_SIZE && (
+                <nav
+                  className="workspace-pagination"
+                  aria-label="Project pages"
+                >
+                  <button
+                    className="secondary"
+                    disabled={projectPage === 0 || projectsLoading}
+                    onClick={() =>
+                      router.push(
+                        workspaceHref(workspace.id, { page: projectPage - 1 }),
+                      )
+                    }
+                  >
+                    <ChevronLeft size={18} />
                     Previous
                   </button>
                   <span>
-                    Page {projectPage + 1} of {Math.ceil(projectTotal / 40)}
+                    Page {projectPage + 1} of{" "}
+                    {Math.ceil(projectTotal / PAGE_SIZE)}
                   </span>
                   <button
                     className="secondary"
-                    disabled={(projectPage + 1) * 40 >= projectTotal}
-                    onClick={() => setProjectPage((page) => page + 1)}
+                    disabled={
+                      (projectPage + 1) * PAGE_SIZE >= projectTotal ||
+                      projectsLoading
+                    }
+                    onClick={() =>
+                      router.push(
+                        workspaceHref(workspace.id, { page: projectPage + 1 }),
+                      )
+                    }
                   >
                     Next
+                    <ChevronRight size={18} />
                   </button>
-                </div>
-              )}
-              {projects.length ? (
-                <div className="project-grid">
-                  {projects.map((p) => (
-                    <button
-                      className="project-card"
-                      key={p.id}
-                      onClick={() => setProject(p)}
-                    >
-                      <div className="project-cover">
-                        <FolderOpen size={40} strokeWidth={1.1} />
-                        <span>PROJECT</span>
-                      </div>
-                      <div className="project-info">
-                        <h2>{p.name}</h2>
-                        <p>{p.description || "Open footage library"}</p>
-                        <div className="card-meta">
-                          <span>
-                            {new Date(p.created_at).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              },
-                            )}
-                          </span>
-                          <ArrowRight size={17} />
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <Layers3 size={42} strokeWidth={1.2} />
-                  <h2>Make room for your next story</h2>
-                  <p>
-                    A project brings a shoot’s footage, searchable worklog, and
-                    selected moments into one place.
-                  </p>
-                  {workspace.role !== "viewer" && (
-                    <button
-                      className="primary"
-                      onClick={() => setDialog("project")}
-                    >
-                      <Plus size={18} /> Create your first project
-                    </button>
-                  )}
-                </div>
+                </nav>
               )}
             </>
           )}
         </div>
-        <footer>
-          RUSHES <span>© {new Date().getFullYear()} · Footage, organized</span>
-          <a href="/privacy">Privacy</a>
-          <a href="/terms">Terms</a>
+        <footer className="workspace-footer">
+          <span>© {new Date().getFullYear()} RUSHES</span>
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
         </footer>
       </main>
       <Dialog
         open={dialog !== null}
-        onOpenChange={(open) => !open && setDialog(null)}
-        title={dialog === "project" ? "New project" : "Create a workspace"}
+        onOpenChange={(open) => {
+          if (!open && !submitLock.current) setDialog(null);
+        }}
+        title={dialog === "project" ? "New project" : "New workspace"}
         description={
           dialog === "project"
-            ? "Keep a shoot’s footage and selects together."
-            : "Only workspace members can access its projects."
+            ? "Give this footage a home."
+            : "Create a separate space for your projects."
         }
       >
-        <form onSubmit={create} className="stack">
+        <form className="stack" onSubmit={create}>
           <label className="field">
             <span>
               {dialog === "project" ? "Project name" : "Workspace name"}
@@ -406,11 +740,9 @@ export function Rushes() {
               required
               maxLength={120}
               autoFocus
-              placeholder={
-                dialog === "project"
-                  ? "e.g. September interviews"
-                  : "e.g. My editing studio"
-              }
+              disabled={busy}
+              aria-invalid={Boolean(formError)}
+              aria-describedby={formError ? "create-error" : undefined}
             />
           </label>
           {dialog === "project" && (
@@ -418,12 +750,17 @@ export function Rushes() {
               <span>
                 Description <span className="muted">(optional)</span>
               </span>
-              <textarea name="description" rows={3} maxLength={2000} />
+              <textarea
+                name="description"
+                rows={2}
+                maxLength={2000}
+                disabled={busy}
+              />
             </label>
           )}
-          {error && (
-            <p className="error-text" role="alert">
-              {error}
+          {formError && (
+            <p id="create-error" className="error-text" role="alert">
+              {formError}
             </p>
           )}
           <button className="primary" disabled={busy}>
@@ -437,138 +774,5 @@ export function Rushes() {
         </form>
       </Dialog>
     </div>
-  );
-}
-
-function Auth({
-  onSuccess,
-  serviceError,
-}: {
-  onSuccess: () => Promise<void>;
-  serviceError: string;
-}) {
-  const [signup, setSignup] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    const data = new FormData(event.currentTarget);
-    const email = String(data.get("email")),
-      password = String(data.get("password"));
-    try {
-      if (signup)
-        await api("/auth/register", {
-          method: "POST",
-          body: JSON.stringify({ name: data.get("name"), email, password }),
-        });
-      await api("/auth/login", {
-        method: "POST",
-        body: new URLSearchParams({ username: email, password }),
-      });
-      await onSuccess();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <main id="main" className="auth-shell">
-      <div className="auth-intro">
-        <a href="/" className="brand">
-          <span className="brand-mark">
-            <Film size={22} />
-          </span>{" "}
-          RUSHES
-        </a>
-        <div>
-          <span className="eyebrow">FOOTAGE, IN FOCUS</span>
-          <h1>
-            Find the moment.
-            <br />
-            Build the story.
-          </h1>
-          <p>
-            Your footage library, with a timestamped worklog and room for every
-            select.
-          </p>
-        </div>
-        <span className="auth-footnote">
-          Local storage · Private workspaces · Originals preserved
-        </span>
-      </div>
-      <div className="auth-panel">
-        <div className="auth-form">
-          <span className="eyebrow">YOUR EDITING WORKSPACE</span>
-          <h2>{signup ? "Create your account" : "Welcome back"}</h2>
-          <p className="muted">
-            {signup
-              ? "Create an account to organize your footage."
-              : "Sign in to your RUSHES library."}
-          </p>
-          <form className="stack" onSubmit={submit}>
-            {signup && (
-              <label className="field">
-                <span>Name</span>
-                <input
-                  name="name"
-                  autoComplete="name"
-                  required
-                  maxLength={120}
-                />
-              </label>
-            )}
-            <label className="field">
-              <span>Email</span>
-              <input
-                name="email"
-                type="email"
-                autoComplete="username"
-                required
-              />
-            </label>
-            <label className="field">
-              <span>Password</span>
-              <input
-                name="password"
-                aria-label="Password"
-                type="password"
-                autoComplete={signup ? "new-password" : "current-password"}
-                minLength={signup ? 12 : undefined}
-                maxLength={256}
-                required
-              />
-              {signup && <small>Use at least 12 characters.</small>}
-            </label>
-            {(error || serviceError) && (
-              <div className="error-text" role="alert">
-                {error || serviceError}
-              </div>
-            )}
-            <button className="primary" disabled={busy}>
-              {busy ? "Please wait…" : signup ? "Create account" : "Sign in"}
-              <ArrowRight size={18} />
-            </button>
-          </form>
-          <button
-            className="auth-switch"
-            onClick={() => {
-              setSignup(!signup);
-              setError("");
-            }}
-          >
-            {signup
-              ? "Already have an account? Sign in"
-              : "New to RUSHES? Create an account"}
-          </button>
-          <p className="privacy-note">
-            Video analysis with Gemini sends derived clips to Google. Local
-            storage does not mean fully offline processing.
-          </p>
-        </div>
-      </div>
-    </main>
   );
 }

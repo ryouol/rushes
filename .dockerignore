@@ -23,6 +23,8 @@
 !web/components/**
 !web/lib/
 !web/lib/**
+!web/public/
+!web/public/**
 **/__pycache__
 **/*.pyc
 **/.env

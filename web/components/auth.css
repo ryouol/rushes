@@ -1,0 +1,336 @@
+.account-page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  color: var(--text);
+}
+
+.account-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  max-width: 1600px;
+  min-height: 100px;
+  margin-inline: auto;
+  padding: 24px clamp(24px, 5vw, 80px);
+}
+
+.account-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  padding: 64px 24px 72px;
+}
+
+.account-content {
+  width: min(100%, 540px);
+  animation: account-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.account-intro {
+  margin-bottom: 40px;
+}
+
+.account-intro h1 {
+  margin: 0 0 14px;
+  font-size: clamp(2.5rem, 4.6vw, 4.25rem);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: -0.065em;
+  text-wrap: balance;
+}
+
+.account-intro p {
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1.5;
+  letter-spacing: -0.025em;
+}
+
+.account-page--signup .account-content {
+  width: min(100%, 560px);
+}
+
+.account-page--signup .account-main {
+  padding-top: 36px;
+  padding-bottom: 40px;
+}
+
+.account-page--signup .account-intro {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.account-page--signup .account-intro h1 {
+  font-size: clamp(2.5rem, 4.2vw, 4rem);
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.account-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.account-field label {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.account-field input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.4;
+  transition:
+    border-color 120ms,
+    background-color 120ms;
+}
+
+.account-field input:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.account-field input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.account-field input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.account-field input:read-only {
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.account-field input:disabled {
+  opacity: 0.7;
+}
+
+.account-password {
+  position: relative;
+}
+
+.account-password input {
+  padding-right: 58px;
+}
+
+.account-password-toggle {
+  position: absolute;
+  inset-inline-end: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  transition:
+    color 120ms,
+    background-color 120ms;
+}
+
+.account-password-toggle:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--panel);
+}
+
+.account-help,
+.account-field-error,
+.account-error,
+.account-status {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.account-help,
+.account-status {
+  color: var(--muted);
+}
+
+.account-field-error,
+.account-error {
+  color: var(--danger);
+}
+
+.account-error {
+  padding: 12px 14px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+
+.account-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 8px;
+  padding: 14px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.4;
+  transition:
+    background-color 120ms,
+    transform 120ms;
+}
+
+.account-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.account-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.account-submit:disabled {
+  opacity: 0.78;
+}
+
+.account-status:empty {
+  display: none;
+}
+
+.account-switch {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.account-switch a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.account-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 24px 24px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.account-footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 64px;
+  padding: 8px;
+}
+
+.account-footer a:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.account-spinner {
+  animation: account-spin 1s linear infinite;
+}
+
+@keyframes account-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes account-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .account-header {
+    min-height: 80px;
+    padding: 18px 24px;
+  }
+
+  .account-main {
+    align-items: flex-start;
+    padding: 64px 24px 40px;
+  }
+
+  .account-page--signup .account-main {
+    padding-top: 30px;
+    padding-bottom: 24px;
+  }
+
+  .account-intro,
+  .account-page--signup .account-intro {
+    margin-bottom: 32px;
+    text-align: left;
+  }
+
+  .account-intro p {
+    font-size: 1.0625rem;
+  }
+
+  .account-form {
+    gap: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-content,
+  .account-spinner {
+    animation: none;
+  }
+
+  .account-field input,
+  .account-password-toggle,
+  .account-submit {
+    transition: none;
+  }
+
+  .account-submit:active:not(:disabled) {
+    transform: none;
+  }
+}

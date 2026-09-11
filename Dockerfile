@@ -6,6 +6,7 @@ RUN npm ci
 COPY web/app ./app
 COPY web/components ./components
 COPY web/lib ./lib
+COPY web/public ./public
 COPY web/next.config.mjs web/next-env.d.ts web/postcss.config.mjs web/tsconfig.json web/server.mjs ./
 RUN npm run build && npm prune --omit=dev && rm -rf .next/cache
 
@@ -34,6 +35,7 @@ COPY --from=python-build /app/.venv /app/.venv
 COPY --from=temporal-build /opt/temporal /opt/temporal
 COPY --from=web-build --chown=rushes:rushes /build/web/.next ./web/.next
 COPY --from=web-build /build/web/node_modules ./web/node_modules
+COPY --from=web-build /build/web/public ./web/public
 COPY --from=web-build /build/web/server.mjs /build/web/next.config.mjs /build/web/package.json ./web/
 COPY scripts/serve.py ./scripts/serve.py
 COPY scripts/bootstrap_workflow_db.py ./scripts/bootstrap_workflow_db.py

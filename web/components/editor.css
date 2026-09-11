@@ -1,0 +1,533 @@
+/* RUSHES review surfaces: footage first, precise controls, optional context. */
+.project-view,
+.settings-view {
+  min-width: 0;
+}
+.project-view .search-bar[hidden],
+.project-view .filter-row[hidden],
+.player-dialog .worklog[hidden] {
+  display: none;
+}
+.project-view .page-heading h1,
+.settings-view .page-heading h1 {
+  font-weight: 400;
+  letter-spacing: -0.045em;
+}
+.project-view .page-heading {
+  margin-bottom: 28px;
+}
+.project-view .search-bar {
+  max-width: 780px;
+  margin: 0 0 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+.project-view .tab-list {
+  gap: 30px;
+}
+.project-view .tab {
+  font-size: 0.94rem;
+}
+.project-view .asset-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 30px 24px;
+}
+.project-view .asset-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.project-view .asset-image {
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.project-view .asset-open {
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.project-view .asset-open:hover .asset-info h2 {
+  color: var(--accent);
+}
+.project-view .asset-info {
+  padding: 14px 0 6px;
+}
+.project-view .asset-info h2 {
+  font-size: 1rem;
+  font-weight: 450;
+  transition: color 120ms ease;
+}
+.project-view .asset-info > div {
+  margin-top: 8px;
+}
+.project-view .asset-notice {
+  padding: 12px 0;
+  margin-top: 8px;
+}
+.project-view .retry {
+  margin: 0;
+  min-height: 44px;
+}
+.project-view .collection-card {
+  border-radius: var(--radius);
+  background: var(--surface);
+  gap: 16px;
+}
+.project-view .collection-card h2 {
+  font-size: 1.15rem;
+  font-weight: 450;
+  overflow-wrap: anywhere;
+}
+.project-view .collection-detail {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.project-view .select-row {
+  gap: 12px;
+}
+.project-view .select-row > button:first-child,
+.project-view .select-row > button > div,
+.project-view .suggestion > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.project-view .export-row {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 22px 0;
+}
+.project-view .download-links a {
+  background: var(--accent);
+  color: var(--on-accent);
+  padding: 11px 16px;
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.export-location summary,
+.advanced-import summary,
+.selection-tools > summary,
+.review-help summary,
+.usage-details summary {
+  min-height: 44px;
+  padding: 12px 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.selection-tools > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.import-drop.is-dragging {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+.import-drop {
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+.upload-list strong {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.upload-list > p {
+  line-height: 1.5;
+}
+.advanced-import .field {
+  margin-top: 12px;
+}
+.player-dialog {
+  inset: 20px;
+  margin: 0 auto;
+  max-width: 1600px;
+  color: var(--text);
+  background: var(--background);
+  border-color: var(--border);
+  border-radius: 12px;
+}
+.player-dialog .player-header {
+  padding: 22px 30px 20px;
+  gap: 22px;
+  border: 0;
+}
+.player-dialog .player-header h2 {
+  font-size: 1.65rem;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+.player-dialog .player-header p {
+  font-size: 0.875rem;
+  margin-top: 8px;
+}
+.player-dialog .worklog-toggle {
+  background: transparent;
+  border-color: transparent;
+  flex-shrink: 0;
+}
+.player-dialog .worklog-toggle[aria-expanded="true"] {
+  background: var(--surface);
+  border-color: var(--border);
+}
+.player-dialog .worklog-toggle[aria-expanded="true"] > svg:last-child {
+  transform: rotate(180deg);
+}
+.player-dialog .player-layout {
+  display: block;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 30px 26px;
+}
+.player-dialog .player-layout.with-worklog {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  align-items: start;
+  gap: 26px;
+}
+.player-dialog .player-stage {
+  overflow: visible;
+  padding: 0;
+}
+.player-dialog .video-well {
+  aspect-ratio: 16 / 9;
+  max-height: 62dvh;
+  border-radius: 6px;
+}
+.player-dialog .video-well video {
+  max-height: 62dvh;
+  object-fit: contain;
+}
+.player-dialog .video-pending {
+  color: #f4f4f6;
+}
+.player-dialog .video-pending p {
+  color: #afb6c1;
+}
+.review-timeline {
+  position: relative;
+  margin-top: 14px;
+}
+.review-filmstrip {
+  display: flex;
+  position: relative;
+  height: 52px;
+  background: var(--panel);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.review-filmstrip img {
+  width: 10%;
+  height: 100%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.review-range {
+  position: absolute;
+  inset-block: 0;
+  border: 3px solid var(--accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.review-playhead {
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  background: #fff;
+  box-shadow: 0 0 2px #000;
+  z-index: 1;
+}
+.player-dialog .review-seek {
+  display: block;
+  position: absolute;
+  inset: 4px 0 auto;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+.player-dialog .review-seek:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.review-ruler {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 8px 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.player-dialog .selection-panel {
+  padding: 4px 0 16px;
+}
+.selection-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 20px;
+}
+.selection-controls .inout {
+  flex: 1 1 330px;
+  gap: 18px;
+}
+.selection-controls .select-actions {
+  flex: 1 1 330px;
+  margin: 0;
+}
+.selection-duration {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+}
+.player-dialog .selection-controls input,
+.player-dialog .selection-controls select {
+  min-height: 48px;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.player-dialog .inout .text-button {
+  min-height: 44px;
+}
+.player-dialog .inout .field > span {
+  min-height: 44px;
+}
+.selection-controls .save-select {
+  min-width: 146px;
+  min-height: 48px;
+}
+.player-dialog .selection-secondary {
+  margin-top: 12px;
+  gap: 20px;
+}
+.player-dialog .text-button {
+  min-height: 44px;
+}
+.review-help,
+.player-dialog .asset-tools {
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+}
+.review-help .keyboard-hints {
+  padding: 12px 0;
+  border: 0;
+}
+.review-help p {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+.player-dialog kbd {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+.player-dialog .worklog {
+  position: sticky;
+  top: 0;
+  max-height: calc(100dvh - 160px);
+  overflow-y: auto;
+  border: 0;
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+.player-dialog .worklog-items {
+  overflow: visible;
+  max-height: none;
+}
+.player-dialog .worklog-item.current {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: var(--accent);
+}
+.player-dialog .worklog-item > p {
+  font-size: 0.92rem;
+}
+.player-dialog .worklog-meta > .timecode {
+  min-height: 44px;
+}
+.player-dialog .worklog-heading h2 {
+  font-size: 1rem;
+  font-weight: 500;
+}
+.review-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 30px 16px;
+  font-size: 0.875rem;
+  color: var(--accent);
+}
+.settings-view .settings-card {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 26px 0;
+  margin: 0;
+}
+.settings-view h2 {
+  font-size: 1.2rem;
+  font-weight: 450;
+  letter-spacing: -0.02em;
+}
+.appearance-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.appearance-settings p {
+  margin-top: 10px;
+  line-height: 1.6;
+}
+.settings-view .credit-balance {
+  font-weight: 400;
+}
+.settings-advanced {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+.settings-advanced > summary {
+  min-height: 52px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+.settings-advanced > summary span + span {
+  margin-left: 18px;
+}
+.settings-view .settings-grid {
+  gap: 40px;
+}
+.settings-advanced .settings-card {
+  border: 0;
+}
+.usage-details {
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .player-dialog .player-layout.with-worklog {
+    display: block;
+  }
+  .player-dialog .worklog {
+    position: static;
+    max-height: none;
+    margin-top: 18px;
+  }
+}
+@media (max-width: 640px) {
+  .project-view .asset-grid {
+    grid-template-columns: 1fr;
+  }
+  .project-view .tab-list {
+    gap: 18px;
+  }
+  .project-view .tab {
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+  .project-view .view-meta {
+    display: none;
+  }
+  .project-view .processing-strip {
+    flex-wrap: wrap;
+  }
+  .project-view .search-result {
+    gap: 12px;
+  }
+  .project-view .result-image {
+    width: 90px;
+  }
+  .project-view .search-result > div:last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .player-dialog {
+    inset: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  .player-dialog .player-header {
+    padding: 16px;
+    gap: 8px;
+  }
+  .player-dialog .player-header h2 {
+    font-size: 1.08rem;
+  }
+  .player-dialog .player-header p {
+    font-size: 0.75rem;
+  }
+  .player-dialog .worklog-toggle {
+    font-size: 0.8rem;
+    padding: 8px;
+    gap: 5px;
+  }
+  .worklog-toggle > svg:first-child,
+  .worklog-toggle .heading-count {
+    display: none;
+  }
+  .player-dialog .player-layout {
+    padding: 0 16px 24px;
+  }
+  .player-dialog .video-well,
+  .player-dialog .video-well video {
+    max-height: 42dvh;
+  }
+  .review-filmstrip {
+    height: 44px;
+  }
+  .review-ruler {
+    font-size: 0.6rem;
+  }
+  .selection-controls {
+    gap: 8px 12px;
+  }
+  .selection-controls .inout,
+  .selection-controls .select-actions {
+    flex-basis: 100%;
+  }
+  .selection-duration {
+    min-height: 28px;
+  }
+  .selection-controls .save-select {
+    min-width: 128px;
+  }
+  .player-dialog .selection-secondary {
+    gap: 4px 12px;
+  }
+  .review-feedback {
+    padding: 0 16px 12px;
+  }
+  .appearance-settings {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .settings-advanced > summary span + span {
+    display: block;
+    margin: 8px 0 0 18px;
+  }
+  .settings-view .section-heading {
+    flex-wrap: wrap;
+  }
+  .settings-view .members-list > div {
+    gap: 10px;
+  }
+  .settings-view .members-list > div > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .import-drop,
+  .project-view .asset-info h2 {
+    transition: none;
+  }
+}

@@ -11,26 +11,24 @@ import {
   ArrowDownToLine,
   ArrowLeft,
   Check,
-  FileVideo,
   Film,
   Folder,
   Loader2,
   Plus,
   Search,
-  Upload,
+  Trash2,
   X,
 } from "lucide-react";
 import {
   api,
-  apiErrorMessage,
   elapsed,
   type Asset,
   type Collection,
-  type CollectionItem,
   type ExportPreview,
   type ExportRecord,
   type Job,
   type Project,
+  type ProjectOrganization,
   type SearchResult,
   type SearchResponse,
   type Workspace,
@@ -39,7 +37,17 @@ import { flushSync } from "react-dom";
 import { useProjectSearchTool } from "@/lib/webmcp";
 import { track } from "@/lib/analytics";
 import { Dialog } from "@/components/dialog";
+import { DeleteDialog, type DeleteTarget } from "@/components/delete-dialog";
+import "./editor.css";
+import { ImportDialog } from "./import-dialog";
+import { CollectionView } from "./collection-view";
 import { Player } from "@/components/player";
+import {
+  OrganizationCategories,
+  OrganizationLibrary,
+  OrganizationStatus,
+} from "@/components/organization-library";
+import "./organization-library.css";
 
 const activeStates = new Set([
   "queued",
@@ -51,10 +59,12 @@ export function ProjectView({
   project,
   workspace,
   onBack,
+  onDeleted,
 }: {
   project: Project;
   workspace: Workspace;
   onBack: () => void;
+  onDeleted: () => void;
 }) {
   const base = `/workspaces/${workspace.id}`;
   const [tab, setTab] = useState<"footage" | "collections" | "exports">(
@@ -63,7 +73,11 @@ export function ProjectView({
   const [assets, setAssets] = useState<Asset[]>([]),
     [total, setTotal] = useState(0),
     [page, setPage] = useState(0);
-  const [uncategorized, setUncategorized] = useState(false);
+  const [category, setCategory] = useState("");
+  const [organization, setOrganization] = useState<ProjectOrganization | null>(
+    null,
+  );
+  const [organizationError, setOrganizationError] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]),
     [connected, setConnected] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]),
@@ -86,6 +100,30 @@ export function ProjectView({
   const [preview, setPreview] = useState<ExportPreview | null>(null),
     [startingExport, setStartingExport] = useState(false);
   const [openCollection, setOpenCollection] = useState<Collection | null>(null);
+  const [notice, setNotice] = useState("");
+  const [pending, setPending] = useState<string[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const pendingActions = useRef(new Set<string>());
+  async function action(
+    key: string,
+    run: () => Promise<void>,
+    success: string,
+  ) {
+    if (pendingActions.current.has(key)) return;
+    pendingActions.current.add(key);
+    setPending([...pendingActions.current]);
+    setError("");
+    setNotice("");
+    try {
+      await run();
+      setNotice(success);
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      pendingActions.current.delete(key);
+      setPending([...pendingActions.current]);
+    }
+  }
 
   const refreshRequest = useRef<AbortController | null>(null);
   const searchRequest = useRef<AbortController | null>(null);
@@ -93,6 +131,8 @@ export function ProjectView({
     setQuery(value);
     setResultQuery(value);
     setTab("footage");
+    setCategory("");
+    setPage(0);
     setResults(response.results);
     setSearchNotice(
       [
@@ -111,9 +151,9 @@ export function ProjectView({
     refreshRequest.current = request;
     const options = { signal: request.signal };
     try {
-      const [footage, groups, rendered] = await Promise.all([
+      const [footage, groups, rendered, organized] = await Promise.all([
         api<{ items: Asset[]; total: number }>(
-          `${base}/projects/${project.id}/assets?offset=${page * 40}&uncategorized=${uncategorized}`,
+          `${base}/projects/${project.id}/assets?offset=${page * 40}${category ? `&category=${encodeURIComponent(category)}` : ""}`,
           options,
         ),
         api<Collection[]>(
@@ -124,19 +164,41 @@ export function ProjectView({
           `${base}/projects/${project.id}/exports?offset=${exportPage * 100}`,
           options,
         ),
+        api<ProjectOrganization>(
+          `${base}/projects/${project.id}/organization`,
+          options,
+        ).then(
+          (data) => ({ data, error: "" }),
+          (failure: unknown) => ({
+            data: null,
+            error:
+              failure instanceof Error
+                ? failure.message
+                : "AI organization could not load. Try again.",
+          }),
+        ),
       ]);
       if (request.signal.aborted) return;
+      if (page > 0 && page * 40 >= footage.total) {
+        setPage(Math.max(0, Math.ceil(footage.total / 40) - 1));
+        return;
+      }
+      if (exportPage > 0 && exportPage * 100 >= rendered.total) {
+        setExportPage(Math.max(0, Math.ceil(rendered.total / 100) - 1));
+      }
       setAssets(footage.items);
       setTotal(footage.total);
       setCollections(groups);
       setExports(rendered.items);
       setExportTotal(rendered.total);
+      setOrganization(organized.data);
+      setOrganizationError(organized.error);
     } catch (e) {
       if (!request.signal.aborted) setError((e as Error).message);
     } finally {
       if (!request.signal.aborted) setLoading(false);
     }
-  }, [base, project.id, page, uncategorized, exportPage]);
+  }, [base, project.id, page, category, exportPage]);
   useEffect(() => {
     setLoading(true);
     void refresh();
@@ -201,7 +263,11 @@ export function ProjectView({
       if (!request.signal.aborted) setSearching(false);
     }
   }
-  async function exportPreview(body: object) {
+  async function exportPreview(body: object, rethrow = false) {
+    if (pendingActions.current.has("preview")) return;
+    pendingActions.current.add("preview");
+    setPending([...pendingActions.current]);
+    setError("");
     try {
       setPreview(
         await api<ExportPreview>(
@@ -210,25 +276,31 @@ export function ProjectView({
         ),
       );
     } catch (e) {
+      if (rethrow) throw e;
       setError((e as Error).message);
+    } finally {
+      pendingActions.current.delete("preview");
+      setPending([...pendingActions.current]);
     }
   }
   async function createCollection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    try {
-      await api(`${base}/projects/${project.id}/collections`, {
-        method: "POST",
-        body: JSON.stringify({
-          name: form.get("name"),
-          instructions: form.get("instructions") || "",
-        }),
-      });
-      setNewCollection(false);
-      await refresh();
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    await action(
+      "collection",
+      async () => {
+        await api(`${base}/projects/${project.id}/collections`, {
+          method: "POST",
+          body: JSON.stringify({
+            name: String(form.get("name") || "").trim(),
+            instructions: String(form.get("instructions") || "").trim(),
+          }),
+        });
+        setNewCollection(false);
+        await refresh();
+      },
+      "Collection created.",
+    );
   }
   const showToolResults = useCallback(
     (value: string, response: SearchResponse) => {
@@ -241,25 +313,72 @@ export function ProjectView({
   useProjectSearchTool(base, project.id, showToolResults);
   const canEdit = workspace.role !== "viewer";
   const active = jobs.filter((job) => activeStates.has(job.state));
+  const showFootageTools =
+    (organization?.total_assets ?? total) > 0 ||
+    category ||
+    results !== null ||
+    searching;
+  const selectedCategory = organization?.categories.find(
+    (item) => item.id === category,
+  );
 
   return (
-    <section className="project-view">
+    <section className="project-view organizer-project">
+      {deleteTarget && (
+        <DeleteDialog
+          key={deleteTarget.path}
+          target={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            const kind = deleteTarget.kind;
+            setDeleteTarget(null);
+            if (kind === "project") {
+              onDeleted();
+              return;
+            }
+            clearSearch();
+            setOpenCollection(null);
+            setNotice(
+              kind === "video"
+                ? "Video deleted. RUSHES-managed files have been removed."
+                : kind === "collection"
+                  ? "Collection deleted. Your videos stay in the library."
+                  : "Export deleted. Its downloadable files have been removed.",
+            );
+            void refresh();
+          }}
+        />
+      )}
       <button className="text-button back-button" onClick={onBack}>
         <ArrowLeft size={16} /> All projects
       </button>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">PROJECT LIBRARY</span>
           <h1>{project.name}</h1>
           <p>
-            {project.description ||
-              `${total} source ${total === 1 ? "file" : "files"} · Originals preserved`}
+            {project.description || "Your footage, organized by what’s inside."}
           </p>
         </div>
         {canEdit && (
-          <button className="primary" onClick={() => setImportOpen(true)}>
-            <Plus size={18} /> Import footage
-          </button>
+          <div className="management-actions">
+            <button className="primary" onClick={() => setImportOpen(true)}>
+              <Plus size={18} /> Import footage
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Delete project"
+              title="Delete project"
+              onClick={() =>
+                setDeleteTarget({
+                  kind: "project",
+                  name: project.name,
+                  path: `${base}/projects/${project.id}`,
+                })
+              }
+            >
+              <Trash2 size={19} />
+            </button>
+          </div>
         )}
       </div>
       {!connected && (
@@ -279,11 +398,93 @@ export function ProjectView({
           </button>
         </div>
       )}
+      {notice && (
+        <p className="notice" role="status">
+          <Check size={17} />
+          {notice}
+        </p>
+      )}
+      {pending.includes("preview") && (
+        <p className="notice" role="status">
+          <Loader2 className="spin" size={17} />
+          Preparing your export preview…
+        </p>
+      )}
+      <OrganizationStatus
+        organization={organization}
+        error={organizationError}
+        onRetry={() => void refresh()}
+      />
+      {active.length > 0 && (
+        <div className="processing-strip" role="status">
+          <Loader2 size={18} className="spin" />
+          <div>
+            <strong>{active[0].stage}</strong>
+            <span>
+              {active.length} {active.length === 1 ? "job" : "jobs"} in progress
+              · Safe to leave after uploads finish
+            </span>
+          </div>
+          <progress
+            max={100}
+            value={active[0].progress}
+            aria-label="Current processing progress"
+          />
+          {canEdit && (
+            <button
+              className="text-button"
+              disabled={
+                pending.includes("cancel") ||
+                active[0].state === "cancel_requested"
+              }
+              onClick={() =>
+                void action(
+                  "cancel",
+                  async () => {
+                    await api(`${base}/jobs/${active[0].id}/cancel`, {
+                      method: "POST",
+                    });
+                    await refresh();
+                  },
+                  "Cancellation requested. Completed work is retained.",
+                )
+              }
+            >
+              {pending.includes("cancel") ||
+              active[0].state === "cancel_requested"
+                ? "Canceling…"
+                : "Cancel"}
+            </button>
+          )}
+        </div>
+      )}
+      <form className="search-bar" onSubmit={search} hidden={!showFootageTools}>
+        <Search size={20} />
+        <input
+          aria-label="Search footage"
+          placeholder="Find anything in your footage"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {results && (
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Clear search"
+            onClick={clearSearch}
+          >
+            <X size={18} />
+          </button>
+        )}
+        <button className="secondary" disabled={searching}>
+          {searching ? "Searching…" : "Search"}
+        </button>
+      </form>
       <div className="project-toolbar">
         <div className="tab-list" role="tablist" aria-label="Project views">
           {(
             [
-              ["footage", "Footage", Film],
+              ["footage", "Library", Film],
               ["collections", "Collections", Folder],
               ["exports", "Exports", ArrowDownToLine],
             ] as const
@@ -322,101 +523,74 @@ export function ProjectView({
             </button>
           ))}
         </div>
-        <span className="view-meta">{total} files</span>
+        <span className="view-meta">
+          {organization?.total_assets ?? total}{" "}
+          {(organization?.total_assets ?? total) === 1 ? "file" : "files"}
+        </span>
       </div>
-      {active.length > 0 && (
-        <div className="processing-strip" role="status">
-          <Loader2 size={18} className="spin" />
-          <div>
-            <strong>{active[0].stage}</strong>
-            <span>
-              {active.length} {active.length === 1 ? "job" : "jobs"} in progress
-              · Safe to leave after uploads finish
-            </span>
-          </div>
-          <progress
-            max={100}
-            value={active[0].progress}
-            aria-label="Current processing progress"
-          />
-          {canEdit && (
-            <button
-              className="text-button"
-              onClick={async () => {
-                try {
-                  await api(`${base}/jobs/${active[0].id}/cancel`, {
-                    method: "POST",
-                  });
-                } catch (e) {
-                  setError((e as Error).message);
-                }
-              }}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      )}
       <div id="project-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
         {tab === "footage" && (
           <>
-            <form className="search-bar" onSubmit={search}>
-              <Search size={20} />
-              <input
-                aria-label="Search footage"
-                placeholder="Search a moment, a phrase, or a visual detail…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {results && (
+            <OrganizationCategories
+              organization={organization}
+              value={category}
+              onChange={(value) => {
+                setCategory(value);
+                setPage(0);
+                clearSearch();
+              }}
+            />
+            <div
+              className="organization-library-heading"
+              hidden={!showFootageTools}
+            >
+              <p>
+                {results
+                  ? "Search across all footage"
+                  : category === "uncategorized"
+                    ? "No AI category yet"
+                    : selectedCategory
+                      ? `Grouped by AI · ${selectedCategory.name}`
+                      : category
+                        ? "Selected category"
+                        : "All footage"}
+              </p>
+              {canEdit && selectedCategory && !results && (
                 <button
-                  type="button"
-                  className="icon-button"
-                  aria-label="Clear search"
-                  onClick={clearSearch}
+                  className="text-button"
+                  disabled={pending.includes("preview") || total === 0}
+                  onClick={() =>
+                    void exportPreview({ kind: "copies", category })
+                  }
                 >
-                  <X size={18} />
+                  <ArrowDownToLine size={16} /> Export category
                 </button>
               )}
-              <button className="secondary" disabled={searching}>
-                {searching ? "Searching…" : "Search"}
-              </button>
-            </form>
-            <div className="filter-row">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={uncategorized}
-                  onChange={(event) => {
-                    setUncategorized(event.target.checked);
-                    setPage(0);
-                    clearSearch();
-                  }}
-                />
-                Uncategorized sources
-              </label>
               {canEdit && results && resultQuery.trim() && (
                 <button
                   className="text-button"
-                  onClick={async () => {
-                    try {
-                      await api(`${base}/projects/${project.id}/collections`, {
-                        method: "POST",
-                        body: JSON.stringify({
-                          name: resultQuery.slice(0, 160),
-                          saved_query: resultQuery,
-                        }),
-                      });
-                      await refresh();
-                      setSearchNotice(
-                        "Search saved. Open it again from Collections.",
-                      );
-                    } catch (error) {
-                      setError((error as Error).message);
-                    }
-                  }}
+                  disabled={pending.includes("search")}
+                  onClick={() =>
+                    void action(
+                      "search",
+                      async () => {
+                        await api(
+                          `${base}/projects/${project.id}/collections`,
+                          {
+                            method: "POST",
+                            body: JSON.stringify({
+                              name: resultQuery.slice(0, 160),
+                              saved_query: resultQuery,
+                            }),
+                          },
+                        );
+                        await refresh();
+                      },
+                      "Search saved. Open it again from Collections.",
+                    )
+                  }
                 >
-                  Save this search
+                  {pending.includes("search") ? "Saving…" : "Save this search"}
                 </button>
               )}
             </div>
@@ -424,7 +598,8 @@ export function ProjectView({
               <div className="search-results">
                 {searchNotice && <p className="notice">{searchNotice}</p>}
                 <p className="section-label">
-                  {results.length} matching ranges
+                  {results.length} matching{" "}
+                  {results.length === 1 ? "range" : "ranges"}
                 </p>
                 {results.length ? (
                   results.map((result) => (
@@ -477,110 +652,38 @@ export function ProjectView({
                   </div>
                 )}
               </div>
-            ) : loading ? (
-              <div className="empty-state compact" role="status">
-                Loading footage…
-              </div>
-            ) : assets.length ? (
-              <>
-                <div className="asset-grid">
-                  {assets.map((asset) => (
-                    <div key={asset.id} className="asset-card">
-                      <button
-                        className="asset-open"
-                        onClick={() => setSelected({ id: asset.id })}
-                      >
-                        <div className="asset-image">
-                          {asset.has_thumbnail ? (
-                            <img
-                              src={`/api${base}/assets/${asset.id}/media/thumbnail`}
-                              alt={`Preview of ${asset.name}`}
-                              loading="lazy"
-                            />
-                          ) : (
-                            <FileVideo size={36} strokeWidth={1.2} />
-                          )}
-                          <span className="duration timecode">
-                            {asset.duration_us
-                              ? elapsed(asset.duration_us)
-                              : "—"}
-                          </span>
-                        </div>
-                        <div className="asset-info">
-                          <h2 title={asset.name}>{asset.name}</h2>
-                          <div>
-                            <span className={`state ${asset.status}`}>
-                              {asset.status.replaceAll("_", " ")}
-                            </span>
-                            <span className="small muted">
-                              {(asset.source_size / 1024 / 1024).toFixed(1)} MB
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                      {asset.error && (
-                        <p className="asset-notice">{asset.error}</p>
-                      )}
-                      {canEdit && asset.can_retry && (
-                        <button
-                          className="text-button retry"
-                          onClick={async () => {
-                            try {
-                              await api(`${base}/assets/${asset.id}/retry`, {
-                                method: "POST",
-                              });
-                              await refresh();
-                            } catch (e) {
-                              setError((e as Error).message);
-                            }
-                          }}
-                        >
-                          Retry processing
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="pagination">
-                  <button
-                    className="secondary"
-                    disabled={page === 0}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    Previous
-                  </button>
-                  <span>
-                    {page * 40 + 1}–{Math.min((page + 1) * 40, total)} of{" "}
-                    {total}
-                  </span>
-                  <button
-                    className="secondary"
-                    disabled={(page + 1) * 40 >= total}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                  </button>
-                </div>
-              </>
             ) : (
-              <div className="empty-state">
-                <Film size={42} strokeWidth={1.2} />
-                <h2>Your footage starts here</h2>
-                <p>
-                  Import video files or a selected folder. RUSHES creates
-                  previews and a timestamped worklog while keeping originals
-                  intact.
-                </p>
-                {canEdit && (
-                  <button
-                    className="primary"
-                    onClick={() => setImportOpen(true)}
-                  >
-                    <Upload size={18} />
-                    Import footage
-                  </button>
-                )}
-              </div>
+              <OrganizationLibrary
+                assets={assets}
+                base={base}
+                category={category}
+                loading={loading}
+                total={total}
+                page={page}
+                canEdit={canEdit}
+                pending={pending}
+                onOpen={(id) => setSelected({ id })}
+                onDelete={(asset) =>
+                  setDeleteTarget({
+                    kind: "video",
+                    name: asset.name,
+                    path: `${base}/assets/${asset.id}`,
+                  })
+                }
+                onPageChange={setPage}
+                onRetry={(id) =>
+                  void action(
+                    id,
+                    async () => {
+                      await api(`${base}/assets/${id}/retry`, {
+                        method: "POST",
+                      });
+                      await refresh();
+                    },
+                    "Processing recovery queued.",
+                  )
+                }
+              />
             )}
           </>
         )}
@@ -588,9 +691,9 @@ export function ProjectView({
           <>
             <div className="section-heading">
               <div>
-                <h2>Collections & selects</h2>
+                <h2>Your collections</h2>
                 <p className="muted small">
-                  Virtual groups of full files or selected ranges.
+                  Groups you create and curate, separate from AI categories.
                 </p>
               </div>
               {canEdit && (
@@ -605,45 +708,65 @@ export function ProjectView({
             </div>
             {openCollection ? (
               <CollectionView
+                key={openCollection.id}
                 collection={openCollection}
                 base={base}
                 canEdit={canEdit}
                 onBack={() => setOpenCollection(null)}
                 onOpen={setSelected}
                 onExport={(kind) =>
-                  exportPreview({ kind, collection_id: openCollection.id })
+                  exportPreview(
+                    { kind, collection_id: openCollection.id },
+                    true,
+                  )
                 }
               />
             ) : collections.length ? (
               <div className="collection-grid">
                 {collections.map((c) => (
-                  <button
-                    className="collection-card"
-                    key={c.id}
-                    onClick={() =>
-                      c.saved_query
-                        ? void search(undefined, c.saved_query)
-                        : setOpenCollection(c)
-                    }
-                  >
-                    <Folder size={28} />
-                    <h2>{c.name}</h2>
-                    <p>
-                      {c.saved_query
-                        ? `Saved search · ${c.saved_query}`
-                        : c.instructions ||
-                          "Review your saved footage and selected ranges."}
-                    </p>
-                  </button>
+                  <article className="collection-entry" key={c.id}>
+                    <button
+                      className="collection-card"
+                      onClick={() =>
+                        c.saved_query
+                          ? void search(undefined, c.saved_query)
+                          : setOpenCollection(c)
+                      }
+                    >
+                      <Folder size={28} />
+                      <h2>{c.name}</h2>
+                      <p>
+                        {c.saved_query
+                          ? `Saved search · ${c.saved_query}`
+                          : c.instructions ||
+                            "Review your saved footage and selected ranges."}
+                      </p>
+                    </button>
+                    {canEdit && (
+                      <button
+                        className="text-button delete-item"
+                        aria-label={`Delete collection ${c.name}`}
+                        onClick={() =>
+                          setDeleteTarget({
+                            kind: "collection",
+                            name: c.name,
+                            path: `${base}/collections/${c.id}`,
+                          })
+                        }
+                      >
+                        <Trash2 size={14} /> Delete collection
+                      </button>
+                    )}
+                  </article>
                 ))}
               </div>
             ) : (
               <div className="empty-state compact">
                 <Folder size={32} />
-                <h2>Keep your selects together</h2>
+                <h2>Create a collection for your project</h2>
                 <p>
-                  Create a collection, then add a full source or mark a range in
-                  the player.
+                  Group whole files or useful ranges around your own brief. AI
+                  categories remain available in the Library.
                 </p>
               </div>
             )}
@@ -684,13 +807,15 @@ export function ProjectView({
                 <div className="button-row">
                   <button
                     className="secondary"
-                    onClick={() => exportPreview({ kind: "json" })}
+                    disabled={pending.includes("preview")}
+                    onClick={() => void exportPreview({ kind: "json" })}
                   >
                     Worklog JSON
                   </button>
                   <button
                     className="secondary"
-                    onClick={() => exportPreview({ kind: "csv" })}
+                    disabled={pending.includes("preview")}
+                    onClick={() => void exportPreview({ kind: "csv" })}
                   >
                     Worklog CSV
                   </button>
@@ -712,23 +837,45 @@ export function ProjectView({
                         ["failed", "canceled"].includes(output.state) && (
                           <button
                             className="secondary"
-                            onClick={async () => {
-                              try {
-                                await api(
-                                  `${base}/exports/${output.id}/retry`,
-                                  { method: "POST" },
-                                );
-                                await refresh();
-                              } catch (error) {
-                                setError((error as Error).message);
-                              }
-                            }}
+                            disabled={pending.includes(output.id)}
+                            onClick={() =>
+                              void action(
+                                output.id,
+                                async () => {
+                                  await api(
+                                    `${base}/exports/${output.id}/retry`,
+                                    { method: "POST" },
+                                  );
+                                  await refresh();
+                                },
+                                "Export recovery queued.",
+                              )
+                            }
                           >
-                            Retry export
+                            {pending.includes(output.id)
+                              ? "Queuing…"
+                              : "Retry export"}
                           </button>
                         )}
                       {output.output_path && (
-                        <p className="output-path">{output.output_path}</p>
+                        <details className="export-location">
+                          <summary>Output location</summary>
+                          <p className="output-path">{output.output_path}</p>
+                        </details>
+                      )}
+                      {canEdit && (
+                        <button
+                          className="text-button export-delete"
+                          onClick={() =>
+                            setDeleteTarget({
+                              kind: "export",
+                              name: output.name,
+                              path: `${base}/exports/${output.id}`,
+                            })
+                          }
+                        >
+                          <Trash2 size={15} /> Delete export
+                        </button>
                       )}
                       <div className="download-links">
                         {output.provenance.outputs?.map((file, index) => (
@@ -748,9 +895,9 @@ export function ProjectView({
             ) : (
               <div className="empty-state compact">
                 <ArrowDownToLine size={32} />
-                <h2>Ready when your selects are</h2>
+                <h2>Your organized footage, ready to take with you</h2>
                 <p>
-                  Export a range from the player, a collection, or your
+                  Export an AI category from the Library, a collection, or your
                   project’s worklog.
                 </p>
               </div>
@@ -765,8 +912,16 @@ export function ProjectView({
           seekUs={selected.seek}
           workspace={workspace}
           collections={collections}
+          projectId={project.id}
+          onCollectionCreated={(created) =>
+            setCollections((current) =>
+              current.some((item) => item.id === created.id)
+                ? current
+                : [...current, created],
+            )
+          }
           onClose={() => setSelected(null)}
-          onExport={exportPreview}
+          onExport={(body) => exportPreview(body, true)}
         />
       )}
       <ImportDialog
@@ -793,7 +948,14 @@ export function ProjectView({
             </span>
             <textarea name="instructions" rows={3} maxLength={2000} />
           </label>
-          <button className="primary">Create collection</button>
+          {error && (
+            <p className="error-text" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="primary" disabled={pending.includes("collection")}>
+            {pending.includes("collection") ? "Creating…" : "Create collection"}
+          </button>
         </form>
       </Dialog>
       <Dialog
@@ -804,6 +966,11 @@ export function ProjectView({
       >
         {preview && (
           <div className="stack">
+            {error && (
+              <p className="error-text" role="alert">
+                {error}
+              </p>
+            )}
             <p className="small muted">{preview.notice}</p>
             {preview.entries.map((entry, index) => (
               <div key={index} className="preview-entry">
@@ -818,17 +985,25 @@ export function ProjectView({
               Estimated output:{" "}
               {(preview.estimated_bytes / 1024 / 1024).toFixed(1)} MB
             </p>
-            <div className="output-path">{preview.output_folder}</div>
+            <details className="export-location">
+              <summary>Output location</summary>
+              <div className="output-path">{preview.output_folder}</div>
+            </details>
             <button
               className="primary"
               disabled={startingExport}
               onClick={async () => {
+                if (startingExport) return;
                 setStartingExport(true);
+                setError("");
                 try {
                   await api(`${base}/exports/${preview.id}/start`, {
                     method: "POST",
                   });
                   track("export_started");
+                  setNotice(
+                    "Export started. Your download will appear here when it is ready.",
+                  );
                   setPreview(null);
                   setSelected(null);
                   setTab("exports");
@@ -848,666 +1023,5 @@ export function ProjectView({
         )}
       </Dialog>
     </section>
-  );
-}
-
-function ImportDialog({
-  open,
-  onOpenChange,
-  base,
-  projectId,
-  onImported,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  base: string;
-  projectId: string;
-  onImported: () => Promise<void>;
-}) {
-  const input = useRef<HTMLInputElement>(null),
-    directory = useRef<HTMLInputElement>(null);
-  const [progress, setProgress] = useState<
-      { name: string; percent: number; state: string }[]
-    >([]),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  const [roots, setRoots] = useState<
-      { id: number; name: string; path: string }[]
-    >([]),
-    [root, setRoot] = useState("");
-  const rootRequest = useRef(0);
-  const [rootLoading, setRootLoading] = useState(false);
-  const [files, setFiles] = useState<string[]>([]),
-    [checked, setChecked] = useState<Set<string>>(new Set()),
-    [truncated, setTruncated] = useState(false);
-  useEffect(() => {
-    if (open)
-      api<typeof roots>(`${base}/source-roots`)
-        .then(setRoots)
-        .catch((e) => setError(e.message));
-  }, [open, base]);
-  async function upload(files: File[]) {
-    if (!files?.length) return;
-    setBusy(true);
-    setError("");
-    const list = Array.from(files).filter((file) =>
-      /\.(mp4|mov|mkv|mxf|avi|mts|m2ts|webm|m4v)$/i.test(file.name),
-    );
-    if (!list.length) {
-      setError("No supported video files were selected.");
-      setBusy(false);
-      return;
-    }
-    setProgress(
-      list.map((file) => ({ name: file.name, percent: 0, state: "Waiting" })),
-    );
-    let cursor = 0;
-    async function next() {
-      while (cursor < list.length) {
-        const index = cursor++,
-          file = list[index];
-        await new Promise<void>((resolve) => {
-          const request = new XMLHttpRequest();
-          request.open(
-            "POST",
-            `/api${base}/projects/${projectId}/upload?filename=${encodeURIComponent(file.name)}&relative_path=${encodeURIComponent(file.webkitRelativePath || file.name)}`,
-          );
-          request.setRequestHeader("Content-Type", "application/octet-stream");
-          const update = (percent: number, state: string) =>
-            setProgress((rows) =>
-              rows[index]?.percent === percent && rows[index]?.state === state
-                ? rows
-                : rows.map((row, i) =>
-                    i === index ? { ...row, percent, state } : row,
-                  ),
-            );
-          request.upload.onprogress = (event) =>
-            update(
-              event.lengthComputable
-                ? Math.round((event.loaded / event.total) * 100)
-                : 0,
-              "Uploading",
-            );
-          request.onload = () => {
-            let detail = "Upload failed; reselect this file";
-            try {
-              detail = apiErrorMessage(
-                JSON.parse(request.responseText),
-                detail,
-              );
-            } catch {}
-            update(
-              100,
-              request.status < 300 ? "Queued for processing" : detail,
-            );
-            resolve();
-          };
-          request.onerror = () => {
-            update(0, "Disconnected; reselect this file");
-            resolve();
-          };
-          request.send(file);
-        });
-        await onImported();
-      }
-    }
-    await Promise.all([next(), next()]);
-    setBusy(false);
-  }
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Import footage"
-      description="Select files or a folder. Originals stay in place; selected uploads are copied into private storage on the RUSHES server."
-    >
-      <div className="stack">
-        <div className="import-drop">
-          <Upload size={30} />
-          <h2>Bring your footage in</h2>
-          <div className="button-row">
-            <button
-              className="primary"
-              disabled={busy}
-              onClick={() => input.current?.click()}
-            >
-              Choose videos
-            </button>
-            <button
-              className="secondary"
-              disabled={busy}
-              onClick={() => directory.current?.click()}
-            >
-              Choose folder
-            </button>
-          </div>
-          <input
-            ref={input}
-            type="file"
-            accept="video/*,.mxf,.mts,.m2ts"
-            multiple
-            hidden
-            onChange={(e) => {
-              const files = Array.from(e.currentTarget.files || []);
-              e.currentTarget.value = "";
-              void upload(files);
-            }}
-          />
-          <input
-            ref={directory}
-            type="file"
-            multiple
-            hidden
-            {...({
-              webkitdirectory: "",
-            } as React.InputHTMLAttributes<HTMLInputElement>)}
-            onChange={(e) => {
-              const files = Array.from(e.currentTarget.files || []);
-              e.currentTarget.value = "";
-              void upload(files);
-            }}
-          />
-        </div>
-        <p className="small muted">
-          Keep this tab open until uploads finish. Completed files process in
-          the background. Interrupted uploads require file reselection.
-          Configured Gemini analysis sends derived clips and transcript context
-          to Google and uses processing credits. When enabled, Modal processes
-          derived audio, worklog text and search queries. Settings shows the
-          active processing services.
-        </p>
-        {progress.length > 0 && (
-          <div className="upload-list" aria-live="polite">
-            {progress.map((file, index) => (
-              <div key={index}>
-                <strong>{file.name}</strong>
-                <span>
-                  {file.state}{" "}
-                  {file.state === "Uploading" ? `${file.percent}%` : ""}
-                </span>
-                <progress
-                  value={file.percent}
-                  max={100}
-                  aria-label={`${file.name} upload`}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-        {roots.length > 0 && (
-          <>
-            <div className="divider" />
-            <label className="field">
-              <span>Index a configured source folder</span>
-              <select
-                value={root}
-                disabled={busy}
-                onChange={async (e) => {
-                  const selected = e.target.value,
-                    request = ++rootRequest.current;
-                  setRoot(selected);
-                  setFiles([]);
-                  setChecked(new Set());
-                  setTruncated(false);
-                  setRootLoading(Boolean(selected));
-                  if (!selected) return;
-                  try {
-                    const result = await api<{
-                      files: string[];
-                      truncated: boolean;
-                    }>(`${base}/source-roots/${selected}/files`);
-                    if (rootRequest.current !== request) return;
-                    setFiles(result.files);
-                    setTruncated(result.truncated);
-                  } catch (error) {
-                    if (rootRequest.current === request)
-                      setError((error as Error).message);
-                  } finally {
-                    if (rootRequest.current === request) setRootLoading(false);
-                  }
-                }}
-              >
-                <option value="">Choose a source root</option>
-                {roots.map((root) => (
-                  <option key={root.id} value={root.id}>
-                    {root.path}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {rootLoading && <p role="status">Loading selected source root…</p>}
-            {files.length > 0 && (
-              <>
-                <div className="source-files">
-                  {files.map((file) => (
-                    <label key={file}>
-                      <input
-                        type="checkbox"
-                        checked={checked.has(file)}
-                        onChange={(e) =>
-                          setChecked((current) => {
-                            const next = new Set(current);
-                            if (e.target.checked) next.add(file);
-                            else next.delete(file);
-                            return next;
-                          })
-                        }
-                      />
-                      {file}
-                    </label>
-                  ))}
-                </div>
-                {truncated && (
-                  <p className="small muted">
-                    This root has more files than this selection view can
-                    display. Import a selected folder through the file picker
-                    for the remaining files.
-                  </p>
-                )}
-                <button
-                  className="secondary"
-                  disabled={!checked.size || busy || rootLoading}
-                  onClick={async () => {
-                    setBusy(true);
-                    try {
-                      const result = await api<{
-                        files: { state: string; error?: string }[];
-                      }>(`${base}/projects/${projectId}/index`, {
-                        method: "POST",
-                        body: JSON.stringify({
-                          root: Number(root),
-                          paths: [...checked],
-                        }),
-                      });
-                      const failures = result.files.filter(
-                        (file) => file.state === "failed",
-                      );
-                      if (failures.length)
-                        setError(failures.map((file) => file.error).join(". "));
-                      else onOpenChange(false);
-                      await onImported();
-                    } catch (e) {
-                      setError((e as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  Index {checked.size} selected files
-                </button>
-              </>
-            )}
-          </>
-        )}
-        {error && (
-          <p className="error-text" role="alert">
-            {error}
-          </p>
-        )}
-        {progress.length > 0 && !busy && (
-          <button className="primary" onClick={() => onOpenChange(false)}>
-            Return to footage <Check size={17} />
-          </button>
-        )}
-      </div>
-    </Dialog>
-  );
-}
-
-function CollectionView({
-  collection,
-  base,
-  canEdit,
-  onBack,
-  onOpen,
-  onExport,
-}: {
-  collection: Collection;
-  base: string;
-  canEdit: boolean;
-  onBack: () => void;
-  onOpen: (value: { id: string; seek?: number }) => void;
-  onExport: (
-    kind:
-      | "clips"
-      | "copies"
-      | "fcp7xml"
-      | "fcpxml"
-      | "selections_json"
-      | "selections_csv",
-  ) => void;
-}) {
-  const [items, setItems] = useState<CollectionItem[]>([]),
-    [error, setError] = useState("");
-  const [editing, setEditing] = useState<CollectionItem | null>(null);
-  const pendingSuggestions = useRef(new Set<string>());
-  const [addingSuggestions, setAddingSuggestions] = useState<Set<string>>(
-    new Set(),
-  );
-  const [prompt, setPrompt] = useState(collection.instructions),
-    [suggestions, setSuggestions] = useState<SearchResult[]>([]),
-    [suggestionNotice, setSuggestionNotice] = useState<string | null>(null),
-    [suggestionsIncomplete, setSuggestionsIncomplete] = useState(false),
-    [busy, setBusy] = useState(false);
-  const refreshAbort = useRef<AbortController | null>(null);
-  const refresh = useCallback(async () => {
-    refreshAbort.current?.abort();
-    const controller = new AbortController();
-    refreshAbort.current = controller;
-    try {
-      const rows = await api<CollectionItem[]>(
-        `${base}/collections/${collection.id}/items`,
-        {
-          signal: controller.signal,
-        },
-      );
-      if (!controller.signal.aborted) setItems(rows);
-    } catch (e) {
-      if (!controller.signal.aborted) setError((e as Error).message);
-    }
-  }, [base, collection.id]);
-  useEffect(() => {
-    void refresh();
-    return () => refreshAbort.current?.abort();
-  }, [refresh]);
-  return (
-    <div className="collection-detail">
-      <button className="text-button" onClick={onBack}>
-        ← All collections
-      </button>
-      <div className="section-heading">
-        <h2>{collection.name}</h2>
-        {canEdit && (
-          <div className="button-row">
-            <button
-              className="secondary"
-              disabled={!items.length}
-              onClick={() => onExport("copies")}
-            >
-              Organized copies
-            </button>
-            <button
-              className="primary"
-              disabled={!items.length}
-              onClick={() => onExport("clips")}
-            >
-              Export clips
-            </button>
-          </div>
-        )}
-      </div>
-      {error && (
-        <p className="error-text" role="alert">
-          {error}
-        </p>
-      )}
-      {canEdit && items.length > 0 && (
-        <>
-          <details className="xml-options">
-            <summary>Selection data</summary>
-            <div className="button-row">
-              <button
-                className="secondary"
-                onClick={() => onExport("selections_json")}
-              >
-                Selection JSON
-              </button>
-              <button
-                className="secondary"
-                onClick={() => onExport("selections_csv")}
-              >
-                Selection CSV
-              </button>
-            </div>
-          </details>
-          <details className="xml-options">
-            <summary>Experimental editor interchange</summary>
-            <p className="small muted">
-              Straight cuts from constant-rate, unrotated footage at one shared
-              frame rate. References originals on the RUSHES server.
-              Target-editor round trips have not been verified.
-            </p>
-            <div className="button-row">
-              <button className="secondary" onClick={() => onExport("fcp7xml")}>
-                Preview FCP7 XML
-              </button>
-              <button className="secondary" onClick={() => onExport("fcpxml")}>
-                Preview FCPXML
-              </button>
-            </div>
-          </details>
-        </>
-      )}
-      {editing && (
-        <form
-          key={editing.id}
-          className="stack select-edit"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            const full = form.get("full") === "on";
-            try {
-              await api(`${base}/collection-items/${editing.id}`, {
-                method: "PATCH",
-                body: JSON.stringify({
-                  start_us: full
-                    ? null
-                    : Math.round(Number(form.get("start")) * 1e6),
-                  end_us: full
-                    ? null
-                    : Math.round(Number(form.get("end")) * 1e6),
-                  note: form.get("note"),
-                }),
-              });
-              setEditing(null);
-              await refresh();
-            } catch (error) {
-              setError((error as Error).message);
-            }
-          }}
-        >
-          <strong>Adjust {editing.asset_name}</strong>
-          <label>
-            <input
-              type="checkbox"
-              name="full"
-              defaultChecked={editing.start_us === null}
-            />{" "}
-            Use full source file
-          </label>
-          <div className="inout">
-            <label className="field">
-              <span>Collection in seconds</span>
-              <input
-                name="start"
-                type="number"
-                step={0.001}
-                min={0}
-                defaultValue={(editing.start_us || 0) / 1e6}
-              />
-            </label>
-            <label className="field">
-              <span>Collection out seconds</span>
-              <input
-                name="end"
-                type="number"
-                step={0.001}
-                min={0}
-                defaultValue={(editing.end_us || 0) / 1e6}
-              />
-            </label>
-          </div>
-          <label className="field">
-            <span>Select note</span>
-            <input name="note" maxLength={1000} defaultValue={editing.note} />
-          </label>
-          <div className="button-row">
-            <button className="primary">Save range</button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setEditing(null)}
-            >
-              Cancel adjustment
-            </button>
-          </div>
-        </form>
-      )}
-      {items.map((item) => (
-        <div className="select-row" key={item.id}>
-          <button
-            onClick={() =>
-              onOpen({ id: item.asset_id, seek: item.start_us || 0 })
-            }
-          >
-            <Film size={19} />
-            <div>
-              <strong>{item.asset_name}</strong>
-              <span className="timecode">
-                {item.start_us === null
-                  ? "Full source file"
-                  : `${elapsed(item.start_us)} — ${elapsed(item.end_us!)}`}
-              </span>
-            </div>
-          </button>
-          {canEdit && (
-            <button className="text-button" onClick={() => setEditing(item)}>
-              Adjust
-            </button>
-          )}
-          {canEdit && (
-            <button
-              className="icon-button"
-              aria-label={`Remove ${item.asset_name} from collection`}
-              onClick={async () => {
-                try {
-                  await api(`${base}/collection-items/${item.id}`, {
-                    method: "DELETE",
-                  });
-                  await refresh();
-                } catch (e) {
-                  setError((e as Error).message);
-                }
-              }}
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-      ))}
-      {!items.length && (
-        <p className="muted">
-          No selects yet. Mark a range in the player, or find suggestions below.
-        </p>
-      )}
-      {canEdit && (
-        <form
-          className="stack"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setBusy(true);
-            setSuggestionNotice(null);
-            setSuggestionsIncomplete(false);
-            try {
-              const result = await api<{
-                suggestions: SearchResult[];
-                notice: string | null;
-                incomplete_processing: boolean;
-              }>(`${base}/collections/${collection.id}/suggest`, {
-                method: "POST",
-                body: JSON.stringify({ instructions: prompt }),
-              });
-              setSuggestions(result.suggestions);
-              setSuggestionNotice(result.notice);
-              setSuggestionsIncomplete(result.incomplete_processing);
-            } catch (e) {
-              setError((e as Error).message);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <label className="field">
-            <span>Find selects from an instruction</span>
-            <input
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              required
-              maxLength={500}
-              placeholder="e.g. Close-ups of hands at work"
-            />
-          </label>
-          <button className="secondary" disabled={busy}>
-            {busy ? "Finding evidence…" : "Suggest ranges"}
-            <Search size={16} />
-          </button>
-        </form>
-      )}
-      {suggestionNotice && (
-        <p className="small muted" role="status">
-          {suggestionNotice}
-        </p>
-      )}
-      {suggestionsIncomplete && (
-        <p className="small muted" role="status">
-          Some footage is still unprocessed. Suggestions use the evidence
-          currently available.
-        </p>
-      )}
-      {suggestions.map((item) => (
-        <div
-          key={`${item.asset_id}:${item.start_us}:${item.end_us}`}
-          className="suggestion"
-        >
-          <div>
-            <strong>{item.asset_name}</strong>
-            <p className="small muted">
-              {item.evidence.map((e) => e.description).join(" ")}
-            </p>
-            <span className="timecode">
-              {elapsed(item.start_us)} — {elapsed(item.end_us)}
-            </span>
-          </div>
-          <button
-            className="secondary"
-            disabled={addingSuggestions.has(
-              `${item.asset_id}:${item.start_us}:${item.end_us}`,
-            )}
-            onClick={async () => {
-              const key = `${item.asset_id}:${item.start_us}:${item.end_us}`;
-              if (pendingSuggestions.current.has(key)) return;
-              pendingSuggestions.current.add(key);
-              setAddingSuggestions(new Set(pendingSuggestions.current));
-              try {
-                await api(`${base}/collections/${collection.id}/items`, {
-                  method: "POST",
-                  body: JSON.stringify({
-                    asset_id: item.asset_id,
-                    start_us: item.start_us,
-                    end_us: item.end_us,
-                  }),
-                });
-                setSuggestions((rows) =>
-                  rows.filter(
-                    (row) =>
-                      row.asset_id !== item.asset_id ||
-                      row.start_us !== item.start_us ||
-                      row.end_us !== item.end_us,
-                  ),
-                );
-                await refresh();
-              } catch (e) {
-                setError((e as Error).message);
-              } finally {
-                pendingSuggestions.current.delete(key);
-                setAddingSuggestions(new Set(pendingSuggestions.current));
-              }
-            }}
-          >
-            Add select
-          </button>
-        </div>
-      ))}
-    </div>
   );
 }

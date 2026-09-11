@@ -1,0 +1,92 @@
+.delete-form {
+  display: grid;
+  gap: 20px;
+  margin-top: 24px;
+}
+.delete-item-name {
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.delete-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.delete-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  color: var(--danger);
+  background: var(--surface);
+  font-weight: 550;
+}
+.delete-primary:hover:not(:disabled) {
+  background: var(--panel);
+}
+.delete-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.management-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.management-actions .icon-button {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.management-actions .icon-button:hover {
+  color: var(--danger);
+}
+.asset-management {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.asset-management .text-button {
+  font-size: 0.8rem;
+  min-height: 44px;
+  color: var(--muted);
+}
+.asset-management .delete-item {
+  margin-left: auto;
+}
+.asset-management .delete-item:hover {
+  color: var(--danger);
+}
+.export-delete {
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .page-heading > .management-actions {
+    width: 100%;
+  }
+  .management-actions > .primary {
+    flex: 1;
+  }
+  .delete-actions > button {
+    flex: 1;
+  }
+}
+
+.collection-entry {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.collection-entry > .collection-card {
+  width: 100%;
+  height: 100%;
+}
+.collection-entry > .delete-item {
+  justify-self: start;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
