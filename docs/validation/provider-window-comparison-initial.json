@@ -1,0 +1,37 @@
+{
+  "started_at": "2026-09-11T15:43:42.931255+00:00",
+  "model": "gemini-3.6-flash",
+  "scope": "One six-second window of a generated 12-second muted red/blue fixture; not representative quality or throughput",
+  "source_interval_seconds": [
+    4,
+    10
+  ],
+  "physical_extraction_seconds": 0.264,
+  "maximum_generation_dispatches": 2,
+  "reservation_scope": "Local configured database provider allowance; separate from production's shared application ledger and from actual cloud invoices",
+  "runs": [
+    {
+      "method": "full_proxy_offset",
+      "file_bytes": 9465,
+      "sha256": "04759d2cb3773838ca4158090781c90b6de8354c5e5c434e793471f7fc85d102",
+      "generation_dispatched": true,
+      "cleanup_verified": true,
+      "reserved_microusd": 60000,
+      "provider_file": "files/0civpf3scu1k",
+      "upload_and_prepare_seconds": 2.034,
+      "preflight_tokens": 204,
+      "error_type": "ValidationError",
+      "http_status": null,
+      "delete_succeeded": true,
+      "total_seconds": 2.706
+    }
+  ],
+  "passed": false,
+  "finished_at": "2026-09-11T15:43:45.709818+00:00",
+  "diagnosis": {
+    "offline_reproduction": "Identical SDK schema conversion rejects exclusiveMinimum before HTTP transport; mocked transport saw zero requests.",
+    "old_dispatch_field_limit": "Original flag was set before SDK validation and is not evidence of an HTTP dispatch.",
+    "repair": "Use inclusive zero lower bound in provider schema; strict positive interval order remains checked locally. Record actual HTTP dispatch-start via request hook.",
+    "reservation_retained_microusd": 60000
+  }
+}

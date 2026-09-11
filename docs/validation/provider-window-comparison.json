@@ -1,0 +1,48 @@
+{
+  "started_at": "2026-09-11T15:50:10.203134+00:00",
+  "model": "gemini-3.6-flash",
+  "scope": "One six-second window of a generated 12-second muted red/blue fixture; not representative quality or throughput",
+  "source_interval_seconds": [
+    4,
+    10
+  ],
+  "physical_extraction_seconds": 0.261,
+  "maximum_generation_dispatches": 2,
+  "reservation_scope": "Local configured database provider allowance; separate from production's shared application ledger and from actual cloud invoices",
+  "runs": [
+    {
+      "method": "full_proxy_offset",
+      "file_bytes": 9465,
+      "sha256": "04759d2cb3773838ca4158090781c90b6de8354c5e5c434e793471f7fc85d102",
+      "generation_dispatched": true,
+      "cleanup_verified": true,
+      "reserved_microusd": 60000,
+      "provider_file": "files/1v1f3ercoqia",
+      "upload_and_prepare_seconds": 3.931,
+      "preflight_tokens": 204,
+      "generation_attempted": true,
+      "error_type": "ServerError",
+      "http_status": 504,
+      "error_message": "Deadline expired before operation could complete.",
+      "delete_succeeded": true,
+      "total_seconds": 31.868
+    }
+  ],
+  "passed": false,
+  "finished_at": "2026-09-11T15:50:42.140891+00:00",
+  "followup": {
+    "ambiguous_generation_repeated": false,
+    "reservation_retained_microusd": 60000,
+    "all_three_attempts_retained_microusd": 180000,
+    "actual_billed_generation_usage": "Unknown; no usable response or usage metadata",
+    "diagnostic_timeout_at_attempt_seconds": 30,
+    "future_generation_timeout_seconds": 120,
+    "future_timeout_verification": "Offline real Google SDK MockTransport only; no live repeat",
+    "offline_regressions": {
+      "passed": 5,
+      "failed": 0,
+      "seconds": 1.22
+    },
+    "review": "docs/PROVIDER-COMPARISON-REVIEW.md"
+  }
+}

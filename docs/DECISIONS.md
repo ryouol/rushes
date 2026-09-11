@@ -36,3 +36,9 @@ Package registries resolve actual available compatible releases; committed lockf
 - The entire application exceeds small-change review guidance. No existing PR was available to split or label. REVIEW.md preserves every issue and a concrete dependency-ordered landing plan.
 
 The provider count interface was checked against the installed SDK and [official combined-input token counting](https://ai.google.dev/gemini-api/docs/generate-content/tokens). No token-cost, semantic-accuracy or representative-throughput claim follows from that documentation check.
+
+## 2026-09-11 — provider-offset comparison remains inconclusive
+
+The bounded comparison used only a generated 12-second, muted red/blue fixture and its six-second physical excerpt. The full-proxy method uploaded 9,465 bytes and counted 204 input tokens. The first attempt failed SDK schema conversion; the second returned HTTP 400; the third returned HTTP 504 after about 32 seconds. None returned usable intervals or measured generation usage, and each uploaded file was deleted with absence verified. The three conservative $0.06 local reservations remain held; they are not measured provider charges and are separate from the production allowance.
+
+Retain physical chunks as the provisional implementation. No timestamp convention or performance advantage for provider offsets is established. The diagnostic now uses the application's 120-second generation timeout while keeping file/count requests at 30 seconds; offline real-SDK tests confirm that configuration and single-dispatch behavior. The ambiguous 504 was not retried. See [the complete comparison review](PROVIDER-COMPARISON-REVIEW.md) for all findings, evidence and the bounded future procedure.

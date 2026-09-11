@@ -1,0 +1,38 @@
+{
+  "started_at": "2026-09-11T15:47:22.131179+00:00",
+  "model": "gemini-3.6-flash",
+  "scope": "One six-second window of a generated 12-second muted red/blue fixture; not representative quality or throughput",
+  "source_interval_seconds": [
+    4,
+    10
+  ],
+  "physical_extraction_seconds": 0.26,
+  "maximum_generation_dispatches": 2,
+  "reservation_scope": "Local configured database provider allowance; separate from production's shared application ledger and from actual cloud invoices",
+  "runs": [
+    {
+      "method": "full_proxy_offset",
+      "file_bytes": 9465,
+      "sha256": "04759d2cb3773838ca4158090781c90b6de8354c5e5c434e793471f7fc85d102",
+      "generation_dispatched": true,
+      "cleanup_verified": true,
+      "reserved_microusd": 60000,
+      "provider_file": "files/ph0f2q2qpt2d",
+      "upload_and_prepare_seconds": 3.388,
+      "preflight_tokens": 204,
+      "generation_attempted": true,
+      "error_type": "ClientError",
+      "http_status": 400,
+      "delete_succeeded": true,
+      "total_seconds": 4.229
+    }
+  ],
+  "passed": false,
+  "finished_at": "2026-09-11T15:47:26.426881+00:00",
+  "followup": {
+    "change": "Use the portable response-schema subset already established by the app; retain strict local interval checks.",
+    "prior_http_400_message": "Unavailable; previous diagnostic captured only status. Schema incompatibility is a hypothesis, not a verified server message.",
+    "generation_automatically_repeated": false,
+    "reservation_retained_microusd": 60000
+  }
+}

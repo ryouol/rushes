@@ -1,6 +1,6 @@
 # RUSHES production status
 
-RUSHES is live at **https://rushes.onrender.com** on Render, with private speech and embedding functions on Modal. Deployment identity and settings are recorded in [the inventory](deployment-inventory.json). The user clarified that $20/month is a soft target; the lean tested setup is approximately $35/month fixed plus variable costs.
+RUSHES is live at **https://rushes.onrender.com** on Render, with private speech and embedding functions on Modal. Deployment identity and settings are recorded in [the inventory](deployment-inventory.json). The tested setup is approximately $35/month fixed plus variable costs, above the requested $20/month combined amount. The later soft-target instruction and current budget clarification are being reconciled in [the goal audit](GOAL-AUDIT.md); a $20 total cap is not enforced.
 
 ## Resources and cost
 
@@ -16,7 +16,7 @@ RUSHES is live at **https://rushes.onrender.com** on Render, with private speech
 
 - Render project `prj-dahh47mk1f9s73f99g70`, production environment `evm-dahh47mk1f9s73f99g7g`.
 - Web service `srv-dahk822d0e5s73fo22o0`; private GitHub repository [ryouol/rushes](https://github.com/ryouol/rushes), branch `codex/production`; automatic deployments disabled.
-- Postgres `dpg-dahk1qek1f9s73fk9n5g-a`; application schema `0005`; distinct `rushes`, `rushes_temporal`, and `rushes_visibility` databases.
+- Postgres `dpg-dahk1qek1f9s73fk9n5g-a`; application schema `0006`; distinct `rushes`, `rushes_temporal`, and `rushes_visibility` databases.
 - Private Modal app [rushes-compute](https://modal.com/apps/royluo05/rushes-production/deployed/rushes-compute), environment `rushes-production`. Both functions scale to zero, cap at one container each, request/limit one CPU and 2 GiB, and have 60-second startup/120-second execution bounds. [Live resource-limit verification](validation/modal-resource-limits.json).
 
 ## Spending and storage controls
@@ -29,6 +29,7 @@ Uploads are limited to 1 GiB each and one hour of source duration. Disk-space ch
 
 ## Verified behavior
 
+- Google connection and returning Google-only sign-in passed on local and production at runtime `83d8758`, including an existing password account with no workspace. A fresh Google email signup was covered by automated provider-contract tests, not a live signup. [Deployment and account evidence](validation/production-google-deployment.json).
 - Public HTTPS API, secure HttpOnly SameSite=Strict sessions, origin rejection, and resistance to rotating forged client-IP headers. [Ingress evidence](validation/render-ingress.json). Different-client counter separation is also covered by local middleware tests; hosted spoof checks used one external client.
 - The final fresh hosted browser test **passed end to end** on runtime `2cb0774`: account creation, synthetic upload, real Gemini analysis and Modal processing, preview playback, correction persistence, selections, rendered export, search, saved searches, notes, source availability, analysis estimate, collection edits, FCP7 XML, selection JSON/CSV, usage, mobile layout and logout. [Browser evidence](validation/render-browser.json). Editor round trips remain unverified; interchange is experimental.
 - Earlier runs exposed Google file-status HTTP 500 errors and one zero-duration model event. Status-read retries and prompt v6 address those specific failures. Strict validation still rejects invalid model output and retains measured usage; no uncertain generation is automatically repeated. The successful earlier continuation and final fresh run are separately recorded.

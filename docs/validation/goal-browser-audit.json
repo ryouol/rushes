@@ -1,17 +1,28 @@
 {
   "checked_on": "2026-09-11",
   "application_revision": "89471a8a5d84cd11a0ccfb0086050ecb3064baba",
-  "shared_initial_run": {"passed": 22, "failed": 4},
+  "shared_initial_run": {
+    "passed": 22,
+    "failed": 4
+  },
   "test_repairs": [
     "Scope authentication alerts beneath main, excluding Next's global route announcer",
     "Wait for the second-project URL before capturing the deletion test destination",
     "Check that stale inert cards cannot receive native focus or pointer actions"
   ],
-  "isolated_suite": {"passed": 25, "failed": 0, "seconds": 25.3},
+  "isolated_suite": {
+    "passed": 25,
+    "failed": 0,
+    "seconds": 25.3
+  },
   "separate_instrumented_player_test": {
     "passed": true,
     "production_player_code_changed": false,
-    "states_observed": ["queued", "preview_ready", "ready"],
+    "states_observed": [
+      "queued",
+      "preview_ready",
+      "ready"
+    ],
     "draft_and_range_preserved": true
   },
   "environment": {
@@ -28,6 +39,28 @@
     ".local/goal-player-test/instrumented.log",
     ".local/goal-player-test/trace.zip"
   ],
-  "review": {"test_repairs_actionable_findings": 0, "player_bug_reproduced": false},
-  "limits": "The initial player's interruption cause remains unproven. This does not certify the latest account-only Settings patch, real Google consent, representative media quality, or a cloud invoice ceiling."
+  "review": {
+    "test_repairs_actionable_findings": 0,
+    "player_bug_reproduced": false
+  },
+  "limits": "The initial player interruption cause remains unproven. Original suites cover 89471a8; the separate account-only Settings follow-up covers fbc5a4a. These mocked tests do not certify real Google consent, representative media quality, or a cloud invoice ceiling.",
+  "account_only_settings_followup": {
+    "application_revision": "fbc5a4a1db8ba074b72192665a239c8c809921d3",
+    "passed": 1,
+    "failed": 0,
+    "seconds": 2.9,
+    "test": "web/e2e/auth.spec.ts:211",
+    "environment": "Isolated production build on localhost:3842 with API and Google navigation routes mocked",
+    "verified": [
+      "Google connection",
+      "returning account-only Settings",
+      "onboarding navigation",
+      "zero workspace writes"
+    ],
+    "artifacts": ".local/goal-account-settings-jxqvpoka/artifacts",
+    "owned_server_stopped": true,
+    "port_closed": true,
+    "owned_build_removed": true,
+    "actionable_review_findings": 0
+  }
 }
