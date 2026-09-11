@@ -105,6 +105,9 @@ test("real account → import → persistent worklog → select → rendered exp
   ).toBeVisible();
   await page.getByLabel("Selection in seconds").fill("2");
   await page.getByLabel("Selection out seconds").fill("4");
+  await page.getByLabel("Save to collection").selectOption({
+    label: "Selected moments",
+  });
   await page.getByRole("button", { name: "Add select", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Saved", exact: true }),
@@ -179,9 +182,14 @@ test("real account → import → persistent worklog → select → rendered exp
   await second
     .getByRole("button", { name: "Review analysis estimate", exact: true })
     .click();
-  await expect(
-    second.getByRole("button", { name: "Start new analysis", exact: true }),
-  ).toBeDisabled();
+  const startAnalysis = second.getByRole("button", {
+    name: "Start new analysis", exact: true,
+  });
+  if (process.env.RUSHES_TEST_LIVE_GEMINI === "1") {
+    await expect(startAnalysis).toBeEnabled();
+  } else {
+    await expect(startAnalysis).toBeDisabled();
+  }
   await second
     .getByRole("button", { name: "Close player", exact: true })
     .click();

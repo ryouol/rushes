@@ -6,14 +6,36 @@
     "environment_ids": [
       "evm-dahh47mk1f9s73f99g7g"
     ],
-    "services": [],
+    "services": [
+      {
+        "id": "srv-dahk822d0e5s73fo22o0",
+        "name": "rushes",
+        "branch": "codex/production",
+        "repo": "https://github.com/ryouol/rushes",
+        "url": "https://rushes.onrender.com",
+        "plan": "1c-2g",
+        "disk": {
+          "id": "dsk-dahk82ad0e5s73fo25dg",
+          "mountPath": "/var/data",
+          "name": "rushes-media",
+          "sizeGB": 10
+        },
+        "deploy_id": "dep-dahk82qd0e5s73fo26r0",
+        "status": "live",
+        "runtime_commit": "ce43d54"
+      }
+    ],
     "databases": [
       {
         "id": "dpg-dahk1qek1f9s73fk9n5g-a",
         "name": "rushes-db",
         "status": "available",
         "plan": "0.1c-256mb",
-        "region": "ohio"
+        "region": "ohio",
+        "application_schema": "0005",
+        "external_access_disabled": true,
+        "disk_autoscaling": false,
+        "storage_gb": 5
       }
     ]
   },
@@ -66,22 +88,24 @@
     ],
     "volumes": [],
     "default_environment_changed": false,
-    "project_budget_enforced": false
+    "project_budget_enforced": false,
+    "app_provider_allowance_configured": true
   },
-  "production_deployed": false,
-  "checked_at": "2026-09-10T23:55:50.834977+00:00",
+  "production_deployed": true,
+  "checked_at": "2026-09-11T00:18:31.227780+00:00",
   "gemini": {
     "configured": true,
     "model": "gemini-3.6-flash",
     "project": "projects/50426910677",
     "standalone_video_validation": "passed",
-    "full_browser_validation": "provider HTTP503; no automatic repeat; asset partial"
+    "full_browser_validation": "Fresh analysis and initial UI succeeded; remaining UI passed on same successful asset/session after restart. Two later fixtures hit Google file-status HTTP500; bounded read retry fix prepared."
   },
   "production_image": {
     "id": "sha256:295dde5f522d03e825ab7d3c8015f842e25b3e59c6484ef3cd0dfbcdc7abceb6",
     "architecture": "linux/amd64",
     "local_runtime_verified": true,
     "published": false,
-    "matches_current_source": false
+    "matches_current_source": false,
+    "historical_local_qa_only": true
   }
 }

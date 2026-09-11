@@ -19,12 +19,14 @@ from rushes.inference import (
     AnalysisResponse,
     AnalysisResult,
     GeminiAnalyzer,
+    ProviderPreparationError,
     analysis_cache_key,
     bounded_transcript,
     embedder,
     validated_intervals,
 )
 from rushes.job_actions import cancel_batch_children
+from rushes.maintenance import delete_remote
 from rushes.models import (
     AnalysisRun,
     AnalysisWindow,
@@ -384,6 +386,20 @@ async def analyze_window(args: dict):
     heartbeat()
     await stage(args, "Analyzing derived footage with Gemini", 65)
     async with tenant_session(args["workspace_id"]) as db:
+        pending = await db.get(AnalysisWindow, UUID(args["window_id"]))
+        old_file = pending.provider_file if pending and pending.state == "pending" else None
+    if old_file:
+        try:
+            await asyncio.to_thread(delete_remote, old_file)
+        except Exception as error:
+            raise ProviderPreparationError(
+                "The previous Google upload could not be cleaned up. No new analysis was sent; resume processing later."
+            ) from error
+        async with tenant_session(args["workspace_id"]) as db:
+            pending = await locked_window(db, args["window_id"])
+            if pending.state == "pending" and pending.provider_file == old_file:
+                pending.provider_file = None
+    async with tenant_session(args["workspace_id"]) as db:
         job = await db.scalar(select(Job).where(Job.id == UUID(args["job_id"])).with_for_update())
         if job.state in {"failed", "canceled", "cancel_requested"}:
             raise asyncio.CancelledError()
@@ -429,7 +445,7 @@ async def analyze_window(args: dict):
                 GeminiAnalyzer(run_model).analyze, chunk, effective_window, transcript, uploaded
             )
         )
-        if result.provider_outcome == "budget_rejected":
+        if result.provider_outcome in {"budget_rejected", "preparation_failed"}:
             # Definitely unsent: retain the checkpoint without charging or advancing windows.
             async with tenant_session(args["workspace_id"]) as db:
                 window = await locked_window(db, args["window_id"])
@@ -437,7 +453,13 @@ async def analyze_window(args: dict):
                     window.state = "pending"
                     window.attempts -= 1
                     window.error = result.validation_error
-            raise ProviderBudgetError(result.validation_error or "AI allowance unavailable")
+                    window.provider_file = result.cleanup_pending_file
+            error_type = (
+                ProviderBudgetError
+                if result.provider_outcome == "budget_rejected"
+                else ProviderPreparationError
+            )
+            raise error_type(result.validation_error or "AI preparation unavailable")
         async with tenant_session(args["workspace_id"]) as db:
             window = await locked_window(db, args["window_id"])
             if window.state not in {"in_flight", "ambiguous"}:

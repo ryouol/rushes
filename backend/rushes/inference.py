@@ -78,6 +78,10 @@ class AnalysisResult(BaseModel):
     cleanup_pending_file: str | None = None
 
 
+class ProviderPreparationError(ValueError):
+    pass
+
+
 class Analyzer(Protocol):
     def analyze(
         self,
@@ -145,7 +149,7 @@ class GeminiAnalyzer:
         on_upload: Callable[[str], None] | None = None,
     ) -> AnalysisResult:
         from google import genai
-        from google.genai import types
+        from google.genai import errors, types
 
         config = settings()
         if not config.gemini_api_key or not config.gemini_api_key.get_secret_value():
@@ -169,16 +173,24 @@ class GeminiAnalyzer:
         )
         remote = None
         result = None
+        generation_started = False
         try:
             remote = client.files.upload(file=chunk, config={"mime_type": "video/mp4"})
             if on_upload:
                 on_upload(remote.name)
             deadline = time.monotonic() + 180
+            status_errors = 0
             while remote.state and remote.state.name == "PROCESSING":
                 if time.monotonic() > deadline:
                     raise TimeoutError("Provider video preparation timed out")
                 time.sleep(2)
-                remote = client.files.get(name=remote.name)
+                try:
+                    remote = client.files.get(name=remote.name)
+                except errors.ServerError as error:
+                    # Status reads are idempotent; generation remains a single dispatch.
+                    if error.code not in {500, 502, 503, 504} or status_errors >= 2:
+                        raise
+                    status_errors += 1
             if not remote.state or remote.state.name != "ACTIVE":
                 raise ValueError("Provider could not prepare the derived video")
             prompt = (
@@ -201,6 +213,7 @@ class GeminiAnalyzer:
                     validation_error="Analysis input exceeds the 10,000-token budget or could not be measured. Reduce the configured analysis window and review a new estimate.",
                 )
                 return result
+            generation_started = True
             response = client.models.generate_content(
                 model=self.model,
                 contents=contents,
@@ -223,6 +236,19 @@ class GeminiAnalyzer:
                 + (usage.thoughts_token_count or 0)
                 if usage
                 else 0,
+            )
+            return result
+        except Exception as error:
+            if generation_started:
+                raise
+            result = AnalysisResult(
+                raw={
+                    "preparation_error_type": type(error).__name__,
+                    "http_status": getattr(error, "code", None),
+                },
+                model=self.model,
+                provider_outcome="preparation_failed",
+                validation_error="Google could not finish preparing this clip. No analysis generation was sent. Use Resume processing to retry later.",
             )
             return result
         finally:

@@ -66,7 +66,9 @@ async def cleanup_provider_files(workspace_id):
                 select(AnalysisWindow.id, AnalysisWindow.provider_file)
                 .where(
                     AnalysisWindow.provider_file.is_not(None),
-                    AnalysisWindow.state.in_(["received", "completed", "ambiguous", "failed"]),
+                    AnalysisWindow.state.in_(
+                        ["pending", "received", "completed", "ambiguous", "failed"]
+                    ),
                     AnalysisWindow.created_at < now() - timedelta(hours=1),
                 )
                 .order_by(AnalysisWindow.created_at, AnalysisWindow.id)

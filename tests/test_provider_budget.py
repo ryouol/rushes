@@ -11,7 +11,7 @@ from rushes import provider_budget, remote_compute
 from rushes.config import settings
 from rushes.db import tenant_session
 from rushes.inference import GeminiAnalyzer
-from rushes.models import AnalysisWindow, Asset, Job, Usage
+from rushes.models import AnalysisWindow, Asset, Job, Reservation, Usage
 from rushes.timing import Interval
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
@@ -121,9 +121,12 @@ async def test_search_explains_budget_denial(monkeypatch):
 
 
 @pytest.mark.integration
-async def test_unsent_window_remains_retryable_without_usage(authenticated, monkeypatch, tmp_path):
+@pytest.mark.parametrize("outcome", ["budget_rejected", "preparation_failed"])
+async def test_unsent_window_remains_retryable_without_usage(
+    authenticated, monkeypatch, tmp_path, outcome
+):
     from rushes import activities
-    from rushes.inference import AnalysisResult
+    from rushes.inference import AnalysisResult, ProviderPreparationError
 
     _clients, ws, _other, project, asset, _tokens = authenticated
     monkeypatch.setattr(settings(), "gemini_api_key", SecretStr("synthetic-no-network"))
@@ -156,12 +159,19 @@ async def test_unsent_window_remains_retryable_without_usage(authenticated, monk
             analyze=lambda *_: AnalysisResult(
                 raw={},
                 model=model,
-                provider_outcome="budget_rejected",
+                provider_outcome=outcome,
                 validation_error="Monthly AI allowance used up",
+                cleanup_pending_file="files/synthetic-pending"
+                if outcome == "preparation_failed"
+                else None,
             )
         ),
     )
-    with pytest.raises(provider_budget.ProviderBudgetError):
+    with pytest.raises(
+        provider_budget.ProviderBudgetError
+        if outcome == "budget_rejected"
+        else ProviderPreparationError
+    ):
         await activities.analyze_window({**args, "window_id": window_id})
     await activities.fail_job({**args, "state": "failed", "error": "Monthly AI allowance used up"})
     async with tenant_session(ws) as db:
@@ -169,6 +179,46 @@ async def test_unsent_window_remains_retryable_without_usage(authenticated, monk
         assert window.state == "pending" and window.attempts == 0
         assert await db.scalar(select(Usage.id).where(Usage.asset_id == asset)) is None
     assert await activities.next_window({**args, **run}) == window_id
+    response = await _clients[0].post(f"/api/workspaces/{ws}/assets/{asset}/retry")
+    assert response.status_code == 202 and response.json()["job_id"] == str(job_id)
+    assert await activities.plan_analysis(args) == run
+    cleaned = []
+    if outcome == "preparation_failed":
+
+        def unavailable_cleanup(_):
+            raise TimeoutError("Synthetic failed cleanup")
+
+        monkeypatch.setattr(activities, "delete_remote", unavailable_cleanup)
+        with pytest.raises(ProviderPreparationError, match="No new analysis was sent"):
+            await activities.analyze_window({**args, "window_id": window_id})
+        async with tenant_session(ws) as db:
+            window = await db.get(AnalysisWindow, UUID(window_id))
+            assert window.state == "pending" and window.attempts == 0
+            assert window.provider_file == "files/synthetic-pending"
+    monkeypatch.setattr(activities, "delete_remote", lambda name: cleaned.append(name))
+    chunk.write_bytes(b"synthetic restored allowance")
+    monkeypatch.setattr(
+        activities,
+        "GeminiAnalyzer",
+        lambda model: SimpleNamespace(
+            analyze=lambda *_: AnalysisResult(
+                raw={}, text='{"observations":[]}', model=model, input_tokens=12
+            )
+        ),
+    )
+    assert await activities.analyze_window({**args, "window_id": window_id}) == "completed"
+    assert cleaned == (["files/synthetic-pending"] if outcome == "preparation_failed" else [])
+    assert await activities.next_window({**args, **run}) is None
+    await activities.finish_asset({**args, **run})
+    async with tenant_session(ws) as db:
+        window = await db.get(AnalysisWindow, UUID(window_id))
+        assert window.attempts == 1
+        usage = await db.scalar(select(Usage).where(Usage.asset_id == asset))
+        assert usage.provider_outcome == "confirmed" and usage.input_tokens == 12
+        reservation = await db.scalar(
+            select(Reservation).where(Reservation.operation_key == f"analysis:{job_id}")
+        )
+        assert reservation.settled_milli == 167
 
 
 @pytest.mark.integration

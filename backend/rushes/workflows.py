@@ -12,7 +12,13 @@ RETRY = RetryPolicy(
     backoff_coefficient=2,
     maximum_interval=timedelta(seconds=60),
     maximum_attempts=3,
-    non_retryable_error_types=["ValueError", "StorageError", "CreditError", "ProviderBudgetError"],
+    non_retryable_error_types=[
+        "ValueError",
+        "StorageError",
+        "CreditError",
+        "ProviderBudgetError",
+        "ProviderPreparationError",
+    ],
 )
 
 
@@ -37,6 +43,7 @@ def failure_message(error: Exception) -> str:
             "CreditError",
             "ValueError",
             "ProviderBudgetError",
+            "ProviderPreparationError",
         }:
             return current.message[:1000]
         cause = getattr(current, "cause", None)

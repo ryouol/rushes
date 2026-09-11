@@ -1,6 +1,6 @@
 # Container preparation
 
-The image packages the Next.js web server, FastAPI API, RUSHES worker and pinned Temporal Server 1.31.2. It is a tested deployment component, not a deployed service or a complete Render/Modal topology. [PRODUCTION.md](PRODUCTION.md) records the soft $20/month target, the stated $35 lean hosting estimate, provider allowance, and outstanding hosted verification.
+The image packages the Next.js web server, FastAPI API, RUSHES worker and pinned Temporal Server 1.31.2. It is deployed as the Render RUSHES service, with private Modal compute. [PRODUCTION.md](PRODUCTION.md) records the soft $20/month target, the stated $35 lean hosting estimate, provider allowance, and hosted verification results.
 
 ## Build and runtime
 
@@ -17,7 +17,7 @@ The build uses locked Python/npm dependencies and excludes private configuration
 - `RUSHES_CLIENT_IP_HEADER`: either `x-rushes-ingress-client-ip` or `true-client-ip`, only after verifying that the trusted ingress overwrites it with a single validated client IP. The web server forwards a separately named internal header to its loopback API. Arbitrary client-supplied forwarding headers are not authoritative.
 - Durable storage mounted at `/var/data`, writable by UID 10001. Originals/previews, exports and model caches have separate subdirectories. The private Modal functions receive bounded derived audio bytes and text; they never access the Render disk. FFmpeg, source storage and workflow orchestration must remain on the RUSHES host.
 
-The web port must be reachable only through the trusted ingress. Otherwise a direct caller could forge its asserted client IP and bypass per-client authentication limits. The local harness uses its own Caddy ingress that overwrites the header. The actual Render edge contract has not yet been verified.
+The web port must be reachable only through the trusted ingress. Otherwise a direct caller could forge its asserted client IP and bypass per-client authentication limits. The local harness uses its own Caddy ingress that overwrites the header. The actual Render True-Client-IP path was tested against rotating forged forwarding headers; see validation/render-ingress.json.
 
 The default upload body limit is 20 GiB and the default duration limit is two hours, configurable by `RUSHES_MAX_UPLOAD_BYTES` and `RUSHES_UPLOAD_TIMEOUT_SECONDS` (1–86400 seconds). The Next custom HTTP server and API both enforce the duration. Slow uploads release database connections between initial authorization and final commit; the latter rechecks session, membership and project access. Failed/timed-out uploads do not publish an asset/job. These are technical limits, not affordable storage allocations or a spending cap. Provider ingress limits also need validation.
 

@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-09-11T00:08:07.423075+00:00",
+  "trusted_header": "true-client-ip",
+  "rotating_spoofed_headers_statuses": [
+    400,
+    400,
+    400,
+    400,
+    400,
+    400,
+    400,
+    400,
+    429,
+    429,
+    429,
+    429
+  ],
+  "forged_headers_cannot_bypass_auth_limit": true,
+  "foreign_origin_rejected": true,
+  "limitation": "Single external client observed; separate-client counter behavior also covered by local middleware tests."
+}

@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-09-11T00:11:40.786974+00:00",
+  "sample_resolution": "default 60 seconds; sampled values, not instantaneous peaks",
+  "resources": {
+    "srv-dahk822d0e5s73fo22o0": {
+      "memory": [
+        {
+          "unit": "bytes",
+          "max_sample": 541163500,
+          "samples": 10
+        },
+        {
+          "unit": "bytes",
+          "max_sample": 3739648,
+          "samples": 1
+        }
+      ],
+      "disk-usage": [
+        {
+          "unit": "bytes",
+          "max_sample": 831488,
+          "samples": 10
+        }
+      ]
+    },
+    "dpg-dahk1qek1f9s73fk9n5g-a": {
+      "memory": [
+        {
+          "unit": "bytes",
+          "max_sample": 122175490,
+          "samples": 27
+        }
+      ],
+      "disk-usage": [
+        {
+          "unit": "bytes",
+          "max_sample": 121298940,
+          "samples": 25
+        }
+      ]
+    }
+  },
+  "scope": "Small synthetic uploads, processing, search and exports; no multi-user load or long footage qualification"
+}

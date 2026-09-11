@@ -6,7 +6,7 @@ export default defineConfig({
   timeout: 180000,
   use: {
     actionTimeout: 15000,
-    baseURL: "http://localhost:3741",
+    baseURL: process.env.RUSHES_TEST_BASE_URL ?? "http://localhost:3741",
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

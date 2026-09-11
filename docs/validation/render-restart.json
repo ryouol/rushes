@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-09-11T00:11:04.152294+00:00",
+  "restart_transition_observed": true,
+  "elapsed_seconds": 41.0,
+  "session_retained": true,
+  "asset_ready_retained": true,
+  "correction_retained": true,
+  "preview_sha256_unchanged": true,
+  "export_after_restart_completed": true,
+  "original_download_sha256_matches_upload": true,
+  "original_sha256": "fe08748262be9e31a74153f2b1c55b74f1335e06d48544f4d6464e21c0503fac"
+}

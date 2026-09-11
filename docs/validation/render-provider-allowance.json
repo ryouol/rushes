@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-09-11T00:12:18.650864+00:00",
+  "monthly_allowance_usd": 2,
+  "reservations": [
+    {
+      "provider": "gemini",
+      "calls": 4,
+      "reserved_usd": 0.24
+    },
+    {
+      "provider": "modal",
+      "calls": 15,
+      "reserved_usd": 0.15
+    }
+  ],
+  "note": "Conservative call exposure, not actual billed usage. Failed or uncertain calls retained. Direct deployment/validation compute, hosting and egress excluded."
+}

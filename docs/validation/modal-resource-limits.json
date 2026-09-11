@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "embedding_dimensions": 384,
+  "maximum_utf8_text_bytes": 15999,
+  "audio_duration_us": 12027938,
+  "transcript_segments": 3,
+  "elapsed_seconds": 14.82,
+  "cpu_request_and_limit": 1,
+  "memory_request_and_limit_mib": 2048,
+  "source_sha256": "10f210000c4d7f26b2aeea625098a0260d11a46f3143db655054aee51e4f42a6"
+}

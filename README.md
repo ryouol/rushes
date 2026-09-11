@@ -2,7 +2,7 @@
 
 A working local footage library, persistent worklog, search workspace, and clip exporter. This is a **local release candidate with explicit verification gaps**, not a completed production release. Gemini analysis sends derived clips and transcript context to Google; local-first does not mean fully offline.
 
-Production deployment is authorized with a **$20/month combined target and modest overage acceptable**. RUSHES has its own Render project and a deployed private Modal compute app. Gemini credentials and one bounded video analysis have been verified. The Render web application and durable hosted workflow service are not deployed; no public RUSHES URL exists. See [current deployment status and blockers](docs/PRODUCTION.md), [the cloud integration review](docs/CLOUD-REVIEW.md), and [the earlier production preparation review](docs/PRODUCTION-REVIEW.md).
+**RUSHES is live at [rushes.onrender.com](https://rushes.onrender.com).** Render hosts the web/API, durable workflows and media; private Modal functions handle speech and embeddings. The $20/month budget is a soft target: this lean configuration is approximately $35/month fixed, with a separate $2 monthly provider-call allowance. See [deployment status and verification](docs/PRODUCTION.md) and [the numbered review record](docs/PRODUCTION-REVIEW.md).
 
 ## Start locally
 
@@ -110,4 +110,4 @@ Do not run it against unrelated services or while using the instance for real wo
 
 The requested simplify and final review are recorded in [all numbered findings and dispositions](docs/REVIEW.md). The remaining review-process limitation is the size of this initial application snapshot; the report provides a concrete staged landing plan.
 
-See [the phase checklist](docs/IMPLEMENTATION.md), [decisions](docs/DECISIONS.md), and [security inventory](docs/validation/security-inventory.json). The later production request authorizes hosting within a strict $20 combined monthly maximum; [production status](docs/PRODUCTION.md) records the unresolved provider/budget requirements. [Container preparation](docs/HOSTING.md) covers the tested web/API entrypoint. Stripe and live payment collection remain deferred by scope. The overall goal remains open while essential integration and external verification are missing.
+See [the phase checklist](docs/IMPLEMENTATION.md), [decisions](docs/DECISIONS.md), and [security inventory](docs/validation/security-inventory.json). The hosted Render/Modal deployment and its soft budget target are documented in [production status](docs/PRODUCTION.md). [Container operation](docs/HOSTING.md) covers the web/API entrypoint. Stripe and payment collection remain deferred by scope; editor round trips and production-scale qualification remain unverified.
