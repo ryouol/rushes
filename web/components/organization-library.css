@@ -185,6 +185,13 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px 16px;
 }
+.organization-asset-grid[inert] {
+  opacity: 0.5;
+}
+.organizer-project .pagination button[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .organizer-project .asset-image,
 .organizer-project .asset-open {
   border-radius: 4px;

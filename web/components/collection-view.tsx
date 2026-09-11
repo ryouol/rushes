@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Film, Search, X } from "lucide-react";
 import {
   api,
@@ -39,6 +39,13 @@ export function CollectionView({
   const [notice, setNotice] = useState("");
   const [mutating, setMutating] = useState(false);
   const mutationPending = useRef(false);
+  const adjustTrigger = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (!editing && !mutating && adjustTrigger.current) {
+      if (adjustTrigger.current.isConnected) adjustTrigger.current.focus();
+      adjustTrigger.current = null;
+    }
+  }, [editing, mutating]);
   const [exporting, setExporting] = useState(false);
   async function previewExport(kind: Parameters<typeof onExport>[0]) {
     if (exporting) return;
@@ -194,125 +201,139 @@ export function CollectionView({
           </details>
         </>
       )}
-      {editing && (
-        <form
-          key={editing.id}
-          className="stack select-edit"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            const full = form.get("full") === "on";
-            await mutate(async () => {
-              await api(`${base}/collection-items/${editing.id}`, {
-                method: "PATCH",
-                body: JSON.stringify({
-                  start_us: full
-                    ? null
-                    : Math.round(Number(form.get("start")) * 1e6),
-                  end_us: full
-                    ? null
-                    : Math.round(Number(form.get("end")) * 1e6),
-                  note: form.get("note"),
-                }),
-              });
-              setEditing(null);
-              await refresh();
-            }, "Select updated.");
-          }}
-        >
-          <strong>Adjust {editing.asset_name}</strong>
-          <label>
-            <input
-              type="checkbox"
-              name="full"
-              defaultChecked={editing.start_us === null}
-            />{" "}
-            Use full source file
-          </label>
-          <div className="inout">
-            <label className="field">
-              <span>Collection in seconds</span>
-              <input
-                name="start"
-                type="number"
-                step={0.001}
-                min={0}
-                defaultValue={(editing.start_us || 0) / 1e6}
-              />
-            </label>
-            <label className="field">
-              <span>Collection out seconds</span>
-              <input
-                name="end"
-                type="number"
-                step={0.001}
-                min={0}
-                defaultValue={(editing.end_us || 0) / 1e6}
-              />
-            </label>
-          </div>
-          <label className="field">
-            <span>Select note</span>
-            <input name="note" maxLength={1000} defaultValue={editing.note} />
-          </label>
-          <div className="button-row">
-            <button className="primary" disabled={mutating}>
-              {mutating ? "Saving…" : "Save range"}
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setEditing(null)}
-            >
-              Cancel adjustment
-            </button>
-          </div>
-        </form>
-      )}
       {items.map((item) => (
-        <div className="select-row" key={item.id}>
-          <button
-            onClick={() =>
-              onOpen({ id: item.asset_id, seek: item.start_us || 0 })
-            }
-          >
-            <Film size={19} />
-            <div>
-              <strong>{item.asset_name}</strong>
-              <span className="timecode">
-                {item.start_us === null
-                  ? "Full source file"
-                  : `${elapsed(item.start_us)} — ${elapsed(item.end_us!)}`}
-              </span>
-            </div>
-          </button>
-          {canEdit && (
+        <Fragment key={item.id}>
+          <div className="select-row">
             <button
-              className="text-button"
-              disabled={mutating}
-              onClick={() => setEditing(item)}
-            >
-              Adjust
-            </button>
-          )}
-          {canEdit && (
-            <button
-              className="icon-button"
-              aria-label={`Remove ${item.asset_name} from collection`}
-              disabled={mutating}
               onClick={() =>
-                void mutate(async () => {
-                  await api(`${base}/collection-items/${item.id}`, {
-                    method: "DELETE",
-                  });
-                  await refresh();
-                }, "Select removed from collection.")
+                onOpen({ id: item.asset_id, seek: item.start_us || 0 })
               }
             >
-              <X size={18} />
+              <Film size={19} />
+              <div>
+                <strong>{item.asset_name}</strong>
+                <span className="timecode">
+                  {item.start_us === null
+                    ? "Full source file"
+                    : `${elapsed(item.start_us)} — ${elapsed(item.end_us!)}`}
+                </span>
+              </div>
             </button>
+            {canEdit && (
+              <button
+                className="text-button"
+                disabled={mutating}
+                aria-expanded={editing?.id === item.id}
+                aria-controls={`collection-edit-${item.id}`}
+                onClick={(event) => {
+                  adjustTrigger.current = event.currentTarget;
+                  setEditing(item);
+                }}
+              >
+                Adjust
+              </button>
+            )}
+            {canEdit && (
+              <button
+                className="icon-button"
+                aria-label={`Remove ${item.asset_name} from collection`}
+                disabled={mutating}
+                onClick={() =>
+                  void mutate(async () => {
+                    await api(`${base}/collection-items/${item.id}`, {
+                      method: "DELETE",
+                    });
+                    await refresh();
+                  }, "Select removed from collection.")
+                }
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+          {editing?.id === item.id && (
+            <form
+              id={`collection-edit-${item.id}`}
+              aria-label={`Adjust ${editing.asset_name}`}
+              className="stack select-edit"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                const full = form.get("full") === "on";
+                await mutate(async () => {
+                  await api(`${base}/collection-items/${editing.id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                      start_us: full
+                        ? null
+                        : Math.round(Number(form.get("start")) * 1e6),
+                      end_us: full
+                        ? null
+                        : Math.round(Number(form.get("end")) * 1e6),
+                      note: form.get("note"),
+                    }),
+                  });
+                  setEditing(null);
+                  await refresh();
+                }, "Select updated.");
+              }}
+            >
+              <strong>Adjust {editing.asset_name}</strong>
+              <label>
+                <input
+                  type="checkbox"
+                  name="full"
+                  autoFocus
+                  defaultChecked={editing.start_us === null}
+                />{" "}
+                Use full source file
+              </label>
+              <div className="inout">
+                <label className="field">
+                  <span>Collection in seconds</span>
+                  <input
+                    name="start"
+                    type="number"
+                    step={0.001}
+                    min={0}
+                    defaultValue={(editing.start_us || 0) / 1e6}
+                  />
+                </label>
+                <label className="field">
+                  <span>Collection out seconds</span>
+                  <input
+                    name="end"
+                    type="number"
+                    step={0.001}
+                    min={0}
+                    defaultValue={(editing.end_us || 0) / 1e6}
+                  />
+                </label>
+              </div>
+              <label className="field">
+                <span>Select note</span>
+                <input
+                  name="note"
+                  maxLength={1000}
+                  defaultValue={editing.note}
+                />
+              </label>
+              <div className="button-row">
+                <button className="primary" disabled={mutating}>
+                  {mutating ? "Saving…" : "Save range"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={mutating}
+                  onClick={() => setEditing(null)}
+                >
+                  Cancel adjustment
+                </button>
+              </div>
+            </form>
           )}
-        </div>
+        </Fragment>
       ))}
       {!loading && !items.length && (
         <p className="muted">

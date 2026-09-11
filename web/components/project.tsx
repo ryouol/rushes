@@ -70,10 +70,18 @@ export function ProjectView({
   const [tab, setTab] = useState<"footage" | "collections" | "exports">(
     "footage",
   );
-  const [assets, setAssets] = useState<Asset[]>([]),
-    [total, setTotal] = useState(0),
-    [page, setPage] = useState(0);
+  const [footage, setFootage] = useState<{
+    items: Asset[];
+    total: number;
+    page: number;
+    category: string;
+  } | null>(null);
+  const assets = footage?.items ?? [];
+  const total = footage?.total ?? 0;
+  const [page, setPage] = useState(0);
   const [category, setCategory] = useState("");
+  const footageCurrent =
+    footage?.page === page && footage.category === category;
   const [organization, setOrganization] = useState<ProjectOrganization | null>(
     null,
   );
@@ -186,8 +194,7 @@ export function ProjectView({
       if (exportPage > 0 && exportPage * 100 >= rendered.total) {
         setExportPage(Math.max(0, Math.ceil(rendered.total / 100) - 1));
       }
-      setAssets(footage.items);
-      setTotal(footage.total);
+      setFootage({ ...footage, page, category });
       setCollections(groups);
       setExports(rendered.items);
       setExportTotal(rendered.total);
@@ -656,10 +663,11 @@ export function ProjectView({
               <OrganizationLibrary
                 assets={assets}
                 base={base}
-                category={category}
+                category={footage?.category ?? category}
                 loading={loading}
+                stale={!footageCurrent}
                 total={total}
-                page={page}
+                page={footage?.page ?? page}
                 canEdit={canEdit}
                 pending={pending}
                 onOpen={(id) => setSelected({ id })}
@@ -671,6 +679,11 @@ export function ProjectView({
                   })
                 }
                 onPageChange={setPage}
+                onRefresh={() => {
+                  setError("");
+                  setLoading(true);
+                  void refresh();
+                }}
                 onRetry={(id) =>
                   void action(
                     id,

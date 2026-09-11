@@ -165,6 +165,7 @@ export function OrganizationLibrary({
   base,
   category,
   loading,
+  stale,
   total,
   page,
   canEdit,
@@ -173,11 +174,13 @@ export function OrganizationLibrary({
   onRetry,
   onDelete,
   onPageChange,
+  onRefresh,
 }: {
   assets: Asset[];
   base: string;
   category: string;
   loading: boolean;
+  stale: boolean;
   total: number;
   page: number;
   canEdit: boolean;
@@ -186,14 +189,16 @@ export function OrganizationLibrary({
   onRetry: (id: string) => void;
   onDelete: (asset: Asset) => void;
   onPageChange: (page: number) => void;
+  onRefresh: () => void;
 }) {
-  if (loading)
+  const unavailable = loading || stale;
+  if (loading && !assets.length)
     return (
       <div className="organization-loading" role="status">
         <Loader2 className="spin" size={20} /> Loading footage…
       </div>
     );
-  if (!assets.length)
+  if (!assets.length && !stale)
     return (
       <div className="empty-state organization-empty">
         <Film size={38} strokeWidth={1.2} />
@@ -213,7 +218,22 @@ export function OrganizationLibrary({
     );
   return (
     <>
-      <div className="asset-grid organization-asset-grid">
+      <p className="sr-only" role="status">
+        {loading ? "Loading footage…" : ""}
+      </p>
+      {!loading && stale && (
+        <div className="organization-unavailable" role="status">
+          <p>This footage view could not load.</p>
+          <button className="text-button" onClick={onRefresh}>
+            Try again
+          </button>
+        </div>
+      )}
+      <div
+        className="asset-grid organization-asset-grid"
+        aria-busy={loading}
+        inert={unavailable}
+      >
         {assets.map((asset) => {
           const organization = asset.organization;
           const state = organization?.state ?? "not_analyzed";
@@ -303,8 +323,10 @@ export function OrganizationLibrary({
         <div className="pagination">
           <button
             className="secondary"
-            disabled={page === 0}
-            onClick={() => onPageChange(page - 1)}
+            aria-disabled={unavailable || page === 0}
+            onClick={() => {
+              if (!unavailable && page > 0) onPageChange(page - 1);
+            }}
           >
             Previous
           </button>
@@ -313,8 +335,11 @@ export function OrganizationLibrary({
           </span>
           <button
             className="secondary"
-            disabled={(page + 1) * 40 >= total}
-            onClick={() => onPageChange(page + 1)}
+            aria-disabled={unavailable || (page + 1) * 40 >= total}
+            onClick={() => {
+              if (!unavailable && (page + 1) * 40 < total)
+                onPageChange(page + 1);
+            }}
           >
             Next
           </button>

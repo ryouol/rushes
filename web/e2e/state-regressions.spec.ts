@@ -921,3 +921,149 @@ test("switching workspaces discards delayed settings", async ({ page }) => {
   await expect(page.getByText("/fixture/old", { exact: true })).toHaveCount(0);
   await expect(page.getByText("/fixture/new", { exact: true })).toBeVisible();
 });
+
+test("footage paging preserves focus and stale category rows stay inactive after failure", async ({
+  page,
+}) => {
+  const coast = { id: "coast", name: "Coastline" };
+  const aerial = { id: "aerial", name: "Aerials" };
+  const library = Array.from({ length: 41 }, (_, index) =>
+    fixtureAsset(`video-${index}`, [index < 40 ? coast : aerial]),
+  );
+  await fixture(page, library);
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let failCategory = true;
+  await page.route("**/projects/p0/assets?**", async (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    const offset = Number(query.get("offset") || 0);
+    const category = query.get("category");
+    if (offset === 40) await pending;
+    if (category === coast.id && failCategory) {
+      await route
+        .fulfill({ status: 503, json: { detail: "Temporary footage failure" } })
+        .catch(() => {});
+      return;
+    }
+    const matching = library.filter(
+      (asset) =>
+        !category ||
+        asset.organization.categories.some((item) => item.id === category),
+    );
+    await route
+      .fulfill({
+        json: {
+          items: matching.slice(offset, offset + 40),
+          total: matching.length,
+        },
+      })
+      .catch(() => {});
+  });
+  await page.locator(".workspace-project-row").first().click();
+  const grid = page.locator(".organization-asset-grid");
+  await expect(grid.locator(".asset-card")).toHaveCount(40);
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  const mountedGrid = await grid.elementHandle();
+  const mountedNext = await next.elementHandle();
+  await next.focus();
+  try {
+    await next.press("Enter");
+    await expect(grid).toHaveAttribute("inert", "");
+    await expect(grid.locator(".asset-card")).toHaveCount(40);
+    await expect(next).toBeFocused();
+    await expect(next).toBeDisabled();
+    expect(await mountedGrid!.evaluate((element) => element.isConnected)).toBe(
+      true,
+    );
+    expect(await mountedNext!.evaluate((element) => element.isConnected)).toBe(
+      true,
+    );
+  } finally {
+    release();
+  }
+  await expect(grid.locator(".asset-card")).toHaveCount(1);
+  await expect(next).toBeFocused();
+  await expect(grid).not.toHaveAttribute("inert", "");
+  await page.getByRole("button", { name: "Coastline 40", exact: true }).click();
+  await expect(
+    page.getByText("This footage view could not load."),
+  ).toBeVisible();
+  await expect(grid).toHaveAttribute("inert", "");
+  await expect(grid.locator(".asset-card")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: /Synthetic video-40/ }),
+  ).toHaveCount(0);
+  failCategory = false;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(grid).not.toHaveAttribute("inert", "");
+  await expect(grid.locator(".asset-card")).toHaveCount(40);
+  await expect(
+    page.getByText("Temporary footage failure", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("This footage view could not load.")).toHaveCount(
+    0,
+  );
+});
+
+test("collection adjustment stays beside its row and restores focus after cancel and save", async ({
+  page,
+}) => {
+  await fixture(page);
+  const items = Array.from({ length: 25 }, (_, index) => ({
+    id: `select-${index}`,
+    asset_id: `asset-${index}`,
+    asset_name: `Footage ${index}`,
+    start_us: 0,
+    end_us: 1_000_000,
+    note: "",
+  }));
+  await page.route("**/projects/p0/collections", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "c",
+          name: "Synthetic selects",
+          instructions: "",
+          item_count: items.length,
+        },
+      ],
+    }),
+  );
+  await page.route("**/collections/c/items", (route) =>
+    route.fulfill({ json: items }),
+  );
+  let savedNote = "";
+  await page.route("**/collection-items/select-24", (route) => {
+    savedNote = route.request().postDataJSON().note;
+    items[24].note = savedNote;
+    return route.fulfill({ json: items[24] });
+  });
+  await page.locator(".workspace-project-row").first().click();
+  await page.getByRole("tab", { name: "Collections", exact: true }).click();
+  await page.locator(".collection-card").first().click();
+  const row = page.locator(".select-row").last();
+  const adjust = row.getByRole("button", { name: "Adjust", exact: true });
+  await adjust.click();
+  const form = page.getByRole("form", {
+    name: "Adjust Footage 24",
+    exact: true,
+  });
+  await expect(
+    form.getByRole("checkbox", { name: "Use full source file" }),
+  ).toBeFocused();
+  await expect(form).toBeInViewport();
+  expect(
+    await row.evaluate((element) => element.nextElementSibling?.tagName),
+  ).toBe("FORM");
+  await form.getByRole("button", { name: "Cancel adjustment" }).click();
+  await expect(adjust).toBeFocused();
+  await expect(form).toHaveCount(0);
+  await adjust.press("Enter");
+  await form.getByLabel("Select note").fill("Keep the final frame");
+  await form.getByRole("button", { name: "Save range", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await expect(adjust).toBeFocused();
+  expect(savedNote).toBe("Keep the final frame");
+});
