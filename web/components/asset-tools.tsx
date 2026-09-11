@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Asset, type Observation } from "@/lib/api";
 
 type Quote = {
@@ -25,23 +25,62 @@ export function AssetTools({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [roots, setRoots] = useState<{ id: number; path: string }[]>([]);
+  const [rootsRequested, setRootsRequested] = useState(false);
+  const [rootsLoading, setRootsLoading] = useState(false);
+  const [rootsError, setRootsError] = useState("");
+  const [rootsAttempt, setRootsAttempt] = useState(0);
   const [relink, setRelink] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
+  const pending = useRef(false);
+  useEffect(() => {
+    if (!canEdit || !rootsRequested) return;
+    const request = new AbortController();
+    setRoots([]);
+    setRootsError("");
+    setRootsLoading(true);
+    void api<{ id: number; path: string }[]>(`${base}/source-roots`, {
+      signal: request.signal,
+    })
+      .then((items) => {
+        if (!request.signal.aborted) setRoots(items);
+      })
+      .catch((error) => {
+        if (!request.signal.aborted) setRootsError(error.message);
+      })
+      .finally(() => {
+        if (!request.signal.aborted) setRootsLoading(false);
+      });
+    return () => request.abort();
+  }, [base, canEdit, rootsRequested, rootsAttempt]);
   async function action(run: () => Promise<void>) {
+    if (pending.current) return;
+    pending.current = true;
     setBusy(true);
     setError("");
+    setStatus("");
     try {
       await run();
     } catch (error) {
       setError((error as Error).message);
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   }
   return (
-    <details className="asset-tools">
-      <summary>Source & analysis</summary>
+    <details
+      className="asset-tools"
+      onToggle={(event) => {
+        if (event.currentTarget.open) setRootsRequested(true);
+      }}
+    >
+      <summary>Footage details & analysis</summary>
       <div className="stack">
+        {busy && (
+          <p className="small muted" role="status">
+            Working…
+          </p>
+        )}
         <p className="output-path">
           Imported as {asset.import_relative_path || asset.relative_path}
         </p>
@@ -75,19 +114,36 @@ export function AssetTools({
         )}
         {canEdit && (
           <>
+            {rootsLoading && (
+              <p className="small muted" role="status">
+                Checking source-folder availability…
+              </p>
+            )}
+            {rootsError && (
+              <div className="stack">
+                <p className="error-text" role="alert">
+                  {rootsError}
+                </p>
+                <button
+                  className="secondary"
+                  disabled={rootsLoading}
+                  onClick={() => setRootsAttempt((attempt) => attempt + 1)}
+                >
+                  Retry source-folder check
+                </button>
+              </div>
+            )}
             <div className="button-row">
-              <button
-                className="secondary"
-                disabled={busy}
-                onClick={() =>
-                  action(async () => {
-                    setRoots(await api(`${base}/source-roots`));
-                    setRelink(true);
-                  })
-                }
-              >
-                Relink source
-              </button>
+              {roots.length > 0 && (
+                <button
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => setRelink((open) => !open)}
+                  aria-expanded={relink}
+                >
+                  Relink source
+                </button>
+              )}
               <button
                 className="secondary"
                 disabled={busy}
@@ -117,66 +173,60 @@ export function AssetTools({
                     })
                   }
                 >
-                  Retry failed processing
+                  Resume processing
                 </button>
               )}
             </div>
-            {relink &&
-              (roots.length ? (
-                <form
-                  className="stack"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const data = new FormData(event.currentTarget);
-                    void action(async () => {
-                      await api(`${base}/assets/${asset.id}/relink`, {
-                        method: "POST",
-                        body: JSON.stringify({
-                          root: Number(data.get("root")),
-                          relative_path: data.get("path"),
-                        }),
-                      });
-                      setRelink(false);
-                      setStatus(
-                        "Source relinked after a matching SHA-256 content check.",
-                      );
-                      await onChanged();
+            {relink && roots.length > 0 && (
+              <form
+                className="stack"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const data = new FormData(event.currentTarget);
+                  void action(async () => {
+                    await api(`${base}/assets/${asset.id}/relink`, {
+                      method: "POST",
+                      body: JSON.stringify({
+                        root: Number(data.get("root")),
+                        relative_path: data.get("path"),
+                      }),
                     });
-                  }}
-                >
-                  <label className="field">
-                    <span>Configured source root</span>
-                    <select name="root">
-                      {roots.map((root) => (
-                        <option key={root.id} value={root.id}>
-                          {root.path}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Relative replacement path</span>
-                    <input
-                      name="path"
-                      required
-                      maxLength={2000}
-                      placeholder="Day 1/Camera A/clip.mov"
-                    />
-                  </label>
-                  <p className="small muted">
-                    Only identical source bytes can be relinked. Import changed
-                    footage as a new source.
-                  </p>
-                  <button className="primary" disabled={busy}>
-                    Verify and relink
-                  </button>
-                </form>
-              ) : (
-                <p className="notice small">
-                  Add an explicit source root in the local .env configuration
-                  and restart the API before relinking.
+                    setRelink(false);
+                    setStatus(
+                      "Source relinked after a matching SHA-256 content check.",
+                    );
+                    await onChanged();
+                  });
+                }}
+              >
+                <label className="field">
+                  <span>Configured source root</span>
+                  <select name="root">
+                    {roots.map((root) => (
+                      <option key={root.id} value={root.id}>
+                        {root.path}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Relative replacement path</span>
+                  <input
+                    name="path"
+                    required
+                    maxLength={2000}
+                    placeholder="Day 1/Camera A/clip.mov"
+                  />
+                </label>
+                <p className="small muted">
+                  Only identical source bytes can be relinked. Import changed
+                  footage as a new source.
                 </p>
-              ))}
+                <button className="primary" disabled={busy}>
+                  Verify and relink
+                </button>
+              </form>
+            )}
             {quote && (
               <div className="stack notice">
                 <strong>
@@ -190,8 +240,8 @@ export function AssetTools({
                 </p>
                 {!quote.available && (
                   <p className="small">
-                    Configure RUSHES_GEMINI_API_KEY in the server’s .env and
-                    restart the API and worker.
+                    Analysis is unavailable on this instance. Ask the workspace
+                    operator to configure the processing service.
                   </p>
                 )}
                 <div className="button-row">
@@ -252,14 +302,26 @@ export function ObservationHistory({
 }) {
   const [history, setHistory] = useState<Revision[] | null>(null),
     [error, setError] = useState("");
+  const historyRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => historyRequest.current?.abort(), []);
   return (
     <details
       className="observation-history"
       onToggle={(event) => {
-        if (event.currentTarget.open)
-          void api<Revision[]>(`${base}/observations/${observation.id}/history`)
-            .then(setHistory)
-            .catch((error) => setError(error.message));
+        historyRequest.current?.abort();
+        if (!event.currentTarget.open) return;
+        const request = new AbortController();
+        historyRequest.current = request;
+        setError("");
+        void api<Revision[]>(`${base}/observations/${observation.id}/history`, {
+          signal: request.signal,
+        })
+          .then((items) => {
+            if (!request.signal.aborted) setHistory(items);
+          })
+          .catch((error) => {
+            if (!request.signal.aborted) setError(error.message);
+          });
       }}
     >
       <summary>Provenance & edit history</summary>
@@ -268,7 +330,7 @@ export function ObservationHistory({
         {(observation.proposed_start_us / 1e6).toFixed(3)}–
         {(observation.proposed_end_us / 1e6).toFixed(3)} elapsed seconds.
       </p>
-      {history === null ? (
+      {error ? null : history === null ? (
         <p className="small">Loading history…</p>
       ) : history.length ? (
         history.map((revision) => (
@@ -289,7 +351,11 @@ export function ObservationHistory({
       ) : (
         <p className="small muted">No corrections recorded.</p>
       )}
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
     </details>
   );
 }
