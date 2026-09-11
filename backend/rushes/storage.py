@@ -71,9 +71,22 @@ def fingerprint(file: BinaryIO) -> str:
 
 def require_space(root: Path, expected_bytes: int, minimum_free: int):
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if shutil.disk_usage(root).free < expected_bytes + minimum_free:
+    free = shutil.disk_usage(root).free
+    required = expected_bytes + minimum_free
+    if free < required:
+
+        def size(amount):
+            for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+                if amount < 1024 or unit == "TiB":
+                    return f"{amount:.2f} {unit}" if unit != "B" else f"{amount} B"
+                amount /= 1024
+
         raise StorageError(
-            "Insufficient free space; choose another output drive or free disk space"
+            f"Insufficient server storage: {size(free)} free, "
+            f"{size(minimum_free)} kept in reserve, and {size(expected_bytes)} "
+            f"needed for this operation. Free another {size(required - free)} "
+            "on the server, then try again. Manage files and exports to free space; "
+            "check storage in Settings."
         )
 
 

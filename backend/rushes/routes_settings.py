@@ -12,7 +12,7 @@ from rushes.auth import require_editor
 from rushes.config import settings
 from rushes.credits import estimate_milli
 from rushes.job_actions import queue_asset
-from rushes.models import Asset, Job, LedgerEntry, Membership, Usage, User, Workspace
+from rushes.models import Asset, Job, LedgerEntry, Membership, Project, Usage, User, Workspace
 from rushes.routes_media import root_at
 from rushes.storage import StorageError, authorized_source_root, fingerprint, open_source
 
@@ -25,6 +25,9 @@ async def workspace_settings(db: DB, access: Access):
     storage = config.storage_root
     storage.mkdir(parents=True, exist_ok=True)
     usage = shutil.disk_usage(storage)
+    output = config.output_root
+    output.mkdir(parents=True, exist_ok=True)
+    export_usage = shutil.disk_usage(output)
     temporal_ready = False
     try:
         await asyncio.wait_for(Client.connect(config.temporal_address), timeout=2)
@@ -32,12 +35,37 @@ async def workspace_settings(db: DB, access: Access):
     except Exception:
         pass
     workspace = await db.get(Workspace, access.workspace_id)
+    files = (
+        await db.execute(
+            select(
+                func.count(Asset.id).label("file_count"),
+                func.count(Asset.id)
+                .filter(Asset.source_kind == "uploaded")
+                .label("uploaded_file_count"),
+                func.coalesce(
+                    func.sum(Asset.source_size).filter(Asset.source_kind == "uploaded"), 0
+                ).label("uploaded_source_bytes"),
+            ).where(Asset.workspace_id == access.workspace_id)
+        )
+    ).one()
+    project_count = await db.scalar(
+        select(func.count(Project.id)).where(Project.workspace_id == access.workspace_id)
+    )
     return {
         "workspace": {"id": workspace.id, "name": workspace.name, "role": access.role},
         "storage_root": str(storage),
         "output_root": str(config.output_root),
         "disk_free_bytes": usage.free,
         "minimum_free_bytes": config.min_free_bytes,
+        "usable_storage_bytes": max(0, usage.free - config.min_free_bytes),
+        "export_disk_free_bytes": export_usage.free,
+        "export_usable_storage_bytes": max(0, export_usage.free - config.min_free_bytes),
+        "export_storage_separate_volume": storage.stat().st_dev != output.stat().st_dev,
+        "workspace_file_count": files.file_count,
+        "workspace_project_count": project_count,
+        "workspace_uploaded_file_count": files.uploaded_file_count,
+        # Recorded original sizes, not a measurement of physical workspace storage.
+        "workspace_uploaded_source_bytes": files.uploaded_source_bytes,
         "source_roots": [str(path) for path in config.source_roots],
         "gemini_configured": bool(
             config.gemini_api_key and config.gemini_api_key.get_secret_value()
