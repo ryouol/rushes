@@ -4,7 +4,15 @@ from datetime import UTC, datetime
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyBaseAccessTokenTableUUID
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -32,6 +40,30 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
 class AccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):
     pass
+
+
+class GoogleIdentity(Base):
+    __tablename__ = "google_identity"
+    subject: Mapped[str] = mapped_column(String(255), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE"), unique=True
+    )
+    email: Mapped[str] = mapped_column(String(320))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class OAuthAttempt(Base):
+    __tablename__ = "oauth_attempt"
+    state_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    browser_hash: Mapped[str] = mapped_column(String(64))
+    nonce: Mapped[str] = mapped_column(String(43))
+    verifier: Mapped[str] = mapped_column(String(43))
+    destination: Mapped[str] = mapped_column(String(2048))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    # Logout revokes an explicit linking attempt as well as its initiating session.
+    link_session_token: Mapped[str | None] = mapped_column(
+        String(43), ForeignKey("accesstoken.token", ondelete="CASCADE"), index=True
+    )
 
 
 class Workspace(Record, Base):
@@ -275,5 +307,6 @@ class Usage(Tenant, Base):
 TENANT_TABLES = [
     table.name
     for table in Base.metadata.sorted_tables
-    if table.name not in {"user", "accesstoken", "workspace", "membership"}
+    if table.name
+    not in {"user", "accesstoken", "google_identity", "oauth_attempt", "workspace", "membership"}
 ]

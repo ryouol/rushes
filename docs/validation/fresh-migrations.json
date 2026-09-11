@@ -1,6 +1,6 @@
 {
   "passed": true,
   "forced_rls_tables": 17,
-  "schema_version": "0004",
+  "schema_version": "0006",
   "database": "isolated disposable test database; dropped after verification"
 }

@@ -34,7 +34,21 @@ def main():
                     "SELECT count(*) FROM pg_class WHERE relrowsecurity AND relforcerowsecurity AND relnamespace = 'public'::regnamespace"
                 ).fetchone()[0]
                 assert forced == 17
-                assert version == "0005"
+                assert version == "0006"
+                assert (
+                    db.execute(
+                        "SELECT count(*) FROM pg_class WHERE relname IN ('google_identity', 'oauth_attempt') "
+                        "AND NOT relrowsecurity AND relnamespace = 'public'::regnamespace"
+                    ).fetchone()[0]
+                    == 2
+                )
+                assert (
+                    db.execute(
+                        "SELECT count(*) FROM pg_constraint WHERE contype = 'f' AND confdeltype = 'c' "
+                        "AND conrelid IN ('google_identity'::regclass, 'oauth_attempt'::regclass)"
+                    ).fetchone()[0]
+                    == 2
+                )
                 assert (
                     db.execute(
                         "SELECT count(*) FROM information_schema.columns WHERE table_name='reservation' AND column_name='cycle'"
