@@ -2,31 +2,46 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Pause, Play } from "lucide-react";
 import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
+import { startScrollMotion } from "@/lib/scroll-motion";
 import "./landing.css";
 
-const examples = [
+const subjects = [
   {
-    name: "Coastline",
+    name: "Scenes",
     poster: "coast",
     description: "Sunlit cliffs and sea stacks along a rugged coastline",
   },
   {
-    name: "Waves",
+    name: "Details",
     poster: "waves",
     description: "White surf breaking around dark rocks",
   },
   {
-    name: "Aerials",
+    name: "Perspectives",
     poster: "aerial",
     description: "An aerial view of the coastline, grassy cliffs and ocean",
   },
 ];
 
 export function Landing() {
+  const page = useRef<HTMLDivElement>(null);
   const hero = useRef<HTMLElement>(null);
+  const [motionPaused, setMotionPaused] = useState(false);
+  const [motionAllowed, setMotionAllowed] = useState(false);
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setMotionAllowed(!preference.matches);
+    update();
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (!page.current || !motionAllowed || motionPaused) return;
+    return startScrollMotion(page.current);
+  }, [motionAllowed, motionPaused]);
   const [showStickyCta, setShowStickyCta] = useState(false);
   useEffect(() => {
     if (!hero.current) return;
@@ -37,7 +52,7 @@ export function Landing() {
     return () => observer.disconnect();
   }, []);
   return (
-    <div className="landing-page">
+    <div ref={page} className="landing-page">
       <PublicHeader />
       <main id="main" className="landing-main">
         <section
@@ -63,22 +78,11 @@ export function Landing() {
           </div>
         </section>
         <section
-          className="landing-demo"
-          aria-label="Example organized footage library"
+          className="landing-showcase"
+          aria-label="A clearer view of your footage"
         >
-          <div className="demo-heading">
-            <div>
-              <p className="demo-example-label">
-                An example of an organized library
-              </p>
-              <h2>Coastal shoot</h2>
-            </div>
-            <p className="demo-static-note">
-              Static illustration · sample imagery
-            </p>
-          </div>
-          <figure className="demo-viewer">
-            <picture className="demo-poster">
+          <figure className="showcase-viewer" data-parallax="0.07">
+            <picture className="showcase-poster" data-motion-image>
               <source
                 type="image/webp"
                 srcSet="/demo/coast-640.webp 640w, /demo/coast-960.webp 960w, /demo/coast-1440.webp 1440w, /demo/coast-1672.webp 1672w"
@@ -86,27 +90,51 @@ export function Landing() {
               />
               <img
                 src="/demo/coast-1440.webp"
-                alt={examples[0].description}
+                alt={subjects[0].description}
                 width={1672}
                 height={941}
                 fetchPriority="high"
               />
             </picture>
           </figure>
-          <div className="demo-results-heading">
-            <h3>From one shoot to useful categories.</h3>
+          <div className="showcase-caption">
+            <span>See the whole shoot. Find the right shot.</span>
+            {motionAllowed && (
+              <button
+                className="motion-control"
+                onClick={() => setMotionPaused((paused) => !paused)}
+                aria-pressed={motionPaused}
+              >
+                {motionPaused ? <Play size={14} /> : <Pause size={14} />}
+                {motionPaused ? "Resume motion" : "Pause motion"}
+              </button>
+            )}
           </div>
-          <div className="demo-library">
-            {examples.map((example) => (
-              <figure key={example.poster} className="demo-clip">
-                <img
-                  src={`/demo/${example.poster}-640.webp`}
-                  alt={example.description}
-                  width={640}
-                  height={360}
-                  loading="lazy"
-                />
-                <figcaption>{example.name}</figcaption>
+          <div className="showcase-heading">
+            <h2>
+              All those moments.
+              <br />
+              Right where you need them.
+            </h2>
+            <p>
+              AI groups your footage by what’s in it. Browse scenes, subjects,
+              and details, then search in your own words.
+            </p>
+          </div>
+          <div className="showcase-subjects">
+            {subjects.map((subject) => (
+              <figure key={subject.poster} className="showcase-subject">
+                <div className="showcase-crop" data-parallax="0.04">
+                  <img
+                    data-motion-image
+                    src={`/demo/${subject.poster}-640.webp`}
+                    alt={subject.description}
+                    width={640}
+                    height={360}
+                    loading="lazy"
+                  />
+                </div>
+                <figcaption>{subject.name}</figcaption>
               </figure>
             ))}
           </div>
