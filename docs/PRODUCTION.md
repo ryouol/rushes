@@ -30,8 +30,8 @@ Uploads are limited to 1 GiB each and one hour of source duration. Disk-space ch
 ## Verified behavior
 
 - Public HTTPS API, secure HttpOnly SameSite=Strict sessions, origin rejection, and resistance to rotating forged client-IP headers. [Ingress evidence](validation/render-ingress.json). Different-client counter separation is also covered by local middleware tests; hosted spoof checks used one external client.
-- Fresh production accounts uploaded synthetic footage, completed real Gemini analysis and Modal processing, played previews, and saved corrections. The remaining selection/search/export journey passed using a successful analysis and its existing session after correcting two test assumptions. Fully fresh reruns also encountered Google file-status HTTP 500 errors; those assets remained partial without repeating uncertain generation.
-- The hosted continuation checked selection saves, rendered clips, correction history, keyword/semantic search fallback, saved searches, notes, source availability, FCP7 XML generation, selection JSON/CSV, usage settings, mobile overflow and logout. Editor round trips remain unverified; interchange is experimental.
+- The final fresh hosted browser test **passed end to end** on runtime `2cb0774`: account creation, synthetic upload, real Gemini analysis and Modal processing, preview playback, correction persistence, selections, rendered export, search, saved searches, notes, source availability, analysis estimate, collection edits, FCP7 XML, selection JSON/CSV, usage, mobile layout and logout. [Browser evidence](validation/render-browser.json). Editor round trips remain unverified; interchange is experimental.
+- Earlier runs exposed Google file-status HTTP 500 errors and one zero-duration model event. Status-read retries and prompt v6 address those specific failures. Strict validation still rejects invalid model output and retains measured usage; no uncertain generation is automatically repeated. The successful earlier continuation and final fresh run are separately recorded.
 - A controlled restart retained the session, ready asset and correction, preserved preview bytes, and completed a new original-copy export whose SHA-256 exactly matched the uploaded original. [Restart evidence](validation/render-restart.json).
 - The final local image workflow harness separately tested interrupted work recovery, private Temporal ports, unavailable startup termination and fail-closed worker/server crashes. [Workflow evidence](validation/workflow-hosting.json). Its historical image predates the provider allowance; Render builds the current application from the recorded repository commit.
 
@@ -43,7 +43,7 @@ Render runtime credentials exclude the migration owner. The application role can
 
 Temporal is pinned to production Server 1.31.2 and PostgreSQL schemas, listens only on loopback, and keeps three days of workflow history. The media disk makes service redeployments/restarts briefly unavailable. Modal environment separation organizes resources within the existing workspace; it is not a separate credential trust boundary.
 
-The first app landing exceeds the review skill's size guideline. The full numbered review record and dispositions are preserved in [PRODUCTION-REVIEW.md](PRODUCTION-REVIEW.md). No GitHub PR exists and no PR comments were posted. Legal/operator copy remains a draft and production-scale retrieval/editor qualification remains future work.
+The first app landing exceeds the review skill's size guideline. The full numbered review record and dispositions are preserved in [PRODUCTION-REVIEW.md](PRODUCTION-REVIEW.md). Backend verification passed 102 tests with one opt-in live Temporal test skipped; the final prompt refinement passed 21 focused inference/timing tests. No GitHub PR exists and no PR comments were posted. Legal/operator copy remains a draft and production-scale retrieval/editor qualification remains future work.
 
 ## Local data
 

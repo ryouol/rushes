@@ -1,18 +1,20 @@
 {
-  "checked_at": "2026-09-11T00:33:22.546449+00:00",
-  "successful_fresh_gemini_assets": 2,
+  "checked_at": "2026-09-11T00:38:12.425772+00:00",
+  "successful_fresh_gemini_assets": 3,
   "hosted_continuation_passed": true,
   "continuation_duration_seconds": 23.8,
-  "fresh_full_test_passed": false,
+  "fresh_full_test_passed": true,
   "test_repairs": [
     "Explicit destination collection selection",
     "Enabled/disabled analysis assertion follows live-mode flag"
   ],
   "provider_file_status_500_failures": 2,
   "generation_automatically_repeated": false,
-  "notes": "Successful analysis and early browser operations were verified on the original attempts; continuation completed the remaining real UI journey on the same successful asset/session after restart. Final fresh verification of the read-retry repair is pending.",
+  "notes": "The final fresh browser journey passed after deploying prompt v6: account, upload, real Gemini/Modal processing, preview, correction persistence, selects, rendered export, search, saved search, note, source check, estimate, collection range edit, FCP7 XML, JSON/CSV, usage, mobile layout and logout.",
   "post_retry_deploy_generation_http_status": 200,
   "post_retry_deploy_cleanup_http_status": 200,
   "post_retry_deploy_rejection": "Gemini emitted a visual event at 5.005 seconds with identical start and end; strict interval validation retained partial state.",
-  "prompt_refinement": "v6 explicitly requires positive durations and omission of unsupported point events; final verification pending."
+  "prompt_refinement": "v6 explicitly requires positive durations and omission of unsupported point events; fresh hosted browser test passed.",
+  "fresh_full_test_duration_ms": 85987.323,
+  "runtime_commit": "2cb077468e1fd8ecbcb46265c7e8109dc51f870f"
 }
