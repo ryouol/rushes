@@ -1,0 +1,238 @@
+{
+  "checked_at": "2026-09-11T15:37:47Z",
+  "deployment": {
+    "service_id": "srv-dahk822d0e5s73fo22o0",
+    "url": "https://rushes.onrender.com",
+    "branch": "codex/production",
+    "runtime_commit": "83d875836bffe62e2909bf606997892ff2403c6b",
+    "deploy_id": "dep-dai1us9594qs73e2glqg",
+    "trigger": "api",
+    "created_at": "2026-09-11T15:34:09.284428Z",
+    "live_at": "2026-09-11T15:35:52.238858Z",
+    "status": "live",
+    "existing_environment_variables_preserved": 20,
+    "google_environment_variables_updated_individually": [
+      "RUSHES_GOOGLE_CLIENT_ID",
+      "RUSHES_GOOGLE_CLIENT_SECRET"
+    ],
+    "plan_and_billing_configuration_preserved": true,
+    "existing_environment_variable_values_compared_unchanged": 20,
+    "current_environment_variable_count": 22,
+    "google_environment_values_match_private_configuration": true,
+    "service_plan_verified_unchanged": true
+  },
+  "previous_deployment": {
+    "deploy_id": "dep-dahkonss728c73cfle10",
+    "runtime_commit": "2cb077468e1fd8ecbcb46265c7e8109dc51f870f",
+    "application_schema": "0005",
+    "inventory_checked_at": "2026-09-11T00:38:12.425772+00:00",
+    "full_processing_browser_evidence": "render-browser.json",
+    "restart_evidence": "render-restart.json",
+    "note": "Earlier Gemini, Modal, media and export checks remain historical evidence for that runtime. This deployment record does not repeat or extend those results."
+  },
+  "migration": {
+    "database_id": "dpg-dahk1qek1f9s73fk9n5g-a",
+    "from_revision": "0005",
+    "revision": "0006",
+    "forced_rls_tables": 17,
+    "oauth_tables": 2,
+    "cascading_foreign_keys": 2,
+    "runtime_role": "rushes_app",
+    "runtime_grants": [
+      "SELECT",
+      "INSERT",
+      "UPDATE",
+      "DELETE"
+    ],
+    "passed": true
+  },
+  "database_external_access": {
+    "temporary_allowlist_scope": "Migration host's current public IPv4 address, restricted to /32",
+    "restored_ip_allow_list": [],
+    "restoration_verified": true,
+    "external_access_disabled": true,
+    "restoration_reverified_after_followup": true
+  },
+  "google": {
+    "project_id": "gen-lang-client-0912851229",
+    "oauth_client_type": "Web application",
+    "audience": "External",
+    "publishing_status": "In production",
+    "redirect_uris": [
+      "http://localhost:3741/api/auth/google/callback",
+      "https://rushes.onrender.com/api/auth/google/callback"
+    ],
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ],
+    "server_configuration_present": true,
+    "real_provider_flow": {
+      "local": {
+        "provider_exchange_verified": true,
+        "existing_password_account_collision_recovery_verified": true,
+        "password_login_to_existing_account_verified": true,
+        "connect_chooser_back_button_enabled_retry_verified": true,
+        "account_connection_verified": true,
+        "sign_out_then_google_only_login_verified": true,
+        "same_account_and_workspace_restored": true,
+        "existing_projects_retained": 2,
+        "connection_retained_after_application_restart": true,
+        "result": "The existing password account connected Google and then signed in using Google alone, retaining its existing workspace and two projects."
+      },
+      "production": {
+        "provider_exchange_verified": true,
+        "existing_password_account_collision_recovery_verified": true,
+        "password_login_to_existing_account_verified": true,
+        "account_only_settings_rendered_without_workspaces": true,
+        "real_google_chooser_and_connected_callback_verified": true,
+        "account_connection_verified": true,
+        "sign_out_then_google_only_login_verified": true,
+        "same_personal_account_restored": true,
+        "returning_login_destination": "/onboarding",
+        "onboarding_account_settings_link_opened_connected_account": true,
+        "workspace_or_project_created": false,
+        "result": "The existing password account with zero workspaces connected Google. After sign-out, Google-only login returned the same account to onboarding; Account settings still showed Google connected."
+      }
+    },
+    "final_account_connection": "passed on local and production",
+    "returning_google_login": "passed on local and production",
+    "verification_limit": "Real Google checks used an existing password account. Creation of a new RUSHES account from a previously unused Google email was not exercised with the live provider; automated RSA integration tests cover signup and cancellation.",
+    "connection_status_verification_method": "GoogleAccount UI after the real callback and after returning Google login. Direct browser navigation to the API endpoint was blocked by the browser client and is not claimed as an independent endpoint check."
+  },
+  "public_http_checks": {
+    "/": 200,
+    "/privacy": 200,
+    "/terms": 200,
+    "/api/health": 200,
+    "/api/auth/providers": 200,
+    "provider_response": {
+      "google": true
+    },
+    "limit": "Health and provider availability alone do not establish database readiness or completed Google sign-in.",
+    "verified_stage_runtime_commit": "89471a8a5d84cd11a0ccfb0086050ecb3064baba"
+  },
+  "browser_checks": {
+    "existing_password_qa_session_retained": true,
+    "existing_workspace_retained": true,
+    "new_settings_rendered": true,
+    "existing_password_login_without_workspaces_verified_on_production": true,
+    "existing_password_login_with_workspace_verified_on_local": true,
+    "production_google_chooser_back_retry_verified": true,
+    "production_account_only_settings_verified": true,
+    "production_google_connected_callback_verified": true,
+    "production_returning_google_login_verified": true,
+    "production_same_account_retained": true,
+    "production_workspace_or_project_created": false,
+    "local_google_connection_and_returning_login_verified": true,
+    "local_existing_workspace_and_two_projects_retained": true,
+    "local_google_connection_retained_after_application_restart": true
+  },
+  "callback_logging": {
+    "probe": "Synthetic callback query marker; no real authorization code used for this logging check",
+    "app": {
+      "count": 98,
+      "marker_found": false,
+      "callback_mentions": 1,
+      "has_more": false
+    },
+    "request": {
+      "count": 0,
+      "marker_found": false,
+      "callback_mentions": 0,
+      "has_more": false
+    },
+    "owner_stream_get_status": 404,
+    "resource_stream_get_status": 404,
+    "application_query_redaction_observed": true,
+    "external_request_log_redaction_verified": false,
+    "limit": "No request logs were returned, and both log-stream lookups returned 404. These results do not prove that external ingress or third-party systems omit callback query strings.",
+    "verified_stage_runtime_commit": "89471a8a5d84cd11a0ccfb0086050ecb3064baba"
+  },
+  "evidence_provenance": {
+    "sanitized_local_records": [
+      ".local/deploy-latest/migration-evidence.json",
+      ".local/deploy-latest/acl-restored.json",
+      ".local/deploy-latest/deployment-latest.json",
+      ".local/deploy-latest/logging-evidence.json"
+    ],
+    "additional_checks": "The deployment operator verified the final deploy timestamps and commit, Google configuration, unchanged environment values and service plan, restored database ACL, public HTTP responses and real browser outcomes. Credentials, personal email addresses and session values are excluded from this record.",
+    "sanitized_local_records_scope": "The listed local records document the initial Google deployment, migration, restored database ACL and synthetic logging check."
+  },
+  "deployment_stages": [
+    {
+      "service_id": "srv-dahk822d0e5s73fo22o0",
+      "url": "https://rushes.onrender.com",
+      "branch": "codex/production",
+      "runtime_commit": "89471a8a5d84cd11a0ccfb0086050ecb3064baba",
+      "deploy_id": "dep-dai1ddm743jc73dn43bg",
+      "trigger": "api",
+      "created_at": "2026-09-11T14:56:54.933685Z",
+      "live_at": "2026-09-11T14:59:32.395131Z",
+      "status": "live",
+      "application_source_changed_during_deployment": false,
+      "existing_environment_variables_preserved": 20,
+      "google_environment_variables_updated_individually": [
+        "RUSHES_GOOGLE_CLIENT_ID",
+        "RUSHES_GOOGLE_CLIENT_SECRET"
+      ],
+      "plan_and_billing_configuration_preserved": true,
+      "stage": "Initial Google configuration and schema deployment",
+      "verification": {
+        "schema_revision": "0006",
+        "public_http_checks_passed": true,
+        "real_provider_exchange_verified_local_and_production": true,
+        "existing_password_account_collision_recovery_verified": true,
+        "zero_workspace_settings_redirect_issue_observed_on_production": true,
+        "note": "The initial deployment was live and the Google exchange worked. Production validation then found that an existing password account with no workspaces could not reach connection settings."
+      }
+    },
+    {
+      "stage": "Account settings access before the first workspace",
+      "runtime_commit": "83d875836bffe62e2909bf606997892ff2403c6b",
+      "deploy_id": "dep-dai1us9594qs73e2glqg",
+      "created_at": "2026-09-11T15:34:09.284428Z",
+      "live_at": "2026-09-11T15:35:52.238858Z",
+      "status": "live",
+      "result": "Account-only Settings, real Google connection and returning Google login verified on production without creating a workspace or project."
+    }
+  ],
+  "account_settings_followup": {
+    "observed_runtime_commit": "89471a8a5d84cd11a0ccfb0086050ecb3064baba",
+    "problem": "An existing password account with no workspaces could not reach Google connection settings: /app?view=settings redirected to onboarding.",
+    "observed_environments": [
+      "production"
+    ],
+    "password_authentication_succeeded_on_production": true,
+    "fix": "Allow account-only Settings access without requiring workspace creation, with a link from onboarding and a navigation guard during project creation or sign-out.",
+    "implementation_status": "complete",
+    "followup_runtime_commit": "83d875836bffe62e2909bf606997892ff2403c6b",
+    "followup_deploy_id": "dep-dai1us9594qs73e2glqg",
+    "deployment_status": "live",
+    "production_browser_validation": "passed",
+    "changed_lines": 267,
+    "changed_files": [
+      "web/components/rushes.tsx",
+      "web/components/onboarding.tsx",
+      "web/components/workspace.css",
+      "web/e2e/auth.spec.ts"
+    ],
+    "validation": {
+      "production_build": "passed",
+      "typecheck": "passed",
+      "simplify_reuse_quality_efficiency": "No remaining actionable findings after the busy-link guard fix.",
+      "code_review_perspectives_completed": 4,
+      "code_review_remaining_actionable_findings": 0,
+      "playwright_regression": "Authored and typechecked; not executed because browser validation was restricted to the selected CUA browser.",
+      "manual_browser": "Real Google connection and returning login verified on local and production."
+    }
+  },
+  "verification_limits": [
+    "Live Google checks used an existing password account; new-account creation with a previously unused Google email was not exercised against the real provider. Automated RSA integration tests cover signup and cancellation.",
+    "The follow-up Playwright regression was authored and typechecked but not executed. Browser evidence comes from the selected CUA browser.",
+    "Public HTTP and synthetic callback logging observations belong to the initial Google deployment stage. Completed Google connection and returning-login checks also cover the final follow-up deployment.",
+    "Zero returned request logs and 404 log-stream lookups do not prove external ingress or third-party callback-query redaction.",
+    "The full Gemini, Modal, media processing and export journey was not repeated for these Google deployments; its prior results remain historical evidence."
+  ]
+}

@@ -20,9 +20,9 @@
           "name": "rushes-media",
           "sizeGB": 10
         },
-        "deploy_id": "dep-dahkonss728c73cfle10",
+        "deploy_id": "dep-dai1us9594qs73e2glqg",
         "status": "live",
-        "runtime_commit": "2cb077468e1fd8ecbcb46265c7e8109dc51f870f"
+        "runtime_commit": "83d875836bffe62e2909bf606997892ff2403c6b"
       }
     ],
     "databases": [
@@ -32,7 +32,7 @@
         "status": "available",
         "plan": "0.1c-256mb",
         "region": "ohio",
-        "application_schema": "0005",
+        "application_schema": "0006",
         "external_access_disabled": true,
         "disk_autoscaling": false,
         "storage_gb": 5
@@ -92,13 +92,13 @@
     "app_provider_allowance_configured": true
   },
   "production_deployed": true,
-  "checked_at": "2026-09-11T00:38:12.425772+00:00",
+  "checked_at": "2026-09-11T15:37:47Z",
   "gemini": {
     "configured": true,
     "model": "gemini-3.6-flash",
     "project": "projects/50426910677",
     "standalone_video_validation": "passed",
-    "full_browser_validation": "Passed fresh end-to-end hosted browser test on prompt v6. Earlier invalid response and provider-status failures are documented; strict validation and single generation dispatch retained."
+    "full_browser_validation": "Historical evidence on runtime 2cb077468e1fd8ecbcb46265c7e8109dc51f870f: passed fresh end-to-end hosted browser test on prompt v6. Earlier invalid response and provider-status failures are documented; strict validation and single generation dispatch retained. This full processing journey was not repeated for the Google deployment; current deployment evidence is in validation/production-google-deployment.json."
   },
   "production_image": {
     "id": "sha256:295dde5f522d03e825ab7d3c8015f842e25b3e59c6484ef3cd0dfbcdc7abceb6",
