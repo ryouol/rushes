@@ -20,9 +20,9 @@
           "name": "rushes-media",
           "sizeGB": 10
         },
-        "deploy_id": "dep-dahk82qd0e5s73fo26r0",
+        "deploy_id": "dep-dahkkj142hec7399rc20",
         "status": "live",
-        "runtime_commit": "ce43d54"
+        "runtime_commit": "904488d00a365ab9adb518692615e4d7fa621a5e"
       }
     ],
     "databases": [
@@ -92,13 +92,13 @@
     "app_provider_allowance_configured": true
   },
   "production_deployed": true,
-  "checked_at": "2026-09-11T00:18:31.227780+00:00",
+  "checked_at": "2026-09-11T00:27:17.493287+00:00",
   "gemini": {
     "configured": true,
     "model": "gemini-3.6-flash",
     "project": "projects/50426910677",
     "standalone_video_validation": "passed",
-    "full_browser_validation": "Fresh analysis and initial UI succeeded; remaining UI passed on same successful asset/session after restart. Two later fixtures hit Google file-status HTTP500; bounded read retry fix prepared."
+    "full_browser_validation": "Bounded preparation-read retry and cleanup repair deployed; final fresh hosted browser verification in progress. Prior successful analysis and complete continuation remain verified."
   },
   "production_image": {
     "id": "sha256:295dde5f522d03e825ab7d3c8015f842e25b3e59c6484ef3cd0dfbcdc7abceb6",

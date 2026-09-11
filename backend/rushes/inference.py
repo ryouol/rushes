@@ -14,7 +14,7 @@ from rushes.provider_budget import ProviderBudgetError, reserve_provider_call
 from rushes.provider_files import delete_provider_file
 from rushes.timing import Interval, to_us
 
-PROMPT_VERSION = "footage-evidence-v5"
+PROMPT_VERSION = "footage-evidence-v6"
 SCHEMA_VERSION = "observations-v1"
 PREPROCESSING_VERSION = "vfr-540p-v3"
 # Video timestamp repair does not change the existing audio recipe or corrected transcript identity.
@@ -200,6 +200,9 @@ class GeminiAnalyzer:
                 "Use approximate half-open start/end seconds relative to THIS UPLOADED CHUNK, "
                 f"starting at 0 and ending at {(window.end_us - window.start_us) / 1e6:.6f}. "
                 "Do not shift timestamps by the source offset. Keep event intervals inside this duration. "
+                "Every observation must have end_seconds strictly greater than start_seconds. "
+                "Describe instantaneous cuts within an adjoining shot's supported nonzero interval; "
+                "omit events when no nonzero duration is supported. Never return a zero-length interval. "
                 "Avoid duplicate descriptions and include uncertainty. Transcript is approximate context: "
                 + json.dumps(bounded_transcript(transcript), ensure_ascii=False)
             )

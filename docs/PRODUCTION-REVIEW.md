@@ -135,6 +135,8 @@ Context follow-up found no new prompt/provenance defect. No GitHub PR exists to 
 
 60. **Final / breaking — failed provider cleanup could lose the uploaded-file reference.** [activities.py:388](../backend/rushes/activities.py#L388) Fixed: preserve the pending cleanup reference, include pending windows in maintenance, and clean the previous upload before another attempt. Failed cleanup leaves the checkpoint unchanged and sends no new analysis. The regression exercises cleanup failure, successful recovery and settlement; the reviewer confirmed resolution.
 
+61. **Hosted validation — model emitted a zero-duration cut event.** [inference.py:203](../backend/rushes/inference.py#L203) The validator correctly rejected identical start/end timestamps and retained the response and measured usage. Prompt v6 explicitly requires positive intervals and omission of unsupported point events. Strict validation remains unchanged; this prompt refinement reduces an avoidable ambiguity without guaranteeing every model response will be valid.
+
 ## Current deployment follow-up verification
 
 - Full backend suite: **102 passed, 1 skipped in 25.93 seconds**. The skipped test is the opt-in live Temporal integration; the previously recorded workflow harness remains separate evidence. One upstream Hugging Face deprecation warning.
