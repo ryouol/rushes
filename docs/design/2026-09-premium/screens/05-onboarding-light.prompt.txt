@@ -1,0 +1,9 @@
+Use case: ui-mockup
+Asset type: high fidelity RUSHES first-project onboarding desktop screen, landscape 1440 by 1000.
+Input image: the attached refined RUSHES landing concept is the exact visual language reference, not an edit target.
+Primary request: Create the matching first-project onboarding screen for the same premium footage review app. Preserve the reference's bespoke cut-shaped black R mark and lowercase rushes wordmark at top left, warm white canvas, thin neutral borders, regular lighter editorial sans typography, ample whitespace and single restrained cobalt blue primary action. Top right: a quiet Light appearance control with sun icon, and Sign out. A very slim horizontal divider beneath header.
+Composition: an elegant focused form at x approximately 440, width 560, y 300. Small understated eyebrow 'Your first project'; large regular heading 'What are you working on?'; one line 'Give your footage a home. You can change the name later.'; label 'Project name'; large outlined single-line text input containing 'Coastal study'; primary button 'Create project' with small right-arrow icon. Below it, understated line with small lock icon 'Your workspace is private.' There is no card border enclosing form, no dashboard, no preview because no footage uploaded yet, no unnecessary illustration, no stepper.
+Bottom left quiet '© 2026 RUSHES'. Bottom right small 'Privacy' and 'Terms' links.
+Constraints: Crisp realistic web UI, only these honest controls, clear exact text, no heavy headings, no decorative badges, no gradients, no nested cards. Beautiful clean professional composition that feels like the attached design carried into onboarding.
+
+Implementation correction: the generated sentence “You can change the name later” is removed in the real screen because the current API supports project listing and creation, not renaming. Actual supporting copy: “Give your footage a home. Start with a name.”

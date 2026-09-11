@@ -1,0 +1,17 @@
+{
+  "fixture_type": "Deterministic categories; real API export/worker/browser download",
+  "export_id": "63d59e74-1296-4f0a-b31a-a53dee134e19",
+  "outputs": [
+    {
+      "output": "waves/0001-Organizer_fixture_Coastline.mp4",
+      "bytes": 4016746,
+      "original_bytes_match": true
+    },
+    {
+      "output": "waves/0002-Organizer_fixture_Waves.mp4",
+      "bytes": 2351657,
+      "original_bytes_match": true
+    }
+  ],
+  "browser_download_event": true
+}

@@ -1,5 +1,5 @@
 {
-  "source_and_bundle_files_scanned": 166,
+  "source_and_bundle_files_scanned": 356,
   "known_secret_variable_names_checked": [
     "RUSHES_DATABASE_URL",
     "RUSHES_ADMIN_DATABASE_URL",
@@ -413,6 +413,97 @@
         "POST"
       ],
       "path": "/api/workspaces/{workspace_id}/assets/{asset_id}/observations",
+      "access": "authenticated",
+      "dependencies": [
+        "<class 'fastapi.security.api_key.APIKeyCookie'>",
+        "current_user_dependency",
+        "database_strategy",
+        "get_session",
+        "token_database",
+        "user_database",
+        "user_manager",
+        "workspace_access",
+        "workspace_db"
+      ],
+      "validation": "typed path/query/body; global loopback Host + Origin middleware; tenant routes use membership and RLS"
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/api/workspaces/{workspace_id}",
+      "access": "authenticated",
+      "dependencies": [
+        "<class 'fastapi.security.api_key.APIKeyCookie'>",
+        "current_user_dependency",
+        "database_strategy",
+        "get_session",
+        "token_database",
+        "user_database",
+        "user_manager",
+        "workspace_access"
+      ],
+      "validation": "typed path/query/body; global loopback Host + Origin middleware; tenant routes use membership and RLS"
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/api/workspaces/{workspace_id}/projects/{project_id}",
+      "access": "authenticated",
+      "dependencies": [
+        "<class 'fastapi.security.api_key.APIKeyCookie'>",
+        "current_user_dependency",
+        "database_strategy",
+        "get_session",
+        "token_database",
+        "user_database",
+        "user_manager",
+        "workspace_access"
+      ],
+      "validation": "typed path/query/body; global loopback Host + Origin middleware; tenant routes use membership and RLS"
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/api/workspaces/{workspace_id}/assets/{asset_id}",
+      "access": "authenticated",
+      "dependencies": [
+        "<class 'fastapi.security.api_key.APIKeyCookie'>",
+        "current_user_dependency",
+        "database_strategy",
+        "get_session",
+        "token_database",
+        "user_database",
+        "user_manager",
+        "workspace_access"
+      ],
+      "validation": "typed path/query/body; global loopback Host + Origin middleware; tenant routes use membership and RLS"
+    },
+    {
+      "methods": [
+        "DELETE"
+      ],
+      "path": "/api/workspaces/{workspace_id}/exports/{export_id}",
+      "access": "authenticated",
+      "dependencies": [
+        "<class 'fastapi.security.api_key.APIKeyCookie'>",
+        "current_user_dependency",
+        "database_strategy",
+        "get_session",
+        "token_database",
+        "user_database",
+        "user_manager",
+        "workspace_access"
+      ],
+      "validation": "typed path/query/body; global loopback Host + Origin middleware; tenant routes use membership and RLS"
+    },
+    {
+      "methods": [
+        "GET"
+      ],
+      "path": "/api/workspaces/{workspace_id}/projects/{project_id}/organization",
       "access": "authenticated",
       "dependencies": [
         "<class 'fastapi.security.api_key.APIKeyCookie'>",

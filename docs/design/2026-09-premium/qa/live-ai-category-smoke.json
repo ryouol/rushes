@@ -1,0 +1,45 @@
+{
+  "tested_at": "2026-09-11T03:10:31.975093+00:00",
+  "source": "web/public/demo/waves-study.mp4",
+  "source_type": "Generated illustrative still with gentle zoom",
+  "prompt_version": "footage-evidence-v7",
+  "schema_version": "observations-v2",
+  "generation_dispatch_limit": 1,
+  "persisted_to_user_library": false,
+  "reservation_limit_microusd": 60000,
+  "billing_note": "Conservative reservation is not a measured provider invoice.",
+  "outcome": "received",
+  "model": "gemini-3.6-flash",
+  "input_tokens": 1394,
+  "output_tokens": 186,
+  "preflight_tokens": 1474,
+  "cleanup_pending": false,
+  "observations": [
+    {
+      "kind": "shot_description",
+      "start_seconds": 0.0,
+      "end_seconds": 16.0,
+      "description": "A static wide shot capturing ocean waves crashing against a rocky coastline during golden hour.",
+      "uncertainty": "low",
+      "categories": [
+        "Coastline",
+        "Waves"
+      ]
+    },
+    {
+      "kind": "visual_event",
+      "start_seconds": 0.0,
+      "end_seconds": 16.0,
+      "description": "Waves continually break and churn foam around dark rock formations along the shore.",
+      "uncertainty": "low",
+      "categories": [
+        "Coastline",
+        "Waves"
+      ]
+    }
+  ],
+  "categories": [
+    "Coastline",
+    "Waves"
+  ]
+}

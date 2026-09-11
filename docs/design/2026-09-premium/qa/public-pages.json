@@ -1,0 +1,141 @@
+{
+  "pages": [
+    {
+      "path": "/",
+      "status": 200,
+      "title": "Your footage. Organized by AI.",
+      "description": "Upload footage, let AI categorize what\u2019s inside, and find what you need with natural-language search.",
+      "og_title": "Your footage. Organized by AI. \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741"
+    },
+    {
+      "path": "/login",
+      "status": 200,
+      "title": "Sign in \u00b7 RUSHES",
+      "description": "Sign in to your AI-organized footage library.",
+      "og_title": "Sign in \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741/login"
+    },
+    {
+      "path": "/signup",
+      "status": 200,
+      "title": "Create an account \u00b7 RUSHES",
+      "description": "Create your RUSHES account and start your first footage project.",
+      "og_title": "Create an account \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741/signup"
+    },
+    {
+      "path": "/onboarding",
+      "status": 200,
+      "title": "Your first project \u00b7 RUSHES",
+      "description": "Create your first RUSHES project and give your footage a home.",
+      "og_title": "Your first project \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741/onboarding"
+    },
+    {
+      "path": "/app",
+      "status": 200,
+      "title": "Your workspace \u00b7 RUSHES",
+      "description": "Organize your footage, review moments, and keep your selects together in RUSHES.",
+      "og_title": "Your workspace \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741/app"
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "title": "Privacy information \u2014 draft \u00b7 RUSHES",
+      "description": "How RUSHES handles footage and account data, with operator policy details awaiting review.",
+      "og_title": "Privacy information \u2014 draft \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741/privacy"
+    },
+    {
+      "path": "/terms",
+      "status": 200,
+      "title": "Terms information \u2014 draft \u00b7 RUSHES",
+      "description": "Current RUSHES product information and legal terms awaiting operator review.",
+      "og_title": "Terms information \u2014 draft \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741/terms"
+    },
+    {
+      "path": "/contact",
+      "status": 200,
+      "title": "Contact information \u00b7 RUSHES",
+      "description": "Contact details for the operator of this RUSHES instance.",
+      "og_title": "Contact information \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741/contact"
+    },
+    {
+      "path": "/missing-qa-page",
+      "status": 404,
+      "title": "Page not found \u00b7 RUSHES",
+      "description": "This RUSHES page is unavailable. Return home or open your workspace.",
+      "og_title": "Page not found \u00b7 RUSHES",
+      "twitter_card": "summary_large_image",
+      "canonical": "http://localhost:3741"
+    }
+  ],
+  "assets": [
+    {
+      "path": "/favicon.ico",
+      "status": 200,
+      "content_type": "image/x-icon",
+      "bytes": 4732
+    },
+    {
+      "path": "/icon-16.png",
+      "status": 200,
+      "content_type": "image/png",
+      "bytes": 571
+    },
+    {
+      "path": "/icon-32.png",
+      "status": 200,
+      "content_type": "image/png",
+      "bytes": 1208
+    },
+    {
+      "path": "/icon-180.png",
+      "status": 200,
+      "content_type": "image/png",
+      "bytes": 15989
+    },
+    {
+      "path": "/manifest.webmanifest",
+      "status": 200,
+      "content_type": "application/manifest+json",
+      "bytes": 382
+    },
+    {
+      "path": "/robots.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 154
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200,
+      "content_type": "application/xml",
+      "bytes": 157
+    },
+    {
+      "path": "/opengraph-image",
+      "status": 200,
+      "content_type": "image/png",
+      "bytes": 48000
+    },
+    {
+      "path": "/twitter-image",
+      "status": 200,
+      "content_type": "image/png",
+      "bytes": 48000
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+[
+  {
+    "path": "/",
+    "h1": "Your footage.Organized by AI.",
+    "scrollWidth": 320,
+    "theme": "dark",
+    "width": 320
+  },
+  {
+    "path": "/login",
+    "h1": "Welcome back.",
+    "scrollWidth": 320,
+    "theme": "dark",
+    "width": 320
+  },
+  {
+    "path": "/signup",
+    "h1": "A home for all your footage.",
+    "scrollWidth": 320,
+    "theme": "dark",
+    "width": 320
+  },
+  {
+    "path": "/privacy",
+    "h1": "Your footage and data.",
+    "scrollWidth": 320,
+    "theme": "dark",
+    "width": 320
+  },
+  {
+    "path": "/terms",
+    "h1": "Using RUSHES.",
+    "scrollWidth": 320,
+    "theme": "dark",
+    "width": 320
+  },
+  {
+    "path": "/contact",
+    "h1": "Get in touch.",
+    "scrollWidth": 320,
+    "theme": "dark",
+    "width": 320
+  },
+  {
+    "path": "/missing-qa-page",
+    "h1": "This page is out of frame.",
+    "scrollWidth": 320,
+    "theme": "dark",
+    "width": 320
+  }
+]
