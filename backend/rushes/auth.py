@@ -10,7 +10,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.exceptions import InvalidPasswordException
 from fastapi_users_db_sqlalchemy.access_token import SQLAlchemyAccessTokenDatabase
 from pydantic import Field
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rushes.config import settings
@@ -36,7 +36,19 @@ async def token_database(session: AsyncSession = Depends(get_session)):
     yield SQLAlchemyAccessTokenDatabase(session, AccessToken)
 
 
+async def lock_account_email(session: AsyncSession, email: str):
+    # Both registration paths must hold this lock through their existence check and commit.
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended('rushes-auth-email:' || lower(:email), 0))"),
+        {"email": email},
+    )
+
+
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
+    async def create(self, user_create, safe=False, request: Request | None = None):
+        await lock_account_email(self.user_db.session, user_create.email)
+        return await super().create(user_create, safe=safe, request=request)
+
     async def validate_password(self, password, user):
         if not 12 <= len(password) <= 256:
             raise InvalidPasswordException(reason="Use a password between 12 and 256 characters")

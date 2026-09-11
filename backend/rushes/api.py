@@ -19,18 +19,21 @@ from rushes.models import LedgerEntry, Membership, Project, User, Workspace
 from rushes.routes_collections import router as collections_router
 from rushes.routes_deletion import router as deletion_router
 from rushes.routes_exports import router as exports_router
+from rushes.routes_google_auth import router as google_auth_router
 from rushes.routes_media import router as media_router
 from rushes.routes_organization import router as organization_router
 from rushes.routes_search import router as search_router
 from rushes.routes_settings import router as settings_router
-from rushes.security import OriginBoundary, RequestBodyBoundary
+from rushes.security import CallbackLogBoundary, OriginBoundary, RequestBodyBoundary
 
 app = FastAPI(title="RUSHES API", docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(RequestBodyBoundary)
 app.add_middleware(OriginBoundary)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
+app.add_middleware(CallbackLogBoundary)
 app.include_router(users.get_auth_router(backend), prefix="/api/auth")
 app.include_router(users.get_register_router(UserRead, UserCreate), prefix="/api/auth")
+app.include_router(google_auth_router)
 
 
 class NamedInput(BaseModel):

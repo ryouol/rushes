@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const config = {
   poweredByHeader: false,
+  logging: {
+    incomingRequests: { ignore: [/^\/api\/auth\/google\/callback\/?(?:\?|$)/] },
+  },
   async headers() {
     return [
       {

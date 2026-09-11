@@ -60,7 +60,14 @@ def main():
                 }
             )
     endpoints = []
-    public = {"/api/health", "/api/auth/register", "/api/auth/login"}
+    public = {
+        "/api/health",
+        "/api/auth/register",
+        "/api/auth/login",
+        "/api/auth/providers",
+        "/api/auth/google/authorize",
+        "/api/auth/google/callback",
+    }
 
     def routes(items, prefix=""):
         for route in items:

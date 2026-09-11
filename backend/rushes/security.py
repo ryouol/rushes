@@ -14,6 +14,20 @@ MAX_INDEX_REQUEST_BYTES = 8 * 1024 * 1024
 PROJECT_BODY_ROUTE = re.compile(r"/api/workspaces/[^/]+/projects/[^/]+/(upload|index)/?")
 
 
+class CallbackLogBoundary:
+    """Give the app callback parameters without leaving them in the server's access-log scope."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].rstrip("/") == "/api/auth/google/callback":
+            application_scope = dict(scope)
+            scope["query_string"] = b""
+            return await self.app(application_scope, receive, send)
+        return await self.app(scope, receive, send)
+
+
 class RequestBodyBoundary:
     """Bound bytes before JSON/form parsing; media uploads enforce their own streaming limit."""
 
@@ -72,7 +86,11 @@ class OriginBoundary:
             return await JSONResponse({"detail": "Request origin is not allowed"}, 403)(
                 scope, receive, send
             )
-        if scope["path"] in {"/api/auth/login", "/api/auth/register"} and unsafe:
+        auth_route = (scope["path"] in {"/api/auth/login", "/api/auth/register"} and unsafe) or (
+            scope["path"]
+            in {"/api/auth/google/authorize", "/api/auth/google/callback", "/api/auth/google/link"}
+        )
+        if auth_route:
             address = scope.get("client", ("local", 0))[0]
             if settings().client_ip_header:
                 try:

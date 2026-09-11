@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     output_root: Path = Path(".local/exports")
     source_roots: list[Path] = []
     origin: str = "http://localhost:3741"
+    google_client_id: str = Field(default="", max_length=256)
+    google_client_secret: SecretStr | None = None
     client_ip_header: Literal["true-client-ip", "x-rushes-ingress-client-ip"] | None = None
     temporal_address: str = "127.0.0.1:7233"
     host_workflow_service: bool = False
@@ -51,6 +53,14 @@ class Settings(BaseSettings):
     analysis_window_seconds: int = Field(default=20, ge=10, le=120)
 
     _supported_model = field_validator("gemini_model")(supported_gemini_model)
+
+    @property
+    def google_configured(self) -> bool:
+        return bool(
+            self.google_client_id
+            and self.google_client_secret
+            and self.google_client_secret.get_secret_value()
+        )
 
     @field_validator("origin")
     @classmethod
