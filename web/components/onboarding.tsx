@@ -254,7 +254,7 @@ export function Onboarding() {
   return (
     <div className="onboarding-shell">
       <header className="onboarding-header">
-        <Brand />
+        <Brand href={user ? "/app" : "/"} />
         <div>
           {user && (
             <button

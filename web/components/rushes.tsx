@@ -56,7 +56,7 @@ export function workspaceHref(
 export function WorkspaceLoading() {
   return (
     <main id="main" className="workspace-opening">
-      <Brand />
+      <Brand href="/app" label="RUSHES dashboard" />
       <div role="status">
         <Loader2 size={20} className="workspace-spinner" /> Opening your
         workspace…
@@ -71,6 +71,7 @@ export function Rushes() {
   const workspaceId = searchParams.get("workspace") || "";
   const projectId = searchParams.get("project") || "";
   const settingsOpen = searchParams.get("view") === "settings";
+  const googleResult = searchParams.get("google");
   const rawPage = Number(searchParams.get("page") || 0);
   const projectPage =
     Number.isSafeInteger(rawPage) && rawPage >= 0
@@ -162,16 +163,19 @@ export function Rushes() {
   }, [accountRetry, handleFailure, router]);
 
   useEffect(() => {
-    if (workspace && !workspaceId)
-      router.replace(
-        workspaceHref(workspace.id, {
-          project: projectId || undefined,
-          settings: settingsOpen,
-          page: projectPage,
-        }),
-        { scroll: false },
-      );
-  }, [workspace, workspaceId, projectId, settingsOpen, projectPage, router]);
+    if (workspace && !workspaceId) {
+      const destination = workspaceHref(workspace.id, {
+        project: projectId || undefined,
+        settings: settingsOpen,
+        page: projectPage,
+      });
+      const result =
+        settingsOpen && ["linked", "cancelled", "link_failed"].includes(googleResult || "")
+          ? `&google=${googleResult}`
+          : "";
+      router.replace(destination + result, { scroll: false });
+    }
+  }, [workspace, workspaceId, projectId, settingsOpen, projectPage, googleResult, router]);
 
   useEffect(() => {
     if (!user || !workspace) return;
@@ -471,7 +475,10 @@ export function Rushes() {
         />
       )}
       <header className="workspace-header">
-        <Brand />
+        <Brand
+          href={workspace ? workspaceHref(workspace.id) : "/app"}
+          label="RUSHES dashboard"
+        />
         <div className="workspace-header-context">
           {workspace?.name || "Your workspace"}
         </div>
