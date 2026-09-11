@@ -3,7 +3,7 @@ import csv
 import json
 import os
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from uuid import UUID
 
 from sqlalchemy import select
@@ -42,24 +42,50 @@ def export_folder(workspace_id: UUID | str, export_id: UUID | str) -> Path:
     return settings().output_root / str(UUID(str(workspace_id))) / str(UUID(str(export_id)))
 
 
+def media_output_path(folder: Path, filename: str) -> Path:
+    relative = PurePosixPath(filename)
+    if (
+        not filename
+        or not relative.parts
+        or "\\" in filename
+        or relative.is_absolute()
+        or relative.as_posix() != filename
+        or any(part in {".", ".."} for part in relative.parts)
+    ):
+        raise StorageError("Export output must stay within its output folder")
+    root = folder.resolve()
+    final = root.joinpath(*relative.parts)
+    if not final.resolve().is_relative_to(root) or any(
+        path.is_symlink()
+        for path in [final, *final.parents]
+        if path != root and path.is_relative_to(root)
+    ):
+        raise StorageError("Export output must stay within its output folder without symlinks")
+    return final
+
+
 def write_media_entry(entry: dict, folder: Path, source, progress=None) -> dict:
-    final = folder / entry["filename"]
-    receipt = final.with_suffix(final.suffix + ".receipt.json")
+    final = media_output_path(folder, entry["filename"])
+    receipt = media_output_path(folder, entry["filename"] + ".receipt.json")
+    temporary_receipt = media_output_path(folder, entry["filename"] + ".receipt.partial.json")
     try:
         result = json.loads(receipt.read_text())
         with final.open("rb") as file:
-            if fingerprint(file) == result["output_sha256"] and (
-                entry["mode"] == "copy" or result.get("renderer_version") == RENDERER_VERSION
+            if (
+                result["output"] == entry["filename"]
+                and fingerprint(file) == result["output_sha256"]
+                and (entry["mode"] == "copy" or result.get("renderer_version") == RENDERER_VERSION)
             ):
                 return result
     except (OSError, ValueError, KeyError):
         pass
     config = settings()
     require_space(folder, entry["estimated_bytes"], config.min_free_bytes)
+    final.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     source.seek(0)
     before = os.fstat(source.fileno())
     if entry["mode"] == "copy":
-        temporary = final.with_suffix(final.suffix + ".partial")
+        temporary = media_output_path(folder, entry["filename"] + ".partial")
         with temporary.open("wb") as output:
             while chunk := source.read(1024 * 1024):
                 require_space(folder, len(chunk), config.min_free_bytes)
@@ -87,13 +113,13 @@ def write_media_entry(entry: dict, folder: Path, source, progress=None) -> dict:
         result = {
             "asset_id": entry["asset_id"],
             "source_name": entry["source_name"],
-            "output": final.name,
+            "output": final.relative_to(folder.resolve()).as_posix(),
             "output_sha256": fingerprint(file),
             "bytes": final.stat().st_size,
             "render_plan": plan,
             "renderer_version": RENDERER_VERSION if entry["mode"] != "copy" else "byte-copy-v1",
+            **({"organization": entry["organization"]} if "organization" in entry else {}),
         }
-    temporary_receipt = receipt.with_suffix(".partial.json")
     temporary_receipt.write_text(json.dumps(result))
     os.replace(temporary_receipt, receipt)
     return result
@@ -117,7 +143,7 @@ def write_media_group(key, entries, folder, progress=None):
         # before accepting the group, even if a writer restored its original timestamps.
         if fingerprint(source) != expected:
             for entry in entries:
-                final = folder / entry["filename"]
+                final = media_output_path(folder, entry["filename"])
                 final.unlink(missing_ok=True)
                 final.with_suffix(final.suffix + ".receipt.json").unlink(missing_ok=True)
             raise StorageError("Source changed during export; no completed output was recorded")
@@ -145,7 +171,9 @@ async def render_export(args: dict):
         asset_ids = {UUID(entry["asset_id"]) for entry in plan["entries"]}
         assets = {
             asset.id: asset
-            for asset in await db.scalars(select(Asset).where(Asset.id.in_(asset_ids)))
+            for asset in await db.scalars(
+                select(Asset).where(Asset.id.in_(asset_ids), Asset.project_id == project_id)
+            )
         }
         for entry in plan["entries"]:
             asset = assets.get(UUID(entry["asset_id"]))
@@ -160,6 +188,11 @@ async def render_export(args: dict):
     require_space(folder, plan["estimated_bytes"], settings().min_free_bytes)
     outputs = []
     if kind in {"clips", "copies"}:
+        filenames = [entry["filename"] for entry in plan["entries"]]
+        if len(filenames) != len(set(filenames)):
+            raise StorageError("Export outputs contain duplicate filenames; review a new preview")
+        for filename in filenames:
+            media_output_path(folder, filename)
         for key, entries in source_groups(plan["entries"]):
             outputs.extend(
                 await keep_alive(
@@ -175,7 +208,14 @@ async def render_export(args: dict):
         outputs.sort(key=lambda output: order[output["output"]])
         manifest = folder / "provenance.json"
         manifest.write_text(
-            json.dumps({"schema": "rushes-export-v1", "outputs": outputs}, indent=2)
+            json.dumps(
+                {
+                    "schema": "rushes-export-v1",
+                    "outputs": outputs,
+                    **({"organization": plan["organization"]} if "organization" in plan else {}),
+                },
+                indent=2,
+            )
         )
         output_path = str(folder)
     elif kind in {"selections_json", "selections_csv"}:
@@ -321,7 +361,10 @@ async def render_export(args: dict):
         export.output_path, export.state, export.provenance = (
             output_path,
             "completed",
-            {"outputs": outputs},
+            {
+                "outputs": outputs,
+                **({"organization": plan["organization"]} if "organization" in plan else {}),
+            },
         )
         job.state, job.stage, job.progress = "completed", "Export complete", 100
         await db.execute(
