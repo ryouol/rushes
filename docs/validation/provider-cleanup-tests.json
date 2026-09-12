@@ -1,0 +1,42 @@
+{
+  "checked_at": "2026-09-12T18:32:40.502488+00:00",
+  "passed": true,
+  "pytest_passed": 90,
+  "pytest_seconds": 8.68,
+  "test_files": [
+    "test_provider_files.py",
+    "test_inference.py",
+    "test_provider_budget.py",
+    "test_production_regressions.py",
+    "test_deletion.py",
+    "test_review_regressions.py",
+    "test_cloud_compute.py"
+  ],
+  "database": "Unique isolated local database; dropped after test completion",
+  "schema": "0007",
+  "forced_rls_tables": 17,
+  "configured_gemini_key": false,
+  "configured_provider_allowance_microusd": 0,
+  "provider_generation_dispatched": false,
+  "source_sha256": {
+    "backend/rushes/activities.py": "4faeb9548ab3e89d761a4d471f908685aeacab2ed46b98f6fa039ffff4dfdba1",
+    "backend/rushes/inference.py": "8f799aa892880f437ec05ae364373d1bf942a5146a659b7dadfb46e6f90be6d2",
+    "backend/rushes/maintenance.py": "b4c7aa84f07c611a781aa68f595d0d54f11bb642c99304971d16bdbc5ede037f",
+    "backend/rushes/models.py": "da2623979c182c3d98023c36aa7cecd3d0151195d4cbbdd172d7689a08441018",
+    "backend/rushes/provider_files.py": "b42b7bff3d4050f0fa0c6cfa23c5fd602765b7796f2d909f849cfdaf8d49c220",
+    "scripts/verify_gemini.py": "856cfe37e0e998d061bf3668eeea42fcd53a69c947ae053fe51da5246c5da67a",
+    "scripts/verify_schema.py": "639ae5f84701971bfc8829f08e516324cf055d3c0de6b0d704e9d2d4c331a431",
+    "tests/test_cloud_compute.py": "ef0f18c755b4d8fda3f03cc14487dea72193c2b3991639ed012e28abc184d95f",
+    "tests/test_inference.py": "247ed0f8b13eca9e6202cea8df79b80d6c7df84158b648dc0e167019794c0458",
+    "tests/test_production_regressions.py": "c20e54ea2d16eb0c97cc046f6002a0d7a3ab0c867b28d0ddd3df07e731853c81",
+    "tests/test_provider_budget.py": "35983c4053d6893e2bcf7caeed86bdff9f9b65b089750ee7c579f0bc962765a0",
+    "tests/test_review_regressions.py": "c86f23ef533aaa92c4b609fd12b17bf8db5691213f835d991bce734ed65119d3",
+    "backend/migrations/versions/0007_provider_file_lifetime.py": "88b14483876bd1ca74da63afd4c721f5fbf4c3214b4c98373665793dcb1266c3",
+    "tests/test_provider_files.py": "f10eeecd6b3fa41112dd7ffa29c69ff84d15bf1937c81d7536a63b3a32ef74d6"
+  },
+  "limitations": [
+    "Provider contracts use fakes; actual paid processing was not repeated",
+    "Test fixtures explicitly set local synthetic ledger allowances or stub reservations at already mocked provider boundaries",
+    "This verifies source and fresh migrations; the historical local Docker image predates these changes"
+  ]
+}

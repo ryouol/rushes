@@ -1,10 +1,13 @@
+import asyncio
 import json
 import uuid
 from datetime import timedelta
 
 import pytest
+from pydantic import SecretStr
 from rushes import maintenance, pipeline, routes_media
 from rushes.auth import WorkspaceAccess
+from rushes.config import settings
 from rushes.db import session_factory, tenant_session
 from rushes.models import (
     AnalysisRun,
@@ -187,10 +190,13 @@ async def test_member_limit_preserves_role_updates(authenticated):
 
 
 @pytest.mark.integration
-async def test_received_file_cleanup_retains_response_and_continues_after_failure(
-    authenticated, monkeypatch
+@pytest.mark.parametrize("replacement_fails", [False, True])
+@pytest.mark.parametrize("offline_expiry", [False, True])
+async def test_received_file_cleanup_delays_failures_and_reaches_newer_expired_files(
+    authenticated, monkeypatch, replacement_fails, offline_expiry
 ):
     _clients, ws, _other, _project, asset, _tokens = authenticated
+    monkeypatch.setattr(settings(), "gemini_api_key", SecretStr("synthetic-no-network"))
     async with tenant_session(ws) as db:
         run = AnalysisRun(
             workspace_id=ws,
@@ -205,7 +211,7 @@ async def test_received_file_cleanup_retains_response_and_continues_after_failur
         )
         db.add(run)
         await db.flush()
-        for index in range(2):
+        for index in range(22):
             db.add(
                 AnalysisWindow(
                     workspace_id=ws,
@@ -214,23 +220,42 @@ async def test_received_file_cleanup_retains_response_and_continues_after_failur
                     start_us=0,
                     end_us=1_000_000,
                     cache_key=str(uuid.uuid4()),
-                    state="received",
+                    state="in_flight" if index == 21 else "received",
                     raw_response={"retained": True},
                     provider_file=f"files/synthetic-{index}",
-                    created_at=now() - timedelta(hours=3 - index),
+                    provider_file_expires_at=now() - timedelta(minutes=1) if index >= 20 else None,
+                    provider_file_retry_at=now() + timedelta(hours=1) if index >= 20 else None,
+                    created_at=now() - timedelta(hours=3) + timedelta(seconds=index),
                 )
             )
         run_id = run.id
     attempted = []
 
-    def delete(name):
+    original_delete = maintenance.delete_remote
+
+    def delete(name, expiry):
         attempted.append(name)
-        if name.endswith("0"):
+        if int(name.rsplit("-", 1)[1]) < 20:
             raise RuntimeError("Synthetic transient provider error")
+        original_delete(name, expiry)
 
     monkeypatch.setattr(maintenance, "delete_remote", delete)
     await maintenance.cleanup_provider_files(ws)
-    assert attempted == ["files/synthetic-0", "files/synthetic-1"]
+    assert attempted == [f"files/synthetic-{index}" for index in range(20)]
+
+    async def end_pass(_seconds):
+        raise asyncio.CancelledError()
+
+    if offline_expiry:
+        with monkeypatch.context() as offline:
+            offline.setattr(settings(), "gemini_api_key", None)
+            offline.setattr(maintenance, "unit_paths", lambda: iter(()))
+            offline.setattr(maintenance.asyncio, "sleep", end_pass)
+            with pytest.raises(asyncio.CancelledError):
+                await maintenance.maintain()
+    else:
+        await maintenance.cleanup_provider_files(ws)
+    assert attempted == [f"files/synthetic-{index}" for index in range(21)]
     async with tenant_session(ws) as db:
         rows = list(
             await db.scalars(
@@ -239,10 +264,37 @@ async def test_received_file_cleanup_retains_response_and_continues_after_failur
                 .order_by(AnalysisWindow.created_at)
             )
         )
-        assert [row.provider_file for row in rows] == ["files/synthetic-0", None]
+        assert [row.provider_file for row in rows[:20]] == [
+            f"files/synthetic-{i}" for i in range(20)
+        ]
+        assert all(row.provider_file_retry_at > now() for row in rows[:20])
+        assert rows[20].provider_file is None
+        assert rows[20].provider_file_expires_at is None
+        assert rows[20].provider_file_retry_at is None
+        assert rows[21].provider_file == "files/synthetic-21"
         assert all(
-            row.state == "received" and row.raw_response == {"retained": True} for row in rows
+            row.state == "received" and row.raw_response == {"retained": True}
+            for row in rows
+            if row is not rows[21]
         )
+        replaced_id = rows[0].id
+        rows[0].provider_file_retry_at = None
+    replacement_expiry = now() + timedelta(hours=48)
+
+    async def concurrent_replacement(_function, name, _expiry):
+        async with tenant_session(ws) as db:
+            row = await db.get(AnalysisWindow, replaced_id)
+            row.provider_file_expires_at = replacement_expiry
+        if replacement_fails:
+            raise RuntimeError("Synthetic stale attempt failed")
+
+    monkeypatch.setattr(maintenance.asyncio, "to_thread", concurrent_replacement)
+    await maintenance.cleanup_provider_files(ws)
+    async with tenant_session(ws) as db:
+        row = await db.get(AnalysisWindow, replaced_id)
+        assert row.provider_file == "files/synthetic-0"
+        assert row.provider_file_expires_at == replacement_expiry
+        assert row.provider_file_retry_at is None
 
 
 def test_proxy_tail_has_explicit_source_provenance():

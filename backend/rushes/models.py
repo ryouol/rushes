@@ -156,6 +156,8 @@ class AnalysisWindow(Tenant, Base):
     raw_response: Mapped[dict | None]
     input_snapshot: Mapped[dict | None]
     provider_file: Mapped[str | None]
+    provider_file_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_file_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None]
     attempts: Mapped[int] = mapped_column(default=0)
     __table_args__ = (CheckConstraint("start_us >= 0 AND end_us > start_us"),)

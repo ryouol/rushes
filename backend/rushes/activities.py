@@ -44,6 +44,7 @@ from rushes.models import (
 from rushes.organization import ORGANIZATION_VERSION, category_records
 from rushes.pipeline import ensure_prepared, prepare_asset, prepare_chunk, transcribe_asset
 from rushes.provider_budget import ProviderBudgetError
+from rushes.provider_files import record_provider_file
 from rushes.storage import run_storage_thread, storage_activity
 from rushes.timing import Interval, bounded_windows
 
@@ -406,17 +407,22 @@ async def analyze_window(args: dict):
     async with tenant_session(args["workspace_id"]) as db:
         pending = await db.get(AnalysisWindow, UUID(args["window_id"]))
         old_file = pending.provider_file if pending and pending.state == "pending" else None
+        old_expiry = pending.provider_file_expires_at if old_file else None
     if old_file:
         try:
-            await run_storage_thread(delete_remote, old_file)
+            await run_storage_thread(delete_remote, old_file, old_expiry)
         except Exception as error:
             raise ProviderPreparationError(
                 "The previous Google upload could not be cleaned up. No new analysis was sent; resume processing later."
             ) from error
         async with tenant_session(args["workspace_id"]) as db:
             pending = await locked_window(db, args["window_id"])
-            if pending.state == "pending" and pending.provider_file == old_file:
-                pending.provider_file = None
+            if (
+                pending.state == "pending"
+                and pending.provider_file == old_file
+                and pending.provider_file_expires_at == old_expiry
+            ):
+                record_provider_file(pending, None)
     async with tenant_session(args["workspace_id"]) as db:
         job = await db.scalar(select(Job).where(Job.id == UUID(args["job_id"])).with_for_update())
         if job.state in {"failed", "canceled", "cancel_requested"}:
@@ -448,13 +454,13 @@ async def analyze_window(args: dict):
         )
         loop = asyncio.get_running_loop()
 
-        async def save_upload(name):
+        async def save_upload(name, expires_at):
             async with tenant_session(args["workspace_id"]) as db:
                 row = await locked_window(db, args["window_id"])
-                row.provider_file = name
+                record_provider_file(row, name, expires_at)
 
-        def uploaded(name):
-            asyncio.run_coroutine_threadsafe(save_upload(name), loop).result(timeout=30)
+        def uploaded(name, expires_at):
+            asyncio.run_coroutine_threadsafe(save_upload(name, expires_at), loop).result(timeout=30)
 
         chunk_plan = json.loads(chunk.with_suffix(".timing.json").read_text())
         effective_window = effective_source_interval(chunk_plan, interval)
@@ -471,7 +477,9 @@ async def analyze_window(args: dict):
                     window.state = "pending"
                     window.attempts -= 1
                     window.error = result.validation_error
-                    window.provider_file = result.cleanup_pending_file
+                    record_provider_file(
+                        window, result.cleanup_pending_file, result.cleanup_pending_file_expires_at
+                    )
             error_type = (
                 ProviderBudgetError
                 if result.provider_outcome == "budget_rejected"
@@ -494,7 +502,10 @@ async def analyze_window(args: dict):
                 "envelope": result.model_dump(mode="json", exclude={"raw"}),
                 "chunk_mapping": chunk_plan,
             }
-            window.provider_file, window.state = result.cleanup_pending_file, "received"
+            record_provider_file(
+                window, result.cleanup_pending_file, result.cleanup_pending_file_expires_at
+            )
+            window.state = "received"
             db.add(
                 Usage(
                     workspace_id=window.workspace_id,

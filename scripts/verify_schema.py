@@ -34,7 +34,16 @@ def main():
                     "SELECT count(*) FROM pg_class WHERE relrowsecurity AND relforcerowsecurity AND relnamespace = 'public'::regnamespace"
                 ).fetchone()[0]
                 assert forced == 17
-                assert version == "0006"
+                assert version == "0007"
+                assert (
+                    db.execute(
+                        "SELECT count(*) FROM information_schema.columns "
+                        "WHERE table_name='analysis_window' "
+                        "AND column_name IN ('provider_file_expires_at','provider_file_retry_at') "
+                        "AND data_type='timestamp with time zone' AND is_nullable='YES'"
+                    ).fetchone()[0]
+                    == 2
+                )
                 assert (
                     db.execute(
                         "SELECT count(*) FROM pg_class WHERE relname IN ('google_identity', 'oauth_attempt') "

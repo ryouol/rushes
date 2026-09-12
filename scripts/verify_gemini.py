@@ -45,7 +45,9 @@ def main():
         "passed": False,
     }
     try:
-        result = GeminiAnalyzer().analyze(fixture, window, "", remote_files.append)
+        result = GeminiAnalyzer().analyze(
+            fixture, window, "", lambda name, _expires_at: remote_files.append(name)
+        )
         report.update(
             provider_outcome=result.provider_outcome,
             input_tokens=result.input_tokens,

@@ -2,6 +2,7 @@ import hashlib
 import json
 import time
 from collections.abc import Callable
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Protocol
@@ -87,6 +88,7 @@ class AnalysisResult(BaseModel):
     output_tokens: int = 0
     model: str
     cleanup_pending_file: str | None = None
+    cleanup_pending_file_expires_at: datetime | None = None
 
 
 class ProviderPreparationError(ValueError):
@@ -99,7 +101,7 @@ class Analyzer(Protocol):
         chunk: Path,
         window: Interval,
         transcript: str,
-        on_upload: Callable[[str], None] | None = None,
+        on_upload: Callable[[str, datetime | None], None] | None = None,
     ) -> AnalysisResult: ...
 
 
@@ -157,7 +159,7 @@ class GeminiAnalyzer:
         chunk: Path,
         window: Interval,
         transcript: str,
-        on_upload: Callable[[str], None] | None = None,
+        on_upload: Callable[[str, datetime | None], None] | None = None,
     ) -> AnalysisResult:
         from google import genai
         from google.genai import errors, types
@@ -183,12 +185,14 @@ class GeminiAnalyzer:
             ),
         )
         remote = None
+        expires_at = None
         result = None
         generation_started = False
         try:
             remote = client.files.upload(file=chunk, config={"mime_type": "video/mp4"})
+            expires_at = remote.expiration_time
             if on_upload:
-                on_upload(remote.name)
+                on_upload(remote.name, expires_at)
             deadline = time.monotonic() + 180
             status_errors = 0
             while remote.state and remote.state.name == "PROCESSING":
@@ -280,10 +284,11 @@ class GeminiAnalyzer:
         finally:
             if remote and remote.name:
                 try:
-                    delete_provider_file(client, remote.name)
+                    delete_provider_file(client, remote.name, expires_at)
                 except Exception:
                     if result:
                         result.cleanup_pending_file = remote.name
+                        result.cleanup_pending_file_expires_at = expires_at
             client.close()
 
 

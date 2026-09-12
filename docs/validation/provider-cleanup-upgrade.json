@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "from_revision": "0006",
+  "to_revision": "0007",
+  "legacy_row_unchanged": true,
+  "expiry_backfilled": false,
+  "retry_backfilled": false,
+  "isolated_database_removed": true
+}

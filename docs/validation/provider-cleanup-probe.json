@@ -1,0 +1,24 @@
+{
+  "started_at": "2026-09-12T17:55:20.436705+00:00",
+  "scope": "Live Files upload/get/delete/list only; no model generation or camera media",
+  "fixture_bytes": 80,
+  "fixture_sha256": "1b5ec8d2c794b3bbc74180bc38eb268e099f94fba29e2995c25ca4fc8eaa1a37",
+  "generation_dispatched": false,
+  "uploaded_name": "files/qe8fod6y2r7l",
+  "expiration_time": "2026-09-14 17:55:21.690317+00:00",
+  "get_before_delete_succeeded": true,
+  "first_delete_succeeded": true,
+  "get_after_delete": {
+    "succeeded": false,
+    "error_type": "ClientError",
+    "error_code": 403
+  },
+  "delete_after_delete": {
+    "succeeded": false,
+    "error_type": "ClientError",
+    "error_code": 403
+  },
+  "complete_list_after_delete_count": 0,
+  "listed_after_delete": false,
+  "finished_at": "2026-09-12T17:55:22.562990+00:00"
+}

@@ -91,6 +91,7 @@ def test_status_reads_retry_but_generation_never_repeats(monkeypatch, tmp_path, 
     def remote(state):
         return SimpleNamespace(
             name="files/synthetic",
+            expiration_time=None,
             uri="https://example.invalid/clip",
             state=SimpleNamespace(name=state),
         )

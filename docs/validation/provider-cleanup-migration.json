@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-09-12T18:34:02.970595+00:00",
+  "from_revision": "0006",
+  "to_revision": "0007",
+  "forced_rls_tables": 17,
+  "nullable_timestamp_columns": 2,
+  "existing_analysis_windows": 13,
+  "legacy_window_state_attempts_and_response_unchanged": true,
+  "external_connection_sslmode": "verify-full",
+  "migration_before_runtime_deployment": true,
+  "passed": true,
+  "database_acl_restored": true,
+  "database_external_access_disabled": true
+}

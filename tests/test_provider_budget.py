@@ -125,8 +125,11 @@ async def test_search_explains_budget_denial(monkeypatch):
 async def test_unsent_window_remains_retryable_without_usage(
     authenticated, monkeypatch, tmp_path, outcome
 ):
+    from datetime import timedelta
+
     from rushes import activities
     from rushes.inference import AnalysisResult, ProviderPreparationError
+    from rushes.models import now
 
     _clients, ws, _other, project, asset, _tokens = authenticated
     monkeypatch.setattr(settings(), "gemini_api_key", SecretStr("synthetic-no-network"))
@@ -152,6 +155,7 @@ async def test_unsent_window_remains_retryable_without_usage(
         json.dumps({"first_source_elapsed_us": 0, "extracted_proxy": {"end_us": 10_000_000}})
     )
     monkeypatch.setattr(activities, "prepare_chunk", lambda *_: chunk)
+    expiry = now() + timedelta(hours=48)
     monkeypatch.setattr(
         activities,
         "GeminiAnalyzer",
@@ -164,6 +168,7 @@ async def test_unsent_window_remains_retryable_without_usage(
                 cleanup_pending_file="files/synthetic-pending"
                 if outcome == "preparation_failed"
                 else None,
+                cleanup_pending_file_expires_at=expiry if outcome == "preparation_failed" else None,
             )
         ),
     )
@@ -185,7 +190,7 @@ async def test_unsent_window_remains_retryable_without_usage(
     cleaned = []
     if outcome == "preparation_failed":
 
-        def unavailable_cleanup(_):
+        def unavailable_cleanup(_name, _expiry):
             raise TimeoutError("Synthetic failed cleanup")
 
         monkeypatch.setattr(activities, "delete_remote", unavailable_cleanup)
@@ -195,7 +200,16 @@ async def test_unsent_window_remains_retryable_without_usage(
             window = await db.get(AnalysisWindow, UUID(window_id))
             assert window.state == "pending" and window.attempts == 0
             assert window.provider_file == "files/synthetic-pending"
-    monkeypatch.setattr(activities, "delete_remote", lambda name: cleaned.append(name))
+            assert window.provider_file_expires_at == expiry
+            window.provider_file_expires_at = now() - timedelta(minutes=1)
+
+    def expired_cleanup(name, expires_at):
+        from rushes.maintenance import delete_remote
+
+        cleaned.append(name)
+        delete_remote(name, expires_at)
+
+    monkeypatch.setattr(activities, "delete_remote", expired_cleanup)
     chunk.write_bytes(b"synthetic restored allowance")
     monkeypatch.setattr(
         activities,
@@ -213,12 +227,70 @@ async def test_unsent_window_remains_retryable_without_usage(
     async with tenant_session(ws) as db:
         window = await db.get(AnalysisWindow, UUID(window_id))
         assert window.attempts == 1
+        assert window.provider_file is None and window.provider_file_expires_at is None
         usage = await db.scalar(select(Usage).where(Usage.asset_id == asset))
         assert usage.provider_outcome == "confirmed" and usage.input_tokens == 12
         reservation = await db.scalar(
             select(Reservation).where(Reservation.operation_key == f"analysis:{job_id}")
         )
         assert reservation.settled_milli == 167
+
+
+@pytest.mark.integration
+async def test_interrupted_analysis_keeps_uploaded_file_expiry(
+    authenticated, monkeypatch, tmp_path
+):
+    from datetime import timedelta
+
+    from rushes import activities
+    from rushes.models import now
+
+    _clients, ws, _other, project, asset, _tokens = authenticated
+    monkeypatch.setattr(settings(), "gemini_api_key", SecretStr("synthetic-no-network"))
+    monkeypatch.setattr(activities, "heartbeat", lambda *_: None)
+    async with tenant_session(ws) as db:
+        job = Job(
+            workspace_id=ws,
+            project_id=project,
+            asset_id=asset,
+            kind="asset",
+            state="running",
+            workflow_id=f"test:{uuid4()}",
+        )
+        db.add(job)
+        await db.flush()
+        job_id = job.id
+    args = {"workspace_id": str(ws), "asset_id": str(asset), "job_id": str(job_id)}
+    run = await activities.plan_analysis(args)
+    window_id = await activities.next_window({**args, **run})
+    chunk = tmp_path / "synthetic.mp4"
+    chunk.write_bytes(b"never sent")
+    chunk.with_suffix(".timing.json").write_text(
+        json.dumps({"first_source_elapsed_us": 0, "extracted_proxy": {"end_us": 10_000_000}})
+    )
+    monkeypatch.setattr(activities, "prepare_chunk", lambda *_: chunk)
+    expiry = now() + timedelta(hours=48)
+    calls = []
+
+    def interrupted(_path, _interval, _transcript, uploaded):
+        calls.append(True)
+        uploaded("files/synthetic-interrupted", expiry)
+        raise TimeoutError("Synthetic interruption after upload checkpoint")
+
+    monkeypatch.setattr(
+        activities, "GeminiAnalyzer", lambda _: SimpleNamespace(analyze=interrupted)
+    )
+    window_args = {**args, "window_id": window_id}
+    with pytest.raises(TimeoutError, match="Synthetic interruption"):
+        await activities.analyze_window(window_args)
+    async with tenant_session(ws) as db:
+        window = await db.get(AnalysisWindow, UUID(window_id))
+        assert window.state == "in_flight" and window.attempts == 1
+        assert window.provider_file == "files/synthetic-interrupted"
+        assert window.provider_file_expires_at == expiry
+        assert window.provider_file_retry_at is None
+    assert await activities.analyze_window(window_args) == "ambiguous"
+    assert calls == [True]
 
 
 @pytest.mark.integration

@@ -8,7 +8,7 @@ import pytest
 from google import genai
 from google.genai import types
 from pydantic import SecretStr, ValidationError
-from rushes import activities, remote_compute
+from rushes import activities, inference, remote_compute
 from rushes.config import settings
 from rushes.db import tenant_session
 from rushes.inference import AnalysisResponse, GeminiAnalyzer
@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 
 def test_gemini_schema_passes_real_sdk_and_retains_local_validation(tmp_path, monkeypatch):
+    monkeypatch.setattr(inference, "reserve_provider_call", lambda _: None)
     payloads, deleted = [], []
     output = {
         "observations": [
@@ -98,6 +99,7 @@ def test_gemini_schema_passes_real_sdk_and_retains_local_validation(tmp_path, mo
     ],
 )
 def test_invalid_remote_vectors_are_rejected(monkeypatch, response):
+    monkeypatch.setattr(remote_compute, "reserve_provider_call", lambda _: None)
     monkeypatch.setattr(
         remote_compute, "remote_function", lambda _: SimpleNamespace(remote=lambda _: response)
     )
@@ -106,6 +108,7 @@ def test_invalid_remote_vectors_are_rejected(monkeypatch, response):
 
 
 def test_remote_limits_prevent_dispatch_and_reject_shifted_timestamps(tmp_path, monkeypatch):
+    monkeypatch.setattr(remote_compute, "reserve_provider_call", lambda _: None)
     calls = []
 
     def dispatch(name):
@@ -138,6 +141,7 @@ def test_remote_limits_prevent_dispatch_and_reject_shifted_timestamps(tmp_path, 
 
 @pytest.mark.integration
 async def test_api_unicode_note_is_indexed_through_remote_contract(authenticated, monkeypatch):
+    monkeypatch.setattr(remote_compute, "reserve_provider_call", lambda _: None)
     clients, ws, _, _, asset, _ = authenticated
     text = "🙂" * 4000
     batches = []

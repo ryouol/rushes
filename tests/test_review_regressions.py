@@ -476,9 +476,11 @@ def test_source_root_removal_revokes_indexed_access(tmp_path, monkeypatch):
 @pytest.mark.parametrize("input_tokens", [10001, 100])
 def test_model_budget_and_measured_output_tokens(tmp_path, monkeypatch, input_tokens):
     from google import genai
+    from rushes import inference
     from rushes.inference import GeminiAnalyzer, bounded_transcript
 
     monkeypatch.setattr(settings(), "gemini_api_key", SecretStr("test-only-no-network"))
+    monkeypatch.setattr(inference, "reserve_provider_call", lambda _: None)
     events = []
 
     class FakeClient:
@@ -491,6 +493,7 @@ def test_model_budget_and_measured_output_tokens(tmp_path, monkeypatch, input_to
         def upload(self, **_kwargs):
             return SimpleNamespace(
                 name="files/synthetic",
+                expiration_time=None,
                 uri="https://example.invalid/synthetic",
                 state=SimpleNamespace(name="ACTIVE"),
             )
