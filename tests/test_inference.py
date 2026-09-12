@@ -52,6 +52,42 @@ def test_nonfinite_model_timestamp_rejected():
         )
 
 
+@pytest.mark.parametrize(
+    "start,end,duration,accepted",
+    [
+        (0, 14.007, 14_006_667, True),
+        (0, 14.007, 14_006_500, True),
+        (0, 14.007, 14_006_499, False),
+        (0, 14.0068, 14_006_667, False),
+        (14.0068, 14.007, 14_006_667, False),
+    ],
+)
+def test_only_final_millisecond_rounding_is_refined(start, end, duration, accepted):
+    response = AnalysisResponse.model_validate(
+        {
+            "observations": [
+                {
+                    "kind": "visual_event",
+                    "description": "Synthetic final shot",
+                    "start_seconds": start,
+                    "end_seconds": end,
+                    "uncertainty": "medium",
+                }
+            ]
+        }
+    )
+    window = Interval(start_us=60_000_000, end_us=60_000_000 + duration)
+    if not accepted:
+        with pytest.raises(ValueError):
+            validated_intervals(response, window, window.end_us)
+        return
+    proposal, interval = validated_intervals(response, window, window.end_us)[0]
+    assert proposal.end_seconds == end
+    assert interval == Interval(start_us=60_000_000, end_us=window.end_us)
+    with pytest.raises(ValueError):
+        validated_intervals(response, window, window.end_us - 1)
+
+
 def test_cache_key_covers_material_inputs():
     arguments = dict(
         fingerprint="abc",

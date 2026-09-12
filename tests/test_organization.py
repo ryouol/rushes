@@ -447,3 +447,59 @@ async def test_received_categories_persist_idempotently_without_another_provider
             } == {"coastline", "waves"}
     summary = (await clients[0].get(f"/api/workspaces/{ws}/projects/{project}/organization")).json()
     assert summary["category_total"] == (0 if legacy else 2)
+
+
+@pytest.mark.integration
+async def test_received_boundary_rounding_preserves_proposal_and_usage(authenticated, monkeypatch):
+    _, ws, _, _, asset_id, _ = authenticated
+
+    def no_provider(*args, **kwargs):
+        raise AssertionError("Retained evidence must not dispatch inference")
+
+    monkeypatch.setattr(activities, "GeminiAnalyzer", no_provider)
+    async with tenant_session(ws) as db:
+        asset = await db.get(Asset, asset_id)
+        asset.duration_us = 14_006_667
+        run, window = await make_run(db, asset, [], window_state="received")
+        window.end_us = asset.duration_us
+        run_id, window_id = run.id, window.id
+        raw = {
+            "provider": {"synthetic": True},
+            "envelope": {
+                "text": json.dumps(
+                    {"observations": [{**proposal(["Coastline"]), "end_seconds": 14.007}]}
+                ),
+                "model": run.model,
+            },
+            "chunk_mapping": {"first_source_elapsed_us": 0},
+        }
+        window.raw_response = raw
+        db.add(
+            Usage(
+                workspace_id=ws,
+                asset_id=asset_id,
+                operation_key=f"analysis:{window_id}",
+                kind="analysis",
+                model=run.model,
+                input_tokens=123,
+                output_tokens=45,
+            )
+        )
+    args = {"workspace_id": str(ws), "window_id": str(window_id)}
+    assert await activities.apply_received_response(args) == "completed"
+    assert await activities.apply_received_response(args) == "completed"
+    async with tenant_session(ws) as db:
+        rows = list(await db.scalars(select(Observation).where(Observation.run_id == run_id)))
+        assert len(rows) == 1
+        assert rows[0].proposed_end_us == 14_007_000
+        assert rows[0].end_us == 14_006_667
+        assert (await db.get(AnalysisWindow, window_id)).raw_response == raw
+        usages = list(
+            await db.scalars(select(Usage).where(Usage.operation_key == f"analysis:{window_id}"))
+        )
+        assert len(usages) == 1
+        assert (usages[0].input_tokens, usages[0].output_tokens, usages[0].provider_outcome) == (
+            123,
+            45,
+            "confirmed",
+        )

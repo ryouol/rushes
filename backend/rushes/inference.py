@@ -107,11 +107,15 @@ class Analyzer(Protocol):
 
 def validated_intervals(response: AnalysisResponse, window: Interval, duration_us: int):
     output = []
+    window_duration = window.end_us - window.start_us
     for item in response.observations:
-        relative = Interval(
-            start_us=to_us(str(item.start_seconds)), end_us=to_us(str(item.end_seconds))
-        )
-        relative.within(window.end_us - window.start_us)
+        end_us = to_us(str(item.end_seconds))
+        # Providers may round the final timestamp to milliseconds. Refine only that
+        # rounding at the chunk boundary; retain the original proposal separately.
+        if 0 < end_us - window_duration <= 500 and end_us % 1000 == 0:
+            end_us = window_duration
+        relative = Interval(start_us=to_us(str(item.start_seconds)), end_us=end_us)
+        relative.within(window_duration)
         absolute = Interval(
             start_us=window.start_us + relative.start_us, end_us=window.start_us + relative.end_us
         ).within(duration_us)

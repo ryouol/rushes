@@ -46,7 +46,7 @@ from rushes.pipeline import ensure_prepared, prepare_asset, prepare_chunk, trans
 from rushes.provider_budget import ProviderBudgetError
 from rushes.provider_files import record_provider_file
 from rushes.storage import run_storage_thread, storage_activity
-from rushes.timing import Interval, bounded_windows
+from rushes.timing import Interval, bounded_windows, to_us
 
 
 def heartbeat(message="processing"):
@@ -383,8 +383,8 @@ async def apply_received_response(args):
                     kind=proposed.kind,
                     start_us=absolute.start_us,
                     end_us=absolute.end_us,
-                    proposed_start_us=absolute.start_us,
-                    proposed_end_us=absolute.end_us,
+                    proposed_start_us=interval.start_us + to_us(str(proposed.start_seconds)),
+                    proposed_end_us=interval.start_us + to_us(str(proposed.end_seconds)),
                     description=proposed.description,
                     attributes=attributes,
                     evidence=[{"window_id": str(window.id)}],
