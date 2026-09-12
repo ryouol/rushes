@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from rushes.api_common import DB, Access, row_json
+from rushes.api_lifespan import lifespan
 from rushes.auth import (
     UserCreate,
     UserRead,
@@ -26,7 +27,9 @@ from rushes.routes_search import router as search_router
 from rushes.routes_settings import router as settings_router
 from rushes.security import CallbackLogBoundary, OriginBoundary, RequestBodyBoundary
 
-app = FastAPI(title="RUSHES API", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(
+    title="RUSHES API", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
+)
 app.add_middleware(RequestBodyBoundary)
 app.add_middleware(OriginBoundary)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])

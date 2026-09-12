@@ -120,19 +120,19 @@ async def test_shutdown_stops_polling_both_queues_before_waiting_for_drain(monke
     class ActiveQueue:
         def __init__(self, *args, **kwargs):
             self.stopped_polling = asyncio.Event()
+            self.is_running = False
             queues.append(self)
 
-        async def __aenter__(self):
-            if len(queues) == 2:
+        async def run(self):
+            self.is_running = True
+            if len(queues) == 2 and all(queue.is_running for queue in queues):
                 entered.set()
-            return self
+            await drained.wait()
+            self.is_running = False
 
         async def shutdown(self):
             self.stopped_polling.set()
             await drained.wait()
-
-        async def __aexit__(self, *args):
-            await self.shutdown()
 
     async def connect(*args, **kwargs):
         return object()

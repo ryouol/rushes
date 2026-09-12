@@ -71,18 +71,12 @@ def main():
                         "--allow-no-auth",
                         "start",
                     ],
-                    env={**os.environ, "GOMEMLIMIT": "512MiB", "GOMAXPROCS": "1"},
+                    env={**os.environ, "GOMEMLIMIT": "128MiB", "GOMAXPROCS": "1"},
                     start_new_session=True,
                 )
                 ready = startup_helper("wait", timeout=75)
                 if not ready or stopping:
                     return
-                children.append(
-                    subprocess.Popen(
-                        [sys.executable, "-m", "rushes.worker"],
-                        start_new_session=True,
-                    )
-                )
             if stopping:
                 return
             children.append(
@@ -127,7 +121,8 @@ def main():
                 if child.poll() is None:
                     with suppress(ProcessLookupError):
                         os.killpg(child.pid, signal.SIGTERM)
-            deadline = time.monotonic() + (35 if temporal is not None else 20)
+            # HTTP drain (10s) precedes worker cleanup (35s) in the hosted API process.
+            deadline = time.monotonic() + (50 if temporal is not None else 20)
             for child in reversed(children):
                 try:
                     child.wait(timeout=max(0, deadline - time.monotonic()))

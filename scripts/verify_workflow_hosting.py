@@ -80,8 +80,8 @@ def service_processes():
             continue
         if args[0] == b"/opt/temporal/temporal-server":
             found["temporal"] = int(path.parent.name)
-        elif args[1:] == [b"-m", b"rushes.worker"]:
-            found["worker"] = int(path.parent.name)
+        elif args[1:4] == [b"-m", b"uvicorn", b"rushes.api:app"]:
+            found["api"] = int(path.parent.name)
     return found
 
 
@@ -90,7 +90,7 @@ def lifecycle_probe(mode: str):
     while time.monotonic() < deadline:
         found = service_processes()
         if mode == "readiness" and "temporal" in found:
-            assert "worker" not in found, "Worker started before private Temporal was ready"
+            assert "api" not in found, "Hosted API started before private Temporal was ready"
             with socket.socket() as connection:
                 assert connection.connect_ex(("127.0.0.1", 10000)) != 0
             return
@@ -104,7 +104,7 @@ def lifecycle_probe(mode: str):
 def verify_lifecycle(image, run, app, proxy, folder, client):
     start = [*run, "-d", "--name", app, "-p", "127.0.0.1:3844:10000", image]
     results = {}
-    for case in ("readiness", "worker", "temporal"):
+    for case in ("readiness", "api", "temporal"):
         command("docker", "rm", app)
         if case == "readiness":
             command("docker", "pause", proxy)
@@ -124,7 +124,7 @@ def verify_lifecycle(image, run, app, proxy, folder, client):
             started = time.monotonic()
             if case == "readiness":
                 command("docker", "stop", "--time", "20", app, timeout=25)
-            code = command("docker", "wait", app, timeout=55)
+            code = command("docker", "wait", app, timeout=75)
             elapsed = round(time.monotonic() - started, 2)
             assert code == ("0" if case == "readiness" else "1"), (case, code)
             with socket.socket() as connection:
@@ -380,7 +380,7 @@ def main():
                 )
                 assert before["state"] == "running", before
                 started = time.monotonic()
-                command("docker", "stop", "--time", "55", app, timeout=60)
+                command("docker", "stop", "--time", "70", app, timeout=75)
                 active_shutdown = round(time.monotonic() - started, 2)
                 assert command("docker", "inspect", app, "--format", "{{.State.ExitCode}}") == "0"
                 command("docker", "rm", app)
@@ -456,7 +456,7 @@ def main():
                 )
                 assert fingerprint == hashlib.sha256(original).hexdigest()
                 started = time.monotonic()
-                command("docker", "stop", "--time", "55", app)
+                command("docker", "stop", "--time", "70", app, timeout=75)
                 shutdown = round(time.monotonic() - started, 2)
                 assert command("docker", "inspect", app, "--format", "{{.State.ExitCode}}") == "0"
                 lifecycle = verify_lifecycle(image, run, app, proxy, folder, client)
