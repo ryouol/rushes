@@ -1,0 +1,151 @@
+{
+  "checked_at": "2026-09-12T20:30:49.742580+00:00",
+  "candidate_commits": [
+    "38c32ca",
+    "7cf600e"
+  ],
+  "production_deployed": false,
+  "current_production_commit": "3584971008ff25880950ab677c9f739908e11dce",
+  "combined_monthly_budget_usd": 20,
+  "current_fixed_monthly_estimate_usd": 35,
+  "invoice_cap_enforced": false,
+  "backend_tests": {
+    "passed": 141,
+    "isolated_database": "rushes_shared_test_58a840ebe847",
+    "database_removed": true,
+    "provider_calls": 0
+  },
+  "canonical_browser_tests": {
+    "passed": 27,
+    "mocked_api": true
+  },
+  "development_proxy": {
+    "passed": true,
+    "streamed_bytes": 131072,
+    "sha256": "c00a557361a4abc1bf897d3ebff6cc4ce5cc1c3cebf8b314b7f96b062fedf74c",
+    "separate_cookies": 2,
+    "wrong_origin": 403,
+    "wrong_host": 400,
+    "scope": "Real Next development server and canonical public boundary with synthetic API; no DB or provider calls"
+  },
+  "canonical_container": {
+    "checked_at": "2026-09-12T20:27:29.394665+00:00",
+    "passed": true,
+    "image": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+    "architecture": "amd64",
+    "production_source_mounted": true,
+    "temporal_server": "1.31.2",
+    "schema_setup_idempotent": true,
+    "verified_tls_postgres_bootstrap_and_runtime": true,
+    "workflow_resumed_after_container_recreation": true,
+    "api_upload_processed_by_worker": true,
+    "active_media_resumed_after_shutdown": true,
+    "active_processing_shutdown_seconds": 1.82,
+    "same_job_after_restart": true,
+    "source_preserved": true,
+    "sessions_and_preview_preserved": true,
+    "temporal_unreachable_from_peer": true,
+    "peak_container_memory_bytes": 486518784,
+    "shutdown_seconds": 1.79,
+    "lifecycle": {
+      "readiness": {
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 15.28
+      },
+      "api": {
+        "passed": true,
+        "exit_code": 1,
+        "seconds": 1.49
+      },
+      "temporal": {
+        "passed": true,
+        "exit_code": 1,
+        "seconds": 0.22
+      }
+    },
+    "limits": "Local Docker, 512 MiB / 0.5 CPU, frozen canonical Python source mounted over a previously built image. Synthetic 4K two-second muted footage, no paid provider calls. Active media is held before FFmpeg executes, so this verifies job resumption but not interrupted partial-file cleanup. Not representative capacity or actual Render ingress verification.",
+    "mount_mode": "Frozen canonical source and QA static output mounted read-only over historical image",
+    "candidate_commit": "7cf600e"
+  },
+  "source_snapshot_matches_canonical_python": true,
+  "actual_format_prototype": [
+    {
+      "source_asset": "022a134b-3a3f-41ca-8195-8462429e5d24",
+      "video_stream_copied_audio_omitted": true,
+      "status": "partial",
+      "concurrent_login": 204,
+      "peak_bytes_resumed_container": 487202816
+    },
+    {
+      "source_asset": "490f3a1b-c03e-4cd5-877e-aa4af8b587a3",
+      "video_stream_copied_audio_omitted": true,
+      "status": "partial",
+      "concurrent_login": 204,
+      "peak_bytes_resumed_container": 487751680
+    },
+    {
+      "source_asset": "23737c79-d20f-45ca-8dbb-93da2a3eac61",
+      "video_stream_copied_audio_omitted": true,
+      "status": "partial",
+      "concurrent_login": 204,
+      "peak_bytes_resumed_container": 499167232
+    }
+  ],
+  "actual_format_container_state": {
+    "Status": "running",
+    "Running": true,
+    "OOMKilled": false,
+    "ExitCode": 0,
+    "StartedAt": "2026-09-12T20:00:29.150095048Z",
+    "FinishedAt": "0001-01-01T00:00:00Z"
+  },
+  "cleanup": {
+    "checked_at": "2026-09-12T20:30:49.742092+00:00",
+    "checks": [
+      {
+        "identity": "f930d871dba6",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      },
+      {
+        "identity": "d846e8529e48",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      },
+      {
+        "identity": "dd3e54b822b0",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      },
+      {
+        "identity": "6e6c6d6f04f5",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      },
+      {
+        "identity": "8acc1bac2962",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      }
+    ]
+  },
+  "limitations": [
+    "Final image and actual Render ingress not yet verified for this candidate.",
+    "Source-mounted historical image on emulated amd64; short synthetic and muted copies of real videos, not representative long-footage capacity.",
+    "The accepted 8K upper limit has not been qualified at 512 MiB.",
+    "No new paid Gemini/Modal processing or real Google login in this stage.",
+    "Local and production provider ledgers remain separate.",
+    "First canonical harness attempt passed media/recovery but failed an immediate host port-close check; retry waits at most5seconds for closure and passed."
+  ]
+}

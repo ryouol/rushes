@@ -1,0 +1,45 @@
+# Static frontend review
+
+Candidate following `7f2d088`, reviewed on 12 September 2026. Production remains on `3584971` and its existing Render plan. The local launcher now serves the exported frontend through Python. This record retains every reported issue, including duplicates and fixed prototype findings. Locations are the file/line observed by each reviewer before subsequent edits.
+
+## Simplify: isolated prototype
+
+1. **Reuse — duplicate 404 handling**, `.local/static-frontend-20260912/asgi/backend/rushes/static_frontend.py:68`. Manually constructing `404.html` bypassed StaticFiles containment and failed when the page was missing. **Fixed:** use the framework lookup and JSON for remaining exceptions; symlink/missing-page tests pass.
+2. **Reuse — unused path**, `.local/static-frontend-20260912/asgi/serve.py:24`. The removed Node launcher left an unused root variable. **Fixed:** removed.
+3. **Quality — cached missing chunks**, `.local/static-frontend-20260912/asgi/backend/rushes/static_frontend.py:74`. Missing build assets received a one-year immutable cache policy. **Fixed:** all error responses receive `no-store`.
+4. **Quality — reception deadlines removed**, `.local/static-frontend-20260912/asgi/serve.py:88`. Removing Node removed its header/request reception deadlines. **Fixed:** the public h11 protocol bounds headers and ordinary bodies to 60 seconds, retains the configured upload duration, and stops the timer when reception completes. Actual socket tests cover slow headers, body reception, uploads and SSE.
+5. **Quality — OPTIONS parity**, `.local/static-frontend-20260912/asgi/backend/rushes/static_frontend.py:49`. Next's automatic 204/Allow response became 405. **Fixed:** preserve the 204 and allowed-method list.
+6. **Efficiency — range requests turned static 404 into 206**, `.local/static-frontend-20260912/asgi/backend/rushes/static_frontend.py:66` and `:74`. Confirmed ten bytes of the error page could be returned as an immutable 206. **Fixed:** error-page responses ignore Range/If-Range; the original 404 remains uncached. This duplicates finding 3's caching component and is retained separately.
+
+## Simplify: canonical implementation
+
+7. **Reuse — test hangs at EOF**, `tests/test_http_protocol.py:56`. A closed connection yielded empty reads forever. **Fixed:** require each received chunk to be nonempty.
+8. **Reuse — duplicate error cache assignment**, `backend/rushes/frontend.py:100`. Static error handling repeated the common outgoing error-header policy. **Fixed:** removed the redundant assignment.
+9. **Quality — overloaded callback log disclosure**, `backend/rushes/http_server.py:49`. Uvicorn's concurrency-limit 503 bypasses ASGI middleware and could log OAuth query parameters. **Fixed:** a bounded logger filter redacts callback queries at the protocol access logger too; actual overloaded HTTP callback regression passes.
+10. **Efficiency — old body deadline affects next headers**, `backend/rushes/http_protocol.py:53`. An early response leaves Uvicorn's old `more_body` flag set after h11 returns to IDLE. **Fixed:** cancel the completed body timer on IDLE; an actual keep-alive early-rejection regression passes.
+
+## Final code review
+
+11. **Testing — legacy private API callers**, `scripts/dev.py:88`, `scripts/verify_recovery.py:89`, `scripts/benchmark_synthetic.py:70`. These helpers addressed port 8741 after it gained public Host validation or disappeared in production mode. **Fixed:** both use the configured public origin. Recovery authenticates and creates its test project before stopping the selected worker.
+12. **Testing — local build instructions omit root settings**, `backend/rushes/http_server.py:35`, `README.md:33`. Plain npm build omitted the root `.env`, then exact build verification rejected startup. **Fixed:** documented builds use `scripts/build_web.py`; container instructions specify matching public build arguments. A separate static build using the nondefault QA origin has passed.
+13. **Testing qualification — final combined entry point still needs verification**, `backend/rushes/http_server.py:40`. Synthetic protocol tests and earlier prototype tests do not independently establish final-image correctness. **Locally verified:** frozen canonical source and static output passed the disposable 512 MiB upload/recovery/lifecycle check. The first attempt failed an immediate Docker host-port closure assertion after container exit; a bounded five-second eventual closure check passed. Fresh final-image and actual Render ingress validation remain required before downgrade/deployment.
+14. **Breaking changes — legacy private API callers**, `scripts/dev.py:89`. Same failure as finding 11, reproduced independently with the real Frontend. **Fixed:** public-origin callers and later recovery shutdown; duplicate retained.
+15. **Breaking changes — incomplete public build configuration migration**, `backend/rushes/http_server.py:35`, `README.md:33`, `docs/HOSTING.md:8`, `scripts/serve.py:15`. Local/Docker instructions and runtime-only Render fallback disagreed with the static manifest. **Fixed:** configuration-aware local build, separate documented QA build origins, explicit public Docker arguments, and the same Render URL fallback at build and startup. Duplicates findings 12 and 17.
+16. **Breaking changes — npm start ignores bind settings**, `web/package.json:8`, `backend/rushes/http_server.py:26`. The replacement entry point ignored PORT/RUSHES_BIND_HOST. **Fixed:** environment defaults are preserved; explicit CLI options take precedence.
+17. **Context — Render URL fallback disagrees across stages**, `scripts/serve.py:15`, `Dockerfile:13`. Explicit RUSHES_ORIGIN deployments were unaffected, but fallback deployments could not pass the manifest guard. **Fixed:** RENDER_EXTERNAL_URL is an explicit public build argument and both stages resolve it consistently. No inference/model-context changes were found. Duplicate retained.
+18. **Change size — first proposed stage exceeded 500 lines**, `tests/test_frontend.py:8` and `:111`, `backend/rushes/http_server.py:15`. The initial proposed stage was 525 lines; the full candidate was 764 before final fixes/docs. **Addressed:** move the public-config guard test into `tests/test_web_build.py` and land the inert boundary/protocol with tests first, then static build/activation/caller integration, then this evidence. Stage 1 is `38c32ca` (441 changed lines); stage 2 is `7cf600e` (396 changed lines). The documentation/evidence stage is separate.
+
+19. **Testing follow-up — wrong source-mounted workflow image**, `docs/HOSTING.md:44`. The remaining example selected a TLS-origin image for the plain-HTTP workflow harness. **Fixed:** use `rushes:workflow-candidate`, built for the workflow origin.
+20. **Breaking follow-up — wrong source-mounted workflow image**, `docs/HOSTING.md:44`. Independently reported the same retained-image mismatch. **Fixed:** corrected the image name; duplicate retained.
+
+## Validation and limits
+
+- Final shared-runtime/application regressions: 141 isolated tests passed. Nine focused frontend/protocol/build-entry tests also passed, including an actual environment-configured public server start. The test database was removed. No provider calls.
+- Canonical local frontend: 27 browser regressions passed. Earlier Node-static and ASGI prototypes also passed those 27 tests independently. Browser APIs were mocked; these do not establish provider or Google authentication success.
+- Isolated 512 MiB/0.5 CPU prototypes passed synthetic 4K interrupted preparation/recovery and three actual short source video streams (10-bit HEVC, 60 fps portrait H.264, and full-range 1440×1920 H.264), copied into muted derivatives for local verification. Login succeeded during each preparation. Cumulative peak for the resumed actual-format container was 499,167,232 bytes; no OOM was recorded. Original source files were read only. No new AI quality or representative long-footage capacity claim.
+- The real Next development proxy passed a streamed 128 KiB body, separate cookies, Host rejection and Origin rejection with a synthetic API and no provider/database calls.
+- The final frozen-source 512 MiB/0.5 CPU harness passed durable interruption/recovery, source hash and session preservation, private Temporal isolation, startup termination and API/Temporal crash shutdown. Its resumed-container peak was 486,518,784 bytes, including an extra workflow probe process. The full accepted 8K input limit remains under capacity qualification.
+- Production, Render plan, disks, provider allowances and other projects are unchanged. The requested $20/month combined budget is not yet met or enforced as an invoice cap.
+- No PR exists; no GitHub comments or review label were posted.
+
+Detailed scope and resource cleanup are recorded in [static-frontend.json](validation/static-frontend.json).

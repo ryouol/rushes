@@ -2,7 +2,7 @@
 
 A working local footage library, persistent worklog, search workspace, and clip exporter. This is a **local release candidate with explicit verification gaps**, not a completed production release. Gemini analysis sends derived clips and transcript context to Google; local-first does not mean fully offline.
 
-**RUSHES is live at [rushes.onrender.com](https://rushes.onrender.com).** Render hosts the web/API, durable workflows and media; private Modal functions handle speech and embeddings. The requested $20/month combined budget is not currently met: the deployed configuration is approximately $35/month fixed, with a separate $2 monthly provider-call allowance. A lower-memory candidate is under local verification; no total invoice cap is enforced. See [deployment status and verification](docs/PRODUCTION.md) and [the current review record](docs/SHARED-RUNTIME-REVIEW.md).
+**RUSHES is live at [rushes.onrender.com](https://rushes.onrender.com).** Render hosts the web/API, durable workflows and media; private Modal functions handle speech and embeddings. The requested $20/month combined budget is not currently met: the deployed configuration is approximately $35/month fixed, with a separate $2 monthly provider-call allowance. A lower-memory candidate is under local verification; no total invoice cap is enforced. See [deployment status and verification](docs/PRODUCTION.md) and [the current review record](docs/STATIC-FRONTEND-REVIEW.md).
 
 ## Start locally
 
@@ -25,12 +25,12 @@ uv run python scripts/dev.py
 
 Open [RUSHES](http://localhost:3741). Create an account, workspace, and project. No seeded login or shared password is provided. Local workspaces receive an explicit development-credit grant; no money is collected.
 
-`configure.py` creates `.env` once with private generated credentials and mode 0600; it preserves an existing file. The PostgreSQL service is isolated on **55432**. RUSHES uses API **8741**, web **3741**, Temporal **7233**, and the local Temporal UI **8233**, all bound to loopback. The launcher refuses occupied service ports and stops only its own children on Ctrl-C. Logs are under `.local/logs`. PostgreSQL remains running with its persistent Docker volume.
+`configure.py` creates `.env` once with private generated credentials and mode 0600; it preserves an existing file. The PostgreSQL service is isolated on **55432**. RUSHES uses public web/API **3741**, Temporal **7233**, and the local Temporal UI **8233**, all bound to loopback. Development mode also uses **8741** behind the Next development server; clients and verification helpers use the public origin. The production build serves exported pages directly from Python. The launcher refuses occupied service ports and stops only its own children on Ctrl-C. Logs are under `.local/logs`. PostgreSQL remains running with its persistent Docker volume.
 
 For the production build:
 
 ```sh
-npm --prefix web run build
+uv run python scripts/build_web.py
 uv run python scripts/dev.py --production
 ```
 
@@ -38,7 +38,7 @@ The API and worker must share this machine's storage. Do not run the worker remo
 
 ## Configuration
 
-See `.env.example`. Set server values in the private `.env`, then restart the API and worker.
+See `.env.example`. Set server values in the private `.env`, then restart the API and worker. Changes to the public origin, contact details, legal entity or analytics identifier also require `uv run python scripts/build_web.py` before starting a production build. The server verifies that the exported pages match those public values; private credentials are excluded from this check.
 
 | Variable | Purpose |
 | --- | --- |
@@ -79,7 +79,7 @@ uv run python scripts/create_fixture.py
 RUSHES_TEST_TEMPORAL=1 uv run pytest tests/test_temporal.py -q
 npm --prefix web exec -- playwright install chromium
 npm --prefix web run test:e2e
-npm --prefix web run build
+uv run python scripts/build_web.py
 uv run python scripts/audit_local.py
 uv run python scripts/verify_schema.py
 ```
