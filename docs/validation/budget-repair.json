@@ -1,0 +1,118 @@
+{
+  "checked_at": "2026-09-12T23:26:29.755157+00:00",
+  "runtime_commit": "0a110712ba2b08cb3a88de1460a816d577ea6bfb",
+  "deployment_id": "dep-daitrmtg1s2s738nu8jg",
+  "deployed_at": "2026-09-12T23:20:57.954296Z",
+  "schema": "0008",
+  "ci": {
+    "url": "https://github.com/ryouol/rushes/actions/runs/34725046825",
+    "backend_passed": 318,
+    "backend_skipped": 2,
+    "browser_passed": 27,
+    "lint_typecheck_build": "passed"
+  },
+  "focused_tests_passed": 35,
+  "fresh_schema_verified": true,
+  "migration": {
+    "schema": "0008",
+    "external_acl_restored": true,
+    "external_access_disabled": true,
+    "forced_rls_tables": 17,
+    "certificate_verified": true
+  },
+  "budget": {
+    "combined_monthly_target_usd": 20,
+    "fixed_hosting_monthly_estimate_usd": 17,
+    "production_provider_allowance_usd": 1.9,
+    "local_provider_allowance_usd": 0.85,
+    "combined_fixed_plus_provider_allowances_usd": 19.75,
+    "limits_increased": false,
+    "original_reservations_retained": true,
+    "known_gemini_responses": "Standard token-priced usage including thinking; rounded up to micro-USD",
+    "unknown_outcomes_and_modal": "Conservative full holds retained",
+    "invoice_limitations": "Builds, egress, taxes and provider enforcement delays are not an enforceable combined invoice cap."
+  },
+  "recovery": {
+    "local": {
+      "assets": 9,
+      "ready": 9,
+      "errors": 0,
+      "originals_sha256_verified": 9,
+      "allowance_microusd": 850000,
+      "accounted_usage_and_holds_microusd": 459891,
+      "remaining_allowance_microusd": 390109,
+      "historical_holds_settled": 7,
+      "before_reconciliation_microusd": 840000,
+      "after_reconciliation_before_recovery_microusd": 434819,
+      "recovery_actions": {
+        "new_pro_analysis_preserving_uncertain_history": 2
+      },
+      "runtime": {
+        "commit": null,
+        "model": "gemini-3.1-pro-preview",
+        "compute_backend": "local",
+        "allowance_microusd": 850000
+      }
+    },
+    "production": {
+      "assets": 14,
+      "ready": 14,
+      "errors": 0,
+      "originals_sha256_verified": 14,
+      "allowance_microusd": 1900000,
+      "accounted_usage_and_holds_microusd": 1483716,
+      "remaining_allowance_microusd": 416284,
+      "historical_holds_settled": 11,
+      "before_reconciliation_microusd": 1900000,
+      "after_reconciliation_before_recovery_microusd": 1252130,
+      "recovery_actions": {
+        "new_pro_analysis_preserving_uncertain_history": 1,
+        "resume_saved_checkpoints": 8,
+        "reapply_retained_response": 1
+      },
+      "runtime": {
+        "commit": "0a110712ba2b08cb3a88de1460a816d577ea6bfb",
+        "model": "gemini-3.1-pro-preview",
+        "compute_backend": "modal",
+        "allowance_microusd": 1900000,
+        "memory_limit_bytes": 536870912,
+        "memory_peak_bytes": 536870912,
+        "memory_events": "low 0\nhigh 0\nmax 829\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n"
+      }
+    }
+  },
+  "search": {
+    "query": "driving",
+    "verification": "Existing owner membership and tenant scope checked; production route invoked by trusted operator; timing excludes HTTP ingress.",
+    "runs": [
+      {
+        "seconds": 9.372,
+        "notice": null,
+        "incomplete_processing": false,
+        "matches": [
+          {
+            "asset_id": "399285c4-ffce-465e-a7c9-b064b477f578",
+            "name": "IMG_5892.MOV",
+            "start_us": 0,
+            "end_us": 11451667
+          }
+        ]
+      },
+      {
+        "seconds": 0.03,
+        "notice": null,
+        "incomplete_processing": false,
+        "matches": [
+          {
+            "asset_id": "399285c4-ffce-465e-a7c9-b064b477f578",
+            "name": "IMG_5892.MOV",
+            "start_us": 0,
+            "end_us": 11451667
+          }
+        ]
+      }
+    ]
+  },
+  "local_disk_recovery": "Removed downloaded uv cache and unused numeric npx cache directories after checking running processes; no original media or Docker resources removed. 6.6 GiB available after cleanup.",
+  "scope": "Real existing user footage recovery. No representative long-video, bulk capacity or human-labeled retrieval benchmark added."
+}

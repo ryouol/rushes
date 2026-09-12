@@ -20,9 +20,9 @@
           "name": "rushes-media",
           "sizeGB": 10
         },
-        "deploy_id": "dep-daisgte7bikc739tunb0",
+        "deploy_id": "dep-daitrmtg1s2s738nu8jg",
         "status": "live",
-        "runtime_commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
+        "runtime_commit": "0a110712ba2b08cb3a88de1460a816d577ea6bfb",
         "num_instances": 1
       }
     ],
@@ -33,13 +33,13 @@
         "status": "available",
         "plan": "0.1c-256mb",
         "region": "ohio",
-        "application_schema": "0007",
+        "application_schema": "0008",
         "external_access_disabled": true,
         "disk_autoscaling": false,
         "storage_gb": 5
       }
     ],
-    "checked_at": "2026-09-12T21:57:27.854353+00:00"
+    "checked_at": "2026-09-12T23:26:29.755157+00:00"
   },
   "budget": {
     "combined_monthly_usd": 20,
@@ -47,15 +47,19 @@
     "render_total_spend_cap_available": false,
     "billable_resources_created": true,
     "period": "calendar month",
-    "note": "User confirmed $20/month combined. One 512 MiB web service plus database/disks totals about $17/month; separate cloud/local provider ledgers cap $1.90/$0.85. These are conservative reservations, not invoices. Build/egress/tax and native Google cap enforcement latency prevent a guaranteed hard total invoice cap. No larger combined budget was approved.",
+    "note": "User confirmed $20/month combined. One 512 MiB web service plus database/disks totals about $17/month; separate cloud/local provider ledgers cap $1.90/$0.85. Gemini holds settle to token-priced usage; unknown outcomes and Modal retain conservative holds. These are not invoices. Build/egress/tax and native Google cap enforcement latency prevent a guaranteed hard total invoice cap. No larger combined budget was approved.",
     "combined_monthly_target_usd": 20,
     "fixed_monthly_estimate_usd": 17,
     "provider_monthly_allowance_usd": 1.9,
-    "allowance_scope": "Combined Gemini and Modal call reservations; excludes fixed hosting, build/deploy compute, egress and tax.",
+    "allowance_scope": "Gemini token-priced usage plus outstanding Gemini/Modal holds; excludes fixed hosting, build/deploy compute, egress and tax.",
     "clarification_pending": false,
     "local_provider_monthly_allowance_usd": 0.85,
     "local_allowance_scope": "Separate local database ledger; not shared with production and not a combined invoice cap.",
-    "combined_fixed_and_allowances_usd": 19.75
+    "combined_fixed_and_allowances_usd": 19.75,
+    "current_accounted_microusd": {
+      "local": 459891,
+      "production": 1483716
+    }
   },
   "other_projects_observed": [
     {
@@ -101,7 +105,7 @@
     "app_provider_allowance_configured": true
   },
   "production_deployed": true,
-  "checked_at": "2026-09-12T21:57:27.854353+00:00",
+  "checked_at": "2026-09-12T23:26:29.755157+00:00",
   "gemini": {
     "configured": true,
     "model": "gemini-3.1-pro-preview",
@@ -118,12 +122,12 @@
   },
   "production_image": {
     "build_provider": "Render",
-    "runtime_source_commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
+    "runtime_source_commit": "0a110712ba2b08cb3a88de1460a816d577ea6bfb",
     "architecture": "linux/amd64",
     "runtime_verified": true,
     "local_full_rebuild": false,
     "historical_local_image_id": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
     "note": "Current production image built by Render. The retained local image ID is historical. No full local rebuild under host disk pressure.",
-    "validation": "validation/search-repair.json"
+    "validation": "validation/budget-repair.json"
   }
 }
