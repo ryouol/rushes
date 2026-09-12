@@ -24,7 +24,14 @@ from sqlalchemy import select
 def test_gemini_schema_passes_real_sdk_and_retains_local_validation(
     tmp_path, monkeypatch, model, thinking, status
 ):
-    monkeypatch.setattr(inference, "reserve_provider_call", lambda _: None)
+    reservation = uuid4()
+    monkeypatch.setattr(inference, "reserve_provider_call", lambda _: reservation)
+    settlements = []
+    monkeypatch.setattr(
+        inference,
+        "settle_gemini_call",
+        lambda identifier, **values: settlements.append((identifier, values)),
+    )
     payloads, deleted = [], []
     output = {
         "observations": [
@@ -73,7 +80,12 @@ def test_gemini_schema_passes_real_sdk_and_retains_local_validation(
                 "candidates": [
                     {"content": {"role": "model", "parts": [{"text": json.dumps(output)}]}}
                 ],
-                "usageMetadata": {"promptTokenCount": 120, "candidatesTokenCount": 30},
+                "usageMetadata": {
+                    "promptTokenCount": 120,
+                    "candidatesTokenCount": 30,
+                    "thoughtsTokenCount": 20,
+                    "totalTokenCount": 170,
+                },
             },
         )
 
@@ -97,12 +109,17 @@ def test_gemini_schema_passes_real_sdk_and_retains_local_validation(
         tmp_path / "synthetic.mp4", Interval(start_us=0, end_us=1_000_000), "Synthetic transcript"
     )
     assert len(payloads) == 2 and deleted == ["files/synthetic"]
+    assert result.provider_reservation_id == reservation
+    assert len(settlements) == 1 and settlements[0][0] == reservation
+    assert settlements[0][1]["rejected"] == (status == 429)
     if status == 429:
         assert result.provider_outcome == "generation_rejected"
         assert result.raw["http_status"] == 429 and "billing and quota" in result.validation_error
         assert result.input_tokens == result.output_tokens == 0
+        assert settlements[0][1]["rejection_evidence"]["http_status"] == 429
         return
-    assert (result.preflight_tokens, result.input_tokens, result.output_tokens) == (123, 120, 30)
+    assert (result.preflight_tokens, result.input_tokens, result.output_tokens) == (123, 120, 50)
+    assert settlements[0][1]["usage"]["thoughts_token_count"] == 20
     assert AnalysisResponse.model_validate_json(result.text).observations[0].end_seconds == 1
     for override in ({"extra": True}, {"description": "x" * 2001}, {"end_seconds": 0}):
         with pytest.raises(ValidationError):

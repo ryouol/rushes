@@ -1,18 +1,20 @@
 import hashlib
 import json
+import logging
 import time
 from collections.abc import Callable
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Protocol
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from rushes.config import gemini_thinking_level, settings, supported_gemini_model
 from rushes.local_models import LocalEmbedder, ModelOptions, transcribe_local
 from rushes.organization import ORGANIZATION_SCHEMA_VERSION, category_records
-from rushes.provider_budget import ProviderBudgetError, reserve_provider_call
+from rushes.provider_budget import ProviderBudgetError, reserve_provider_call, settle_gemini_call
 from rushes.provider_files import delete_provider_file
 from rushes.timing import Interval, to_us
 
@@ -78,6 +80,7 @@ def provider_response_schema() -> dict:
 
 
 class AnalysisResult(BaseModel):
+    provider_reservation_id: UUID | None = None
     response: AnalysisResponse | None = None
     text: str | None = None
     validation_error: str | None = None
@@ -93,6 +96,25 @@ class AnalysisResult(BaseModel):
 
 class ProviderPreparationError(ValueError):
     pass
+
+
+def settle_analysis_result(result: AnalysisResult):
+    rejected = result.provider_outcome in {
+        "preparation_failed",
+        "generation_rejected",
+        "input_rejected",
+    }
+    evidence = {"outcome": result.provider_outcome}
+    for key in ("http_status", "rejection_type", "preparation_error_type"):
+        if key in result.raw:
+            evidence[key] = result.raw[key]
+    settle_gemini_call(
+        result.provider_reservation_id,
+        model=result.model,
+        usage=result.raw.get("usage_metadata"),
+        rejected=rejected,
+        rejection_evidence=evidence if rejected else None,
+    )
 
 
 class Analyzer(Protocol):
@@ -174,7 +196,7 @@ class GeminiAnalyzer:
                 "Gemini analysis needs RUSHES_GEMINI_API_KEY in the private local .env"
             )
         try:
-            reserve_provider_call("gemini")
+            reservation_id = reserve_provider_call("gemini")
         except ProviderBudgetError as error:
             return AnalysisResult(
                 raw={},
@@ -182,17 +204,18 @@ class GeminiAnalyzer:
                 provider_outcome="budget_rejected",
                 validation_error=str(error),
             )
-        client = genai.Client(
-            api_key=config.gemini_api_key.get_secret_value(),
-            http_options=types.HttpOptions(
-                timeout=120_000, retry_options=types.HttpRetryOptions(attempts=1)
-            ),
-        )
+        client = None
         remote = None
         expires_at = None
         result = None
         generation_started = False
         try:
+            client = genai.Client(
+                api_key=config.gemini_api_key.get_secret_value(),
+                http_options=types.HttpOptions(
+                    timeout=120_000, retry_options=types.HttpRetryOptions(attempts=1)
+                ),
+            )
             remote = client.files.upload(file=chunk, config={"mime_type": "video/mp4"})
             expires_at = remote.expiration_time
             if on_upload:
@@ -322,6 +345,17 @@ class GeminiAnalyzer:
             )
             return result
         finally:
+            if result is not None:
+                result.provider_reservation_id = reservation_id
+            try:
+                if result is not None:
+                    settle_analysis_result(result)
+            except Exception:
+                # Preserve the response even when accounting is unavailable. The full
+                # hold remains charged, and its ID travels with the durable response.
+                logging.getLogger(__name__).warning(
+                    "Provider settlement unavailable; retaining reservation %s", reservation_id
+                )
             if remote and remote.name:
                 try:
                     delete_provider_file(client, remote.name, expires_at)
@@ -329,7 +363,8 @@ class GeminiAnalyzer:
                     if result:
                         result.cleanup_pending_file = remote.name
                         result.cleanup_pending_file_expires_at = expires_at
-            client.close()
+            if client:
+                client.close()
 
 
 def model_options() -> ModelOptions:

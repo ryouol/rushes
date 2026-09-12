@@ -27,6 +27,10 @@ def budget_period(monkeypatch):
         drivername="postgresql"
     )
     with psycopg.connect(url.render_as_string(hide_password=False)) as db:
+        db.execute(
+            "DELETE FROM provider_spend_settlement WHERE reservation_id IN (SELECT id FROM provider_spend_reservation WHERE month=%s)",
+            (period,),
+        )
         db.execute("DELETE FROM provider_spend_reservation WHERE month=%s", (period,))
 
 
@@ -41,7 +45,7 @@ def test_parallel_calls_cannot_overdraw_or_reset_the_monthly_allowance(budget_pe
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         assert sum(pool.map(attempt, range(8))) == 3
-    with pytest.raises(provider_budget.ProviderBudgetError, match="monthly AI allowance"):
+    with pytest.raises(provider_budget.ProviderBudgetError, match="AI spending limit"):
         provider_budget.reserve_provider_call("modal")
 
 
@@ -105,8 +109,83 @@ def test_database_options_preserve_spaces_and_override_timeout(monkeypatch):
         raise psycopg.OperationalError("Synthetic unavailable database")
 
     monkeypatch.setattr(provider_budget.psycopg, "connect", unavailable)
-    with pytest.raises(provider_budget.ProviderBudgetError, match="No provider request was sent"):
+    with pytest.raises(
+        provider_budget.ProviderBudgetError, match="No new provider request was sent"
+    ):
         provider_budget.reserve_provider_call("modal")
+
+
+@pytest.mark.integration
+def test_settlement_releases_only_unused_hold_once_and_preserves_history(
+    budget_period, monkeypatch
+):
+    monkeypatch.setattr(settings(), "provider_monthly_allowance_microusd", 85_000)
+    reservation = provider_budget.reserve_provider_call("gemini")
+    usage = {
+        "prompt_token_count": 1000,
+        "candidates_token_count": 100,
+        "thoughts_token_count": 100,
+        "total_token_count": 1200,
+    }
+    with pytest.raises(provider_budget.ProviderBudgetError):
+        provider_budget.reserve_provider_call("gemini")
+    # Even concurrent repeated settlement may release a hold only once.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        list(
+            pool.map(
+                lambda _: provider_budget.settle_gemini_call(
+                    reservation, model="gemini-3.1-pro-preview", usage=usage
+                ),
+                range(4),
+            )
+        )
+    with provider_budget.budget_connection() as db:
+        assert (
+            db.execute(
+                "SELECT amount_microusd FROM provider_spend_reservation WHERE id=%s", (reservation,)
+            ).fetchone()[0]
+            == 75_000
+        )
+        assert (
+            db.execute(
+                "SELECT amount_microusd FROM provider_spend_settlement WHERE reservation_id=%s",
+                (reservation,),
+            ).fetchone()[0]
+            == 4400
+        )
+        for table in ("provider_spend_reservation", "provider_spend_settlement"):
+            assert not db.execute(
+                "SELECT has_table_privilege(current_user,%s,'UPDATE,DELETE')", (table,)
+            ).fetchone()[0]
+    provider_budget.reserve_provider_call("gemini")
+    with pytest.raises(provider_budget.ProviderBudgetError):
+        provider_budget.reserve_provider_call("modal")
+    with pytest.raises(ValueError, match="conflicts"):
+        provider_budget.settle_gemini_call(
+            reservation, model="gemini-3.1-pro-preview", rejected=True
+        )
+
+
+@pytest.mark.integration
+def test_unmeasured_usage_keeps_hold_and_rejection_settles_original_month(
+    budget_period, monkeypatch
+):
+    monkeypatch.setattr(settings(), "provider_monthly_allowance_microusd", 75_000)
+    reservation = provider_budget.reserve_provider_call("gemini")
+    for usage in (
+        None,
+        {},
+        {"prompt_token_count": 1000},
+        {"prompt_token_count": 1000, "total_token_count": 1},
+    ):
+        provider_budget.settle_gemini_call(reservation, model="gemini-3.1-pro-preview", usage=usage)
+    with pytest.raises(provider_budget.ProviderBudgetError):
+        provider_budget.reserve_provider_call("modal")
+    # Completion after a month boundary must settle the reservation's month.
+    monkeypatch.setattr(provider_budget, "current_month", lambda: date(2099, 2, 1))
+    provider_budget.settle_gemini_call(reservation, model="gemini-3.1-pro-preview", rejected=True)
+    monkeypatch.setattr(provider_budget, "current_month", lambda: budget_period)
+    provider_budget.reserve_provider_call("gemini")
 
 
 async def test_search_explains_budget_denial(monkeypatch):
@@ -157,12 +236,20 @@ async def test_unsent_window_remains_retryable_without_usage(
         json.dumps({"first_source_elapsed_us": 0, "extracted_proxy": {"end_us": 10_000_000}})
     )
     monkeypatch.setattr(activities, "prepare_chunk", lambda *_: chunk)
+    provider_reservation = uuid4() if outcome != "budget_rejected" else None
+    settlements = []
+    monkeypatch.setattr(
+        activities,
+        "settle_analysis_result",
+        lambda result: settlements.append(result.provider_reservation_id),
+    )
     expiry = now() + timedelta(hours=48)
     monkeypatch.setattr(
         activities,
         "GeminiAnalyzer",
         lambda model: SimpleNamespace(
             analyze=lambda *_: AnalysisResult(
+                provider_reservation_id=provider_reservation,
                 raw={},
                 model=model,
                 provider_outcome=outcome,
@@ -184,6 +271,9 @@ async def test_unsent_window_remains_retryable_without_usage(
     async with tenant_session(ws) as db:
         window = await db.get(AnalysisWindow, UUID(window_id))
         assert window.state == "pending" and window.attempts == 0
+        assert window.raw_response["envelope"]["provider_reservation_id"] == (
+            str(provider_reservation) if provider_reservation else None
+        )
         assert await db.scalar(select(Usage.id).where(Usage.asset_id == asset)) is None
     assert await activities.next_window({**args, **run}) == window_id
     response = await _clients[0].post(f"/api/workspaces/{ws}/assets/{asset}/retry")
@@ -223,6 +313,11 @@ async def test_unsent_window_remains_retryable_without_usage(
         ),
     )
     assert await activities.analyze_window({**args, "window_id": window_id}) == "completed"
+    assert settlements == (
+        [provider_reservation] * (2 if outcome == "preparation_failed" else 1)
+        if provider_reservation
+        else []
+    )
     assert cleaned == (["files/synthetic-pending"] if outcome == "preparation_failed" else [])
     assert await activities.next_window({**args, **run}) is None
     await activities.finish_asset({**args, **run})
@@ -293,6 +388,85 @@ async def test_interrupted_analysis_keeps_uploaded_file_expiry(
         assert window.provider_file_retry_at is None
     assert await activities.analyze_window(window_args) == "ambiguous"
     assert calls == [True]
+
+
+@pytest.mark.integration
+async def test_received_response_recovers_settlement_outage_without_regeneration(
+    authenticated, budget_period, monkeypatch, tmp_path
+):
+    from rushes import activities
+    from rushes.inference import AnalysisResult, settle_analysis_result
+
+    _clients, ws, _other, project, asset, _tokens = authenticated
+    monkeypatch.setattr(settings(), "provider_monthly_allowance_microusd", 75_000)
+    monkeypatch.setattr(settings(), "gemini_api_key", SecretStr("synthetic-no-network"))
+    monkeypatch.setattr(activities, "heartbeat", lambda *_: None)
+    reservation_id = provider_budget.reserve_provider_call("gemini")
+    async with tenant_session(ws) as db:
+        job = Job(
+            workspace_id=ws,
+            project_id=project,
+            asset_id=asset,
+            kind="asset",
+            state="running",
+            workflow_id=f"test:{uuid4()}",
+        )
+        db.add(job)
+        await db.flush()
+        job_id = job.id
+    args = {"workspace_id": str(ws), "asset_id": str(asset), "job_id": str(job_id)}
+    run = await activities.plan_analysis(args)
+    window_id = await activities.next_window({**args, **run})
+    args["window_id"] = window_id
+    chunk = tmp_path / "synthetic.mp4"
+    chunk.write_bytes(b"never sent")
+    chunk.with_suffix(".timing.json").write_text(
+        json.dumps({"first_source_elapsed_us": 0, "extracted_proxy": {"end_us": 10_000_000}})
+    )
+    monkeypatch.setattr(activities, "prepare_chunk", lambda *_: chunk)
+    calls = []
+
+    def analyze(*_):
+        calls.append(True)
+        return AnalysisResult(
+            provider_reservation_id=reservation_id,
+            model="gemini-3.1-pro-preview",
+            text='{"observations":[]}',
+            raw={
+                "usage_metadata": {
+                    "prompt_token_count": 1000,
+                    "total_token_count": 1200,
+                    "candidates_token_count": 100,
+                    "thoughts_token_count": 100,
+                }
+            },
+            input_tokens=1000,
+            output_tokens=200,
+        )
+
+    monkeypatch.setattr(activities, "GeminiAnalyzer", lambda _: SimpleNamespace(analyze=analyze))
+
+    def unavailable(_):
+        raise provider_budget.ProviderBudgetError("Synthetic database outage")
+
+    monkeypatch.setattr(activities, "settle_analysis_result", unavailable)
+    with pytest.raises(RuntimeError, match="spending reconciliation"):
+        await activities.analyze_window(args)
+    async with tenant_session(ws) as db:
+        assert (await db.get(AnalysisWindow, UUID(window_id))).state == "received"
+    with pytest.raises(provider_budget.ProviderBudgetError):
+        provider_budget.reserve_provider_call("modal")
+    monkeypatch.setattr(activities, "settle_analysis_result", settle_analysis_result)
+    assert await activities.analyze_window(args) == "completed"
+    assert calls == [True]
+    with provider_budget.budget_connection() as db:
+        assert (
+            db.execute(
+                "SELECT amount_microusd FROM provider_spend_settlement WHERE reservation_id=%s",
+                (reservation_id,),
+            ).fetchone()[0]
+            == 4400
+        )
 
 
 @pytest.mark.integration

@@ -23,6 +23,7 @@ from rushes.inference import (
     analysis_cache_key,
     bounded_transcript,
     embedder,
+    settle_analysis_result,
     validated_intervals,
 )
 from rushes.job_actions import cancel_batch_children
@@ -319,6 +320,14 @@ async def apply_received_response(args):
             return window.state
         stored = window.raw_response
         result = AnalysisResult.model_validate({**stored["envelope"], "raw": stored["provider"]})
+        if result.provider_reservation_id:
+            try:
+                await run_storage_thread(settle_analysis_result, result)
+            except ProviderBudgetError as error:
+                # Retry from this durable response; never send another generation.
+                raise RuntimeError(
+                    "Received analysis is waiting for spending reconciliation"
+                ) from error
         interval = effective_source_interval(
             stored["chunk_mapping"], Interval(start_us=window.start_us, end_us=window.end_us)
         )
@@ -408,6 +417,15 @@ async def analyze_window(args: dict):
         pending = await db.get(AnalysisWindow, UUID(args["window_id"]))
         old_file = pending.provider_file if pending and pending.state == "pending" else None
         old_expiry = pending.provider_file_expires_at if old_file else None
+        previous = pending.raw_response if pending and pending.state == "pending" else None
+    if previous and previous["envelope"].get("provider_reservation_id"):
+        envelope = previous["envelope"]
+        if envelope["provider_outcome"] in {"preparation_failed", "generation_rejected"}:
+            # Finish accounting before a new response can replace the rejection evidence.
+            await run_storage_thread(
+                settle_analysis_result,
+                AnalysisResult.model_validate({**envelope, "raw": previous["provider"]}),
+            )
     if old_file:
         try:
             await run_storage_thread(delete_remote, old_file, old_expiry)
@@ -482,6 +500,11 @@ async def analyze_window(args: dict):
             async with tenant_session(args["workspace_id"]) as db:
                 window = await locked_window(db, args["window_id"])
                 if window.state == "in_flight":
+                    window.raw_response = {
+                        "provider": result.raw,
+                        "envelope": result.model_dump(mode="json", exclude={"raw"}),
+                        "chunk_mapping": chunk_plan,
+                    }
                     window.state = "pending"
                     window.attempts -= 1
                     window.error = result.validation_error
