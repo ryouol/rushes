@@ -473,8 +473,12 @@ async def analyze_window(args: dict):
                 GeminiAnalyzer(run_model).analyze, chunk, effective_window, transcript, uploaded
             )
         )
-        if result.provider_outcome in {"budget_rejected", "preparation_failed"}:
-            # Definitely unsent: retain the checkpoint without charging or advancing windows.
+        if result.provider_outcome in {
+            "budget_rejected",
+            "preparation_failed",
+            "generation_rejected",
+        }:
+            # Definitely unsent or explicitly rejected: retain the checkpoint without charging credits.
             async with tenant_session(args["workspace_id"]) as db:
                 window = await locked_window(db, args["window_id"])
                 if window.state == "in_flight":

@@ -121,7 +121,9 @@ async def test_search_explains_budget_denial(monkeypatch):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("outcome", ["budget_rejected", "preparation_failed"])
+@pytest.mark.parametrize(
+    "outcome", ["budget_rejected", "preparation_failed", "generation_rejected"]
+)
 async def test_unsent_window_remains_retryable_without_usage(
     authenticated, monkeypatch, tmp_path, outcome
 ):

@@ -289,6 +289,27 @@ class GeminiAnalyzer:
             return result
         except Exception as error:
             if generation_started:
+                if isinstance(error, errors.ClientError) and error.code in {
+                    400,
+                    401,
+                    403,
+                    404,
+                    429,
+                }:
+                    message = (
+                        "Gemini rejected this request because its model quota is exhausted or unavailable. "
+                        "Check this project's Google AI Studio billing and quota, then resume processing."
+                        if error.code == 429
+                        else "Google rejected the Gemini model request. Check the API key, model access "
+                        "and request configuration, then resume processing."
+                    )
+                    result = AnalysisResult(
+                        raw={"http_status": error.code, "rejection_type": type(error).__name__},
+                        model=self.model,
+                        provider_outcome="generation_rejected",
+                        validation_error=message,
+                    )
+                    return result
                 raise
             result = AnalysisResult(
                 raw={
