@@ -1,0 +1,168 @@
+{
+  "checked_at": "2026-09-12T17:43:22.146518+00:00",
+  "scope": "Local 512 MiB / 0.5 CPU capacity rejection checks; no Render mutations or paid provider calls",
+  "base_image": "sha256:3106f9070d4133a870062bb006db3109e9503178a2281d2e06933f20ecb44de4",
+  "host_architecture": "arm64",
+  "docker_daemon_architecture": "aarch64",
+  "image_architecture": "amd64",
+  "emulated": true,
+  "swap_above_memory_limit_bytes": 0,
+  "current_runtime_source_sha256": {
+    "scripts/serve.py": "48dd6b1085c6c45e14b69558d409bcbd9b59b5386fa371fa20d03745c877f14d",
+    "backend/rushes/workflow_service.py": "6407fc58d58ef058c65fb394a282daa6af3db617ddfa52e1211171a48b8039e6"
+  },
+  "checks": [
+    {
+      "passed": false,
+      "error_type": "AssertionError",
+      "source_revision": "821ddde",
+      "memory_limit_bytes": 536870912,
+      "cpus": 0.5,
+      "started_at": "2026-09-12T17:15:57.541386+00:00",
+      "finished_at": "2026-09-12T17:17:17.080116+00:00",
+      "provider_allowance_microusd": 0,
+      "source_configuration": "Baseline 821ddde",
+      "gomemlimit": "512MiB",
+      "failed_stage": "registration",
+      "oom_killed": true,
+      "oom_event_count": 2,
+      "disposable_identity": "3f1e7340a241",
+      "owned_containers_volumes_databases_roles_removed": true,
+      "process_rss_samples": [],
+      "adapted_harness_sha256": "3ee3d058371a5099a15926b8a9e0f553c287cd2b81777288301fb960e7206e9d",
+      "local_serve_override_sha256": null
+    },
+    {
+      "passed": false,
+      "error_type": "AssertionError",
+      "source_revision": "821ddde",
+      "memory_limit_bytes": 536870912,
+      "cpus": 0.5,
+      "started_at": "2026-09-12T17:19:45.419887+00:00",
+      "finished_at": "2026-09-12T17:20:35.568575+00:00",
+      "provider_allowance_microusd": 0,
+      "source_configuration": "Baseline 821ddde with only local GOMEMLIMIT change",
+      "gomemlimit": "128MiB",
+      "failed_stage": "registration",
+      "oom_killed": true,
+      "oom_event_count": 1,
+      "disposable_identity": "65a80b6cafae",
+      "owned_containers_volumes_databases_roles_removed": true,
+      "process_rss_samples": [
+        {
+          "process": "python",
+          "rss_kib": 92148
+        },
+        {
+          "process": "temporal-server",
+          "rss_kib": 141424
+        },
+        {
+          "process": "python",
+          "rss_kib": 134516
+        },
+        {
+          "process": "python",
+          "rss_kib": 135456
+        },
+        {
+          "process": "node",
+          "rss_kib": 87008
+        }
+      ],
+      "adapted_harness_sha256": "2206cd603068c383a47603e9de5da842991ea36c3d98bc722c76192092b7931e",
+      "local_serve_override_sha256": "c20fc5cd9de04b5a20e1c315bfe04bc92ca6af60d0d0016ac84c9ae80b299089"
+    },
+    {
+      "passed": false,
+      "error_type": "AssertionError",
+      "source_revision": "821ddde",
+      "memory_limit_bytes": 536870912,
+      "cpus": 0.5,
+      "started_at": "2026-09-12T17:27:46.960639+00:00",
+      "finished_at": "2026-09-12T17:28:43.611940+00:00",
+      "provider_allowance_microusd": 0,
+      "source_configuration": "Baseline image with current supervisor and backend mounted read-only",
+      "gomemlimit": "512MiB",
+      "failed_stage": "login after successful registration",
+      "oom_killed": true,
+      "oom_event_count": 1,
+      "disposable_identity": "41e923a83cf9",
+      "owned_containers_volumes_databases_roles_removed": true,
+      "process_rss_samples": [
+        {
+          "process": "python",
+          "rss_kib": 26036
+        },
+        {
+          "process": "temporal-server",
+          "rss_kib": 173872
+        },
+        {
+          "process": "python",
+          "rss_kib": 138512
+        },
+        {
+          "process": "python",
+          "rss_kib": 140156
+        },
+        {
+          "process": "node",
+          "rss_kib": 113904
+        }
+      ],
+      "adapted_harness_sha256": "9f3477bd0c24f8903530e0585bc4113bc02df08bc8f5e29b3f27a8bac5cf92a9",
+      "local_serve_override_sha256": null
+    },
+    {
+      "passed": false,
+      "error_type": "AssertionError",
+      "source_revision": "821ddde",
+      "memory_limit_bytes": 536870912,
+      "cpus": 0.5,
+      "started_at": "2026-09-12T17:31:11.921231+00:00",
+      "finished_at": "2026-09-12T17:32:08.398160+00:00",
+      "provider_allowance_microusd": 0,
+      "source_configuration": "Baseline image with current backend and local supervisor copy mounted read-only",
+      "gomemlimit": "128MiB",
+      "failed_stage": "login after successful registration",
+      "oom_killed": true,
+      "oom_event_count": 1,
+      "disposable_identity": "a51391a810db",
+      "owned_containers_volumes_databases_roles_removed": true,
+      "process_rss_samples": [
+        {
+          "process": "python",
+          "rss_kib": 26096
+        },
+        {
+          "process": "temporal-server",
+          "rss_kib": 174732
+        },
+        {
+          "process": "python",
+          "rss_kib": 138992
+        },
+        {
+          "process": "python",
+          "rss_kib": 140052
+        },
+        {
+          "process": "node",
+          "rss_kib": 114692
+        }
+      ],
+      "adapted_harness_sha256": "726632318023efe3a4c9cb86e90d2f06ed32010c68741b30daf3e272fac63fdf",
+      "local_serve_override_sha256": "0cc93cdc1c127bd065a5aab12901dc52e315fc00eb9f6b63ac7728f9cb55303f"
+    }
+  ],
+  "decision": "512 MiB deployment not validated; do not downgrade production on this evidence",
+  "limitations": [
+    "All four checks failed before video processing",
+    "Process RSS samples are not summed because shared mappings can be counted more than once",
+    "Absolute memory thresholds under emulation do not establish native Render capacity",
+    "Go memory limit is soft and covers Go-managed memory, not all container memory",
+    "SDK workflow/lifecycle probe was excluded from these capacity checks; full lifecycle test includes additional probe overhead",
+    "Local and production provider ledgers are separate; neither is a combined cloud invoice cap"
+  ]
+}

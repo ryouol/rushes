@@ -1,0 +1,37 @@
+# Supervisor simplification review — 12 September 2026
+
+Scope: the changes to `scripts/serve.py`, `backend/rushes/workflow_service.py`, and their focused tests against `821ddde`. Three independent simplify reviewers covered reuse, quality and efficiency. Four final reviewers covered breaking changes, testing, model-visible context and change size at xhigh effort. There is no GitHub PR and no comments were posted. Numbered items preserve duplicate findings, recommendations, dispositions and verification limits.
+
+1. **Fixed — P2: setup-only dependencies remained in the supervisor.** Efficiency review identified the old imports at `scripts/serve.py:13`, which kept Settings, database helpers and the Temporal SDK resident for the service lifetime. The supervisor now uses only the standard library; `scripts/serve.py:36` runs preparation/readiness in short-lived, tracked subprocesses. Container parent RSS samples fell from about 90 MiB to 26 MiB. This is a process sample, not a measured reduction of the entire container peak.
+
+2. **Applied — reuse existing configuration and readiness logic.** Reuse review recommended keeping one Settings/configuration/namespace implementation rather than introducing another settings reader or Temporal configuration generator. `backend/rushes/workflow_service.py:168` now exposes preparation through the existing module. Private configuration is still exclusively created with mode 0600; the parent receives only two nonsecret scalar settings.
+
+3. **Applied — bound and supervise startup helpers.** Quality review required helpers to participate in signal handling, deadlines and reaping, with Temporal stopped last. `scripts/serve.py:36` tracks each child before polling, caps output parsing at 8192 bytes, and retains unfinished helpers for the existing shutdown path. Preparation/readiness failures prevent normal startup. No remaining runtime issue was reported in the final code inspection.
+
+4. **Fixed — P3: helper PID marker could be read before its contents were written.** Reuse review found the test's existence check could race the PID write at `tests/test_supervisor.py:59`. The fixture now writes a temporary file and atomically replaces the marker at `tests/test_supervisor.py:42` before the parent reads it. The real process termination/reaping assertion remains.
+
+5. **Fixed — P3: duplicate PID-marker race.** Quality review independently reported the same race at `tests/test_supervisor.py:59`. It is preserved separately here and resolved by the atomic marker publication at `tests/test_supervisor.py:42`.
+
+6. **Fixed — test name claimed more than its assertions established.** Quality review noted that the invalid-configuration test proved failure propagation and absence of created storage, not a direct observation of the public port. `tests/test_supervisor.py:13` is now named `test_invalid_startup_configuration_failure_reaches_supervisor`. Public startup gating belongs to the full container lifecycle check.
+
+7. **Retained limitation — lifecycle probe adds SDK memory.** Reuse review identified the top-level imports in `scripts/verify_workflow_hosting.py:18` and the in-container invocation at `scripts/verify_workflow_hosting.py:115`. Even standard-library-only lifecycle probes load those dependencies. The 512 MiB capacity checks stop before those extra probes; the full 2 GiB lifecycle run includes their overhead. No production runtime dependency was added by this harness.
+
+8. **Retained limitation — duplicate probe-memory caveat.** Quality review independently raised the same imports/invocation at `scripts/verify_workflow_hosting.py:18` and `scripts/verify_workflow_hosting.py:115`. It remains a qualification on reported container peaks, not an unaddressed application runtime bug.
+
+9. **Retained constraint — authentication has transient memory demand.** Efficiency review inspected the default password helper used by `backend/rushes/auth.py:58` and measured an Argon2 `memory_cost` of 65536 KiB. The local 512 MiB checks failed during registration or login before processing any video. Password hashing was not weakened to fit a smaller instance.
+
+10. **Retained limitation — emulated capacity measurements.** Efficiency review found the local host/daemon are arm64/aarch64 while the image is amd64. At `scripts/verify_workflow_hosting.py:148`, image architecture is recorded; [the memory evidence](validation/supervisor-memory.json) additionally records host/daemon architecture and emulation. These measurements do not prove that a native Render 512 MiB instance can or cannot support the full workload. They do not justify a downgrade.
+
+11. **Retained limitation — RSS is not additive and Go's limit is not a container cap.** Efficiency review required cgroup/OOM evidence instead of summing process RSS. [Four checks](validation/supervisor-memory.json) record OOM events and failures at the configured 512 MiB limit. The local-only Go 128 MiB variants also failed. The production setting at `scripts/serve.py:74` remains 512 MiB; it is a soft Go runtime memory setting, not a bound on Node, Python, hashing, FFmpeg or all Temporal mappings.
+
+12. **No further worthwhile efficiency cleanup.** Efficiency review found model-heavy imports already delayed until their relevant paths. It reported no remaining actionable efficiency issue in the final supervisor refactor at `scripts/serve.py:36`; broad unrelated rewrites were not made.
+
+13. **Final breaking-changes review: no finding.** The reviewer checked `scripts/serve.py:14` and `backend/rushes/workflow_service.py:168`: origin/port validation, trusted ingress enforcement, private config permissions, child commands and shutdown ordering remain intact. The installed package contains the module entry point, so no extra runtime Docker copy is required. This was static review, not a claim that the new image had passed lifecycle tests.
+
+14. **Final testing review: no finding.** The reviewer reran the focused workflow/supervisor tests: seven passed. `tests/test_supervisor.py:33` checks a real subprocess and cleanup; `tests/test_workflow_service.py:84` checks the private configuration boundary. Full-container restart, readiness and crash checks are recorded separately in [supervisor-hosting.json](validation/supervisor-hosting.json); their result must not be inferred from the unit tests.
+
+15. **Final model-visible-context review: no finding.** No prompt, conversation-history or model-context behavior changes. The bounded two-scalar IPC at `scripts/serve.py:57` contains no database credentials; the private configuration file stays in the temporary directory. Rust `ContextualUserFragment` guidance is not applicable to this Python supervisor.
+
+16. **Final change-size review: no finding.** The reviewed implementation and tests comprised 196 authored changed lines (174 additions and 22 removals) across four files, including the previously untracked 77-line test. The focused runtime change is within the applicable complex-change guideline. This evidence/review documentation is additional to that measured implementation scope.
+
+The four 512 MiB checks are capacity rejections within their stated local scope. They are not evidence of an application regression on the supported 2 GiB setup. The candidate's deployment state and integration result are recorded in [the goal audit](GOAL-AUDIT.md).

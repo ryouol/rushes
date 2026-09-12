@@ -49,3 +49,9 @@ The first app landing exceeds the review skill's size guideline. The full number
 ## Local data
 
 The local app and database remain available independently; `.local/launcher.pid` records the launcher. Seven original MOV source hashes survived the earlier host disk-pressure incident, documented in [disk recovery](validation/disk-recovery.json). Private credentials, QA sessions and database backups remain ignored under `.local/` or `.env` and were not pushed to GitHub.
+
+On 12 September, local Docker storage errors were recovered by clearing a download cache and restarting Docker. The existing database volume was reused, a fresh backup was checked, and all seven original hashes matched. The local application is running again at `http://localhost:3741`. [Recovery record](validation/disk-recovery-20260912.json). Local `.env` now has its own $2 monthly provider allowance; its ledger is separate from production and does not enforce a combined invoice cap.
+
+## Supervisor follow-up
+
+The supervisor now releases configuration/readiness dependencies after startup. Seven focused tests and the fresh full 2 GiB container upload/recovery/lifecycle harness passed. [Review](SUPERVISOR-REVIEW.md), [container evidence](validation/supervisor-hosting.json). Local tests of the $7, 512 MiB service size ran out of memory during sign-in, even with the smaller supervisor; emulation limits native-capacity conclusions. [Memory evidence](validation/supervisor-memory.json). The existing Render size remains in place and the $20/month budget discrepancy remains open.

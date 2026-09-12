@@ -8,6 +8,7 @@ from pydantic import SecretStr
 from rushes.config import Settings, settings
 from rushes.workflow_service import (
     database_urls,
+    prepare_service,
     server_config,
     wait_for_namespace,
     write_server_config,
@@ -78,6 +79,34 @@ async def test_shutdown_does_not_attempt_namespace_connection(monkeypatch):
 
     monkeypatch.setattr(workflow_service.Client, "connect", unexpected)
     assert not await wait_for_namespace("127.0.0.1:7233", stopping=lambda: True)
+
+
+def test_preparation_returns_only_public_startup_fields_and_preserves_private_config(
+    monkeypatch, tmp_path
+):
+    from rushes import workflow_service
+
+    config = configured(
+        storage_root=tmp_path / "storage",
+        output_root=tmp_path / "exports",
+        host_workflow_service=True,
+        origin="https://rushes.example.com",
+        client_ip_header="true-client-ip",
+        upload_timeout_seconds=321,
+    )
+    monkeypatch.setattr(workflow_service, "settings", lambda: config)
+    path = tmp_path / "workflow.json"
+    result = prepare_service(path)
+    assert result == {"host_workflow_service": True, "upload_timeout_seconds": 321}
+    assert config.storage_root.is_dir() and config.output_root.is_dir()
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert json.loads(path.read_text()) == server_config(config)
+    with pytest.raises(FileExistsError):
+        prepare_service(path)
+    config.client_ip_header = None
+    with pytest.raises(ValueError, match="trusted ingress"):
+        prepare_service(tmp_path / "rejected.json")
+    assert not (tmp_path / "rejected.json").exists()
 
 
 async def test_shutdown_stops_polling_both_queues_before_waiting_for_drain(monkeypatch):

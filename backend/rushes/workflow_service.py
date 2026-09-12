@@ -1,5 +1,6 @@
 """Private single-host Temporal service configuration and readiness."""
 
+import argparse
 import asyncio
 import json
 import os
@@ -14,7 +15,7 @@ from temporalio.api.workflowservice.v1 import DescribeNamespaceRequest, Register
 from temporalio.client import Client
 from temporalio.service import RPCError, RPCStatusCode
 
-from rushes.config import Settings
+from rushes.config import Settings, settings
 
 
 def database_urls(config: Settings):
@@ -162,3 +163,36 @@ async def wait_for_namespace(
         except (RuntimeError, TimeoutError, RPCError):
             await asyncio.sleep(0.5)
     raise TimeoutError("Private Temporal service and default namespace did not become ready")
+
+
+def prepare_service(path: Path) -> dict:
+    config = settings()
+    if config.origin.startswith("https:") and not config.client_ip_header:
+        raise ValueError(
+            "Set RUSHES_CLIENT_IP_HEADER to a header overwritten by the trusted ingress"
+        )
+    for folder in (config.storage_root, config.output_root):
+        folder.mkdir(parents=True, exist_ok=True)
+    if config.host_workflow_service:
+        write_server_config(config, path)
+    return {
+        "host_workflow_service": config.host_workflow_service,
+        "upload_timeout_seconds": config.upload_timeout_seconds,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("prepare").add_argument("path", type=Path)
+    commands.add_parser("wait")
+    args = parser.parse_args()
+    if args.command == "prepare":
+        result = prepare_service(args.path)
+    else:
+        result = asyncio.run(wait_for_namespace(settings().temporal_address))
+    print(json.dumps(result), flush=True)
+
+
+if __name__ == "__main__":
+    main()

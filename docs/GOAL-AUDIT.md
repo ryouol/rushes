@@ -1,4 +1,4 @@
-# Original goal audit — 11 September 2026
+# Original goal audit — 12 September 2026
 
 This audit reconciles the original footage-worklog brief with the later production request and the newer work performed in the shared repository. It does not declare the goal complete. Historical tests below retain their original scope; a passing synthetic test does not establish representative footage quality.
 
@@ -56,3 +56,15 @@ The previously authored authentication/history and state suites were actually ex
 Final isolated results: **25 browser tests passed in 25.3 seconds**, plus **one separately instrumented player test passed**. The build passed. Two independent final reviewers found no actionable issue in the test repairs or reproduced player behavior. These checks validate the archived revision with the stated test corrections; they do not validate subsequent account-only Settings changes or live Google consent. [Machine-readable evidence](validation/goal-browser-audit.json) records the boundaries and logs.
 
 A separate follow-up then built committed revision `fbc5a4a` in isolation and ran the new account-only Settings regression: **one test passed in 2.9 seconds**, checking Google connection, returning Settings, onboarding navigation and zero workspace writes. Its API and Google navigation routes were mocked; it complements the separate real-provider browser evidence above. The owned server was stopped, its port closed, and its generated build removed. No actionable testing-review finding remained.
+
+## Supervisor and lower-cost instance investigation
+
+The supervisor now releases setup-only Python dependencies after configuration and private Temporal readiness. It retains the existing configuration validation, private file permissions, child commands, memory setting and Temporal-last shutdown order. Seven focused tests passed. Three simplify reviewers and all four final code-review perspectives completed; every finding and disposition, including duplicate test/probe observations, is preserved in [SUPERVISOR-REVIEW.md](SUPERVISOR-REVIEW.md).
+
+The fresh repository Dockerfile build produced image `7627745f4c71`. The complete disposable 2 GiB / 1 CPU workflow harness passed upload processing, interruption/resumption, session and preview preservation, PostgreSQL workflow recovery, private port isolation, startup termination, and worker/Temporal failure handling. [Evidence and exact source/harness hashes](validation/supervisor-hosting.json) distinguish this candidate from the historical image. Its 710,479,872-byte peak includes the additional in-container test probe and is not a representative capacity measurement. Paid providers were disabled.
+
+Four local 512 MiB / 0.5 CPU checks ran out of memory during registration or login, before video processing. The variants covered the baseline, a lower Go memory target, the lean supervisor, and both changes together. The lean supervisor reduced its sampled process RSS from approximately 90 MiB to 26 MiB; it did not establish a safe smaller-instance deployment. The host is arm64 and the image amd64, so emulation limits conclusions about native Render capacity. [Memory evidence](validation/supervisor-memory.json) records OOM events and verified removal of each experiment's containers, volumes, databases and role. No Render downgrade was made.
+
+The local app was restored on port 3741. Its private `.env` now sets a $2 monthly provider allowance instead of leaving local provider exposure unbounded. Local and production databases maintain **separate** ledgers; this does not create a shared $2 allowance or a $20 combined invoice cap. No paid diagnostic was run during these checks.
+
+After the image build, Docker's local storage reported I/O errors and became read-only while the Mac was low on free space. Clearing the npm download cache and restarting Docker recovered the existing database volume without a restore or reset. Seven uploaded originals still matched their recorded hashes, and a fresh private database backup was created and its table of contents checked. The local launcher was restarted and health/provider checks passed. [Recovery evidence](validation/disk-recovery-20260912.json). Production was unaffected. The recovered build image subsequently passed the full harness above; the earlier image-lookup failure is not an application-test failure.

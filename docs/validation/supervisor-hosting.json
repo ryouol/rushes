@@ -1,0 +1,55 @@
+{
+  "checked_at": "2026-09-12T17:44:52.918300+00:00",
+  "passed": true,
+  "image": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+  "architecture": "amd64",
+  "production_source_mounted": false,
+  "temporal_server": "1.31.2",
+  "schema_setup_idempotent": true,
+  "verified_tls_postgres_bootstrap_and_runtime": true,
+  "workflow_resumed_after_container_recreation": true,
+  "api_upload_processed_by_worker": true,
+  "active_media_resumed_after_shutdown": true,
+  "active_processing_shutdown_seconds": 1.72,
+  "same_job_after_restart": true,
+  "source_preserved": true,
+  "sessions_and_preview_preserved": true,
+  "temporal_unreachable_from_peer": true,
+  "peak_container_memory_bytes": 710479872,
+  "shutdown_seconds": 1.64,
+  "lifecycle": {
+    "readiness": {
+      "passed": true,
+      "exit_code": 0,
+      "seconds": 15.25
+    },
+    "worker": {
+      "passed": true,
+      "exit_code": 1,
+      "seconds": 1.86
+    },
+    "temporal": {
+      "passed": true,
+      "exit_code": 1,
+      "seconds": 0.58
+    }
+  },
+  "limits": "Local Docker, 2 GiB / 1 CPU. Synthetic two-second muted footage, no paid provider calls. Active media is held before FFmpeg executes, so this verifies job resumption but not interrupted partial-file cleanup. Not representative capacity or actual Render ingress verification.",
+  "provenance": {
+    "base_revision": "821ddde",
+    "original_harness_sha256": "bbd9ceedb93e7e6605df54ac5a11f31f6df0d77ae0c901e5247e2021624cd67c",
+    "adapted_harness_sha256": "128233531e24921bf7273159cbd9e208276563344062fb769ac93a7b647fbb4e",
+    "adaptations": [
+      "Unique report target supervisor-hosting.json preserves historical evidence",
+      "Provider allowance zero in disposable runtime"
+    ],
+    "runtime_source_sha256": {
+      "scripts/serve.py": "48dd6b1085c6c45e14b69558d409bcbd9b59b5386fa371fa20d03745c877f14d",
+      "backend/rushes/workflow_service.py": "6407fc58d58ef058c65fb394a282daa6af3db617ddfa52e1211171a48b8039e6"
+    }
+  },
+  "provider_monthly_allowance_microusd": 0,
+  "image_built_from_repository_dockerfile": true,
+  "peak_includes_probe_overhead": true,
+  "deployment_status": "Validated locally; deployment evidence recorded separately"
+}

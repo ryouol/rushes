@@ -1,6 +1,6 @@
 """Run the public web server and its private API in one service container."""
 
-import asyncio
+import json
 import os
 import signal
 import subprocess
@@ -10,22 +10,12 @@ import time
 from contextlib import suppress
 from pathlib import Path
 
-from rushes.config import settings
-from rushes.workflow_service import wait_for_namespace, write_server_config
-
 
 def main():
     if not os.environ.get("RUSHES_ORIGIN") and os.environ.get("RENDER_EXTERNAL_URL"):
         os.environ["RUSHES_ORIGIN"] = os.environ["RENDER_EXTERNAL_URL"]
     if not os.environ.get("RUSHES_ORIGIN"):
         raise SystemExit("Set RUSHES_ORIGIN to the public HTTPS origin before starting the service")
-    config = settings()
-    if config.origin.startswith("https:") and not config.client_ip_header:
-        raise SystemExit(
-            "Set RUSHES_CLIENT_IP_HEADER to a header overwritten by the trusted ingress"
-        )
-    for path in (config.storage_root, config.output_root):
-        path.mkdir(parents=True, exist_ok=True)
     port = int(os.environ.get("PORT", "10000"))
     if not 1 <= port <= 65535 or port == 8741:
         raise SystemExit(
@@ -42,11 +32,37 @@ def main():
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
+
+    def startup_helper(*arguments, timeout):
+        with tempfile.TemporaryFile() as output:
+            helper = subprocess.Popen(
+                [sys.executable, "-m", "rushes.workflow_service", *arguments],
+                stdout=output,
+                start_new_session=True,
+            )
+            children.append(helper)
+            deadline = time.monotonic() + timeout
+            while helper.poll() is None:
+                if stopping:
+                    return None
+                if temporal is not None and temporal.poll() is not None:
+                    raise RuntimeError("Private Temporal exited during startup")
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("RUSHES startup helper exceeded its time limit")
+                time.sleep(0.1)
+            if helper.returncode:
+                raise RuntimeError("RUSHES startup helper failed; inspect its preceding error")
+            children.remove(helper)
+            output.seek(0)
+            return json.loads(output.read(8192))
+
     with tempfile.TemporaryDirectory(prefix="rushes-workflow-") as temporary:
         try:
-            if config.host_workflow_service:
-                path = Path(temporary) / "temporal.yaml"
-                write_server_config(config, path)
+            path = Path(temporary) / "temporal.yaml"
+            config = startup_helper("prepare", str(path), timeout=30)
+            if stopping:
+                return
+            if config["host_workflow_service"]:
                 temporal = subprocess.Popen(
                     [
                         "/opt/temporal/temporal-server",
@@ -58,12 +74,8 @@ def main():
                     env={**os.environ, "GOMEMLIMIT": "512MiB", "GOMAXPROCS": "1"},
                     start_new_session=True,
                 )
-                if (
-                    not asyncio.run(
-                        wait_for_namespace(config.temporal_address, stopping=lambda: stopping)
-                    )
-                    or stopping
-                ):
+                ready = startup_helper("wait", timeout=75)
+                if not ready or stopping:
                     return
                 children.append(
                     subprocess.Popen(
@@ -99,7 +111,7 @@ def main():
                         **os.environ,
                         "RUSHES_BIND_HOST": "0.0.0.0",
                         "PORT": str(port),
-                        "RUSHES_UPLOAD_TIMEOUT_SECONDS": str(config.upload_timeout_seconds),
+                        "RUSHES_UPLOAD_TIMEOUT_SECONDS": str(config["upload_timeout_seconds"]),
                     },
                     start_new_session=True,
                 )
