@@ -10,8 +10,9 @@ from sqlalchemy.engine import make_url
 from rushes.config import settings
 
 # USD micro-units. Reservations remain consumed even after ambiguous or failed calls.
-# Gemini covers 10k input / 4096 output at the published January 2027 standard rates.
-CALL_ALLOWANCE = {"gemini": 60_000, "modal": 10_000}
+# Pro: 10k input at $2/M plus 4096 output/thinking at $12/M, rounded up.
+# Reviewed against Google's standard pricing on 2026-09-12; also covers retained Flash runs.
+CALL_ALLOWANCE = {"gemini": 75_000, "modal": 10_000}
 
 
 class ProviderBudgetError(ValueError):

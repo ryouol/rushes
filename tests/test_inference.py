@@ -8,9 +8,9 @@ def test_model_configuration_rejected_before_provider_upload():
     from rushes.config import Settings, settings
     from rushes.inference import GeminiAnalyzer
 
-    with pytest.raises(ValueError, match="supports gemini-3.6-flash"):
+    with pytest.raises(ValueError, match="supports gemini-3.1-pro-preview"):
         GeminiAnalyzer("gemini-2.5-pro")
-    with pytest.raises(ValidationError, match="supports gemini-3.6-flash"):
+    with pytest.raises(ValidationError, match="supports gemini-3.1-pro-preview"):
         Settings.model_validate({**settings().model_dump(), "gemini_model": "gemini-2.5-pro"})
 
 

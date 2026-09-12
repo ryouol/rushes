@@ -17,7 +17,12 @@ from rushes.timing import Interval
 from sqlalchemy import select
 
 
-def test_gemini_schema_passes_real_sdk_and_retains_local_validation(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "model,thinking", [("gemini-3.1-pro-preview", "LOW"), ("gemini-3.6-flash", "MINIMAL")]
+)
+def test_gemini_schema_passes_real_sdk_and_retains_local_validation(
+    tmp_path, monkeypatch, model, thinking
+):
     monkeypatch.setattr(inference, "reserve_provider_call", lambda _: None)
     payloads, deleted = [], []
     output = {
@@ -49,7 +54,7 @@ def test_gemini_schema_passes_real_sdk_and_retains_local_validation(tmp_path, mo
             "maxItems",
         ):
             assert unsupported not in schema
-        assert config["thinkingConfig"] == {"thinking_level": "MINIMAL"}
+        assert config["thinkingConfig"] == {"thinking_level": thinking}
         return httpx.Response(
             200,
             json={
@@ -76,7 +81,7 @@ def test_gemini_schema_passes_real_sdk_and_retains_local_validation(tmp_path, mo
 
     monkeypatch.setattr(genai, "Client", client)
     monkeypatch.setattr(settings(), "gemini_api_key", SecretStr("synthetic-no-network"))
-    result = GeminiAnalyzer().analyze(
+    result = GeminiAnalyzer(model).analyze(
         tmp_path / "synthetic.mp4", Interval(start_us=0, end_us=1_000_000), "Synthetic transcript"
     )
     assert (result.preflight_tokens, result.input_tokens, result.output_tokens) == (123, 120, 30)
@@ -101,7 +106,11 @@ def test_gemini_schema_passes_real_sdk_and_retains_local_validation(tmp_path, mo
 def test_invalid_remote_vectors_are_rejected(monkeypatch, response):
     monkeypatch.setattr(remote_compute, "reserve_provider_call", lambda _: None)
     monkeypatch.setattr(
-        remote_compute, "remote_function", lambda _: SimpleNamespace(remote=lambda _: response)
+        remote_compute,
+        "remote_function",
+        lambda _: SimpleNamespace(
+            spawn=lambda *args, **kwargs: SimpleNamespace(get=lambda **kw: response)
+        ),
     )
     with pytest.raises(ValueError):
         remote_compute.RemoteEmbedder().embed(["Synthetic"])
@@ -154,7 +163,13 @@ async def test_api_unicode_note_is_indexed_through_remote_contract(authenticated
             "vectors": [[0.01] * 384 for _ in texts],
         }
 
-    monkeypatch.setattr(remote_compute, "remote_function", lambda _: SimpleNamespace(remote=embed))
+    monkeypatch.setattr(
+        remote_compute,
+        "remote_function",
+        lambda _: SimpleNamespace(
+            spawn=lambda texts, **kw: SimpleNamespace(get=lambda **kw: embed(texts))
+        ),
+    )
     monkeypatch.setattr(activities, "embedder", remote_compute.RemoteEmbedder)
     monkeypatch.setattr(activities, "heartbeat", lambda *_: None)
     response = await clients[0].post(

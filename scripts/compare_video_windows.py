@@ -11,7 +11,7 @@ from typing import Literal
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, ConfigDict, Field
-from rushes.config import settings
+from rushes.config import gemini_thinking_level, settings
 from rushes.media import run_media
 from rushes.provider_budget import CALL_ALLOWANCE, reserve_provider_call
 from rushes.provider_files import delete_provider_file
@@ -232,7 +232,9 @@ def main():
                         },
                         temperature=0,
                         max_output_tokens=512,
-                        thinking_config=types.ThinkingConfig(thinking_level="minimal"),
+                        thinking_config=types.ThinkingConfig(
+                            thinking_level=gemini_thinking_level(config.gemini_model)
+                        ),
                     ),
                 )
                 run["generation_seconds"] = round(time.monotonic() - generation_started, 3)

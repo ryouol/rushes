@@ -506,7 +506,9 @@ def test_model_budget_and_measured_output_tokens(tmp_path, monkeypatch, input_to
         def generate(self, **kwargs):
             assert input_tokens <= 10000, "Over-budget input must never be analyzed"
             assert kwargs["config"].max_output_tokens == 4096
-            assert kwargs["config"].thinking_config.thinking_level == "MINIMAL"
+            assert kwargs["config"].thinking_config.thinking_level == (
+                "LOW" if settings().gemini_model == "gemini-3.1-pro-preview" else "MINIMAL"
+            )
             return SimpleNamespace(
                 text='{"observations": []}',
                 model_dump=lambda **kw: {"synthetic": True},

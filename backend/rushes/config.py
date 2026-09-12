@@ -5,15 +5,19 @@ from typing import Literal
 from pydantic import AnyHttpUrl, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-GEMINI_MODEL = "gemini-3.6-flash"
+GEMINI_MODEL = "gemini-3.1-pro-preview"
 
 
 def supported_gemini_model(model: str) -> str:
-    if model != GEMINI_MODEL:
+    if model not in {GEMINI_MODEL, "gemini-3.6-flash"}:
         raise ValueError(
-            f"This analyzer supports {GEMINI_MODEL} with bounded output and minimal thinking"
+            f"This analyzer supports {GEMINI_MODEL} with bounded output and low thinking"
         )
     return model
+
+
+def gemini_thinking_level(model: str) -> str:
+    return "low" if supported_gemini_model(model) == GEMINI_MODEL else "minimal"
 
 
 class Settings(BaseSettings):
@@ -64,7 +68,11 @@ class Settings(BaseSettings):
         return {
             name: getattr(self, name)
             for name in (
-                "origin", "contact_email", "contact_phone", "contact_address", "legal_entity",
+                "origin",
+                "contact_email",
+                "contact_phone",
+                "contact_address",
+                "legal_entity",
                 "ga_measurement_id",
             )
         }

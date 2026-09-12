@@ -9,14 +9,14 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from rushes.config import settings, supported_gemini_model
+from rushes.config import gemini_thinking_level, settings, supported_gemini_model
 from rushes.local_models import LocalEmbedder, ModelOptions, transcribe_local
 from rushes.organization import ORGANIZATION_SCHEMA_VERSION, category_records
 from rushes.provider_budget import ProviderBudgetError, reserve_provider_call
 from rushes.provider_files import delete_provider_file
 from rushes.timing import Interval, to_us
 
-PROMPT_VERSION = "footage-evidence-v7"
+PROMPT_VERSION = "footage-evidence-v8"
 SCHEMA_VERSION = ORGANIZATION_SCHEMA_VERSION
 PREPROCESSING_VERSION = "vfr-540p-v3"
 # Video timestamp repair does not change the existing audio recipe or corrected transcript identity.
@@ -223,6 +223,19 @@ class GeminiAnalyzer:
                 "Describe instantaneous cuts within an adjoining shot's supported nonzero interval; "
                 "omit events when no nonzero duration is supported. Never return a zero-length interval. "
                 "Avoid duplicate descriptions and include uncertainty. "
+                "Create at most twelve concise observations, including distinct spoken topics as well as visual events. "
+                "For speech, name the concept being explained and summarize what is said in its own "
+                "supported interval, using kind speech; do not limit the worklog to visible objects. "
+                "An explanation of hashmaps must be searchable by that concept at the time it is discussed. "
+                "Include simultaneous supported concepts together: driving a car beside the ocean "
+                "should be searchable by driving, car, and ocean. These examples are instructions "
+                "about coverage, never evidence that those things occur in this footage. "
+                "Describe concrete subjects, actions, "
+                "visible objects, setting and readable text using everyday searchable language. "
+                "Give each distinct event its own tight supported interval. Do not use the entire "
+                "chunk for an event visible during only part of it. Whole-chunk descriptions are "
+                "appropriate only for content continuously visible throughout. Prefer a useful "
+                "event description over a generic camera-movement or shot-size label. "
                 "For each observation include categories: zero to three short English noun phrases "
                 "describing visible content, subjects, setting or shot type for automatically grouping "
                 "whole source files. Each name must be at most 36 characters, at most six words, and "
@@ -256,7 +269,9 @@ class GeminiAnalyzer:
                     response_schema=provider_response_schema(),
                     temperature=0.1,
                     max_output_tokens=4096,
-                    thinking_config=types.ThinkingConfig(thinking_level="minimal"),
+                    thinking_config=types.ThinkingConfig(
+                        thinking_level=gemini_thinking_level(self.model)
+                    ),
                 ),
             )
             usage = response.usage_metadata
@@ -318,6 +333,8 @@ class Embedder(Protocol):
     model: str
 
     def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+    def rerank(self, query: str, texts: list[str]) -> list[float]: ...
 
 
 @lru_cache(maxsize=1)

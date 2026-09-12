@@ -49,11 +49,11 @@ def test_parallel_calls_cannot_overdraw_or_reset_the_monthly_allowance(budget_pe
 def test_failed_modal_call_keeps_its_reservation(budget_period, monkeypatch):
     monkeypatch.setattr(settings(), "provider_monthly_allowance_microusd", 10_000)
 
-    def ambiguous(*args):
+    def ambiguous(*args, **kwargs):
         raise TimeoutError("Synthetic unknown remote outcome")
 
     monkeypatch.setattr(
-        remote_compute, "remote_function", lambda _: SimpleNamespace(remote=ambiguous)
+        remote_compute, "remote_function", lambda _: SimpleNamespace(spawn=ambiguous)
     )
     with pytest.raises(TimeoutError):
         remote_compute.RemoteEmbedder().embed(["Synthetic"])

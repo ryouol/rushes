@@ -5,12 +5,19 @@ from functools import lru_cache
 from pathlib import Path
 
 import modal
-from rushes.local_models import LocalEmbedder, ModelOptions, transcribe_local, transcription_model
+from rushes.local_models import (
+    RERANKER_MODEL,
+    LocalEmbedder,
+    ModelOptions,
+    transcribe_local,
+    transcription_model,
+)
 from rushes.remote_compute import (
     MAX_AUDIO_BYTES,
     MODAL_APP,
     REMOTE_EMBEDDING_MODEL,
     REMOTE_TRANSCRIPTION_MODEL,
+    validate_query,
     validate_texts,
 )
 from rushes.timing import Interval
@@ -23,7 +30,9 @@ app = modal.App(MODAL_APP)
 
 def cache_models():
     transcription_model(OPTIONS)
-    LocalEmbedder(OPTIONS).embed(["Initialize the embedding model cache."])
+    model = LocalEmbedder(OPTIONS)
+    model.embed(["Initialize the embedding model cache."])
+    model.rerank("red car", ["A red car passes the camera."])
 
 
 image = (
@@ -51,8 +60,11 @@ def embedding_model():
     startup_timeout=60,
     retries=0,
 )
-def embed(texts: list[str]) -> dict:
+def embed(texts: list[str], query: str | None = None) -> dict:
     validate_texts(texts)
+    if query is not None:
+        validate_query(query)
+        return {"model": RERANKER_MODEL, "scores": embedding_model().rerank(query, texts)}
     return {"model": OPTIONS.embedding_model, "vectors": embedding_model().embed(texts)}
 
 
