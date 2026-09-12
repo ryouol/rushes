@@ -259,10 +259,13 @@ export function ProjectView({
     setSearching(true);
     setError("");
     try {
-      const result = await api<SearchResponse>(
-        `${base}/projects/${project.id}/search?q=${encodeURIComponent(searchQuery)}`,
-        { signal: request.signal },
-      );
+      const url = `${base}/projects/${project.id}/search?q=${encodeURIComponent(searchQuery)}`;
+      const immediate = await api<SearchResponse>(`${url}&semantic=false`, {
+        signal: request.signal,
+      });
+      if (request.signal.aborted) return;
+      applySearch(searchQuery, immediate);
+      const result = await api<SearchResponse>(url, { signal: request.signal });
       if (!request.signal.aborted) applySearch(searchQuery, result);
     } catch (e) {
       if (!request.signal.aborted) setError((e as Error).message);
@@ -611,7 +614,7 @@ export function ProjectView({
                 {results.length ? (
                   results.map((result) => (
                     <button
-                      key={`${result.asset_id}:${result.start_us}`}
+                      key={`${result.asset_id}:${result.start_us}:${result.end_us}`}
                       className="search-result"
                       onClick={() =>
                         setSelected({

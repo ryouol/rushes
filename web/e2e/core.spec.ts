@@ -201,7 +201,7 @@ test("real account → import → persistent worklog → select → rendered exp
   await expect(
     second.getByRole("tab", { name: "Collections", exact: true }),
   ).toBeFocused();
-  await second.getByRole("button", { name: /Selected moments/ }).click();
+  await second.getByRole("button", { name: /^Selected moments\b/ }).click();
   await second.getByRole("button", { name: "Adjust", exact: true }).click();
   await second.getByLabel("Collection in seconds").fill("3");
   await second.getByLabel("Collection out seconds").fill("5");

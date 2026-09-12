@@ -295,5 +295,5 @@ async def reanalyze(asset_id: uuid.UUID, body: AnalysisConfirmation, db: DB, acc
     ):
         raise HTTPException(409, "This source already has an active job")
     job = queue_asset(db, asset, payload={"analysis_confirmation": body.model_dump()})
-    asset.status = "queued"
+    asset.status, asset.error = "queued", None
     return {"job_id": job.id, "state": "queued"}

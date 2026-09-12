@@ -1,7 +1,6 @@
-import asyncio
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import cast, func, literal, select, text
 
@@ -11,9 +10,9 @@ from rushes.db import tenant_session
 from rushes.inference import embedder
 from rushes.models import Asset, Embedding, Observation, Project
 from rushes.provider_budget import ProviderBudgetError
+from rushes.search_compute import cache_key, computations, relevance_scores
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}")
-search_limit = asyncio.Semaphore(1)
 
 
 async def search_evidence(
@@ -81,16 +80,6 @@ async def search_evidence(
         observation = matches.get(id)
         if observation is None:
             continue
-        overlap = next(
-            (
-                result
-                for result in results
-                if result["asset_id"] == observation.asset_id
-                and result["start_us"] <= observation.end_us + 500_000
-                and result["end_us"] >= observation.start_us - 500_000
-            ),
-            None,
-        )
         evidence = {
             "observation_id": observation.id,
             "description": observation.description,
@@ -99,63 +88,104 @@ async def search_evidence(
             "kind": observation.kind,
             "review_status": observation.review_status,
         }
-        if overlap:
-            overlap["start_us"] = min(overlap["start_us"], observation.start_us)
-            overlap["end_us"] = max(overlap["end_us"], observation.end_us)
-            overlap["evidence"].append(evidence)
-        elif len(results) < limit:
-            asset = assets[observation.asset_id]
-            results.append(
-                {
-                    "asset_id": asset.id,
-                    "asset_name": asset.name,
-                    "start_us": observation.start_us,
-                    "end_us": observation.end_us,
-                    "score": scores[id],
-                    "evidence": [evidence],
-                    "processing_status": asset.status,
-                    "has_thumbnail": bool(asset.thumbnail_path),
-                }
-            )
+        asset = assets[observation.asset_id]
+        results.append(
+            {
+                "asset_id": asset.id,
+                "asset_name": asset.name,
+                "start_us": observation.start_us,
+                "end_us": observation.end_us,
+                "score": scores[id],
+                "evidence": [evidence],
+                "processing_status": asset.status,
+                "has_thumbnail": bool(asset.thumbnail_path),
+            }
+        )
+        if len(results) >= limit:
+            break
     return results, semantic_error
 
 
-async def query_embedding(query):
+async def query_embedding(query, workspace=""):
+    # The BGE model card recommends this instruction for query-to-passage retrieval.
+    text = (
+        "Represent this sentence for searching relevant passages: " + query
+        if settings().embedding_model == "BAAI/bge-small-en-v1.5"
+        else query
+    )
     try:
-        await asyncio.wait_for(search_limit.acquire(), timeout=0.05)
-    except TimeoutError:
-        return None, "Semantic search is busy; keyword evidence is shown. Try again shortly."
-    task = asyncio.create_task(asyncio.to_thread(lambda: embedder().embed([query])[0]))
-
-    def finished(task):
-        search_limit.release()
-        if not task.cancelled():
-            task.exception()
-
-    task.add_done_callback(finished)
-    try:
-        return await asyncio.wait_for(asyncio.shield(task), timeout=3), None
+        vector = await computations.get(
+            cache_key("query", workspace, query), lambda: embedder().embed([text])[0]
+        )
+        return vector, None
     except ProviderBudgetError as error:
         return None, f"{error} Keyword evidence is shown."
     except Exception:
         return (
             None,
-            "Semantic search is warming up or unavailable; keyword evidence is shown. Try again shortly.",
+            "Semantic search is starting or unavailable. Keyword evidence is shown; retrying this query reuses any completed search work.",
         )
 
 
-async def retrieve(access, project_id, query, limit=20):
+def distinct_moments(results, limit):
+    selected = []
+    for result in results:
+        duplicate = next(
+            (
+                row
+                for row in selected
+                if (
+                    row["asset_id"] == result["asset_id"]
+                    and row["start_us"] == result["start_us"]
+                    and row["end_us"] == result["end_us"]
+                )
+            ),
+            None,
+        )
+        if duplicate:
+            duplicate["evidence"].extend(result["evidence"])
+        elif len(selected) < limit:
+            selected.append(result)
+    return selected
+
+
+async def retrieve(access, project_id, query, limit=20, semantic=True):
     async with tenant_session(access.workspace_id) as db:
         await owned(db, Project, project_id, access)
-    vector, notice = await query_embedding(query)
+    query = " ".join(query.split())
+    if not query:
+        raise HTTPException(422, "Enter a search phrase")
+    vector, notice = (
+        await query_embedding(query, access.workspace_id)
+        if semantic
+        else (None, "Text matches are shown while semantic search checks the footage.")
+    )
     async with tenant_session(access.workspace_id) as db:
-        results, notice = await search_evidence(
-            db, access, project_id, query, limit, vector, notice
-        )
+        results, notice = await search_evidence(db, access, project_id, query, 60, vector, notice)
         incomplete = await db.scalar(
             select(Asset.id).where(Asset.project_id == project_id, Asset.status != "ready").limit(1)
         )
-    return results, notice, bool(incomplete)
+    if results and not notice:
+        try:
+            scores = await relevance_scores(
+                access.workspace_id,
+                query,
+                [result["evidence"][0]["description"] for result in results],
+            )
+            ranked = []
+            for result, score in zip(results, scores, strict=True):
+                if score >= -3:
+                    ranked.append({**result, "score": score})
+            results = sorted(ranked, key=lambda result: result["score"], reverse=True)
+        except Exception as error:
+            notice = (
+                f"{error} Keyword evidence is shown."
+                if isinstance(error, ProviderBudgetError)
+                else "Relevance checking is starting or unavailable. Keyword evidence is shown; try again shortly."
+            )
+            async with tenant_session(access.workspace_id) as db:
+                results, _ = await search_evidence(db, access, project_id, query, 60, None, notice)
+    return distinct_moments(results, limit), notice, bool(incomplete)
 
 
 @router.get("/projects/{project_id}/search")
@@ -164,8 +194,9 @@ async def search(
     access: Access,
     q: str = Query(min_length=1, max_length=500),
     limit: int = Query(20, ge=1, le=40),
+    semantic: bool = True,
 ):
-    results, error, incomplete = await retrieve(access, project_id, q, limit)
+    results, error, incomplete = await retrieve(access, project_id, q, limit, semantic)
     return {
         "results": results,
         "mode": "keyword" if error else "hybrid",
