@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import next from "next";
 
 const port = Number(process.env.PORT ?? 3741);
@@ -17,6 +17,26 @@ if (
   );
 }
 
+// The Python boundary owns header filtering and trusted ingress identity in both modes.
+function proxy(request, response) {
+  const upstream = httpRequest({
+    hostname: "127.0.0.1", port: 8741, path: request.url,
+    method: request.method, headers: request.headers,
+  }, (incoming) => {
+    response.writeHead(incoming.statusCode, incoming.rawHeaders);
+    incoming.pipe(response);
+    incoming.on("error", () => response.destroy());
+  });
+  upstream.on("error", () => {
+    if (response.headersSent) return response.destroy();
+    response.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+    response.end(JSON.stringify({ detail: "Processing services are disconnected. Retry shortly." }));
+  });
+  request.on("aborted", () => upstream.destroy());
+  response.on("close", () => upstream.destroy());
+  request.pipe(upstream);
+}
+
 // Next's default server ends request bodies after five minutes, even while data arrives.
 const server = createServer(
   {
@@ -25,6 +45,11 @@ const server = createServer(
     connectionsCheckingInterval: 1000,
   },
   (request, response) => {
+    const path = request.url.split("?", 1)[0];
+    if (path === "/api" || path.startsWith("/api/")) {
+      proxy(request, response);
+      return;
+    }
     handle(request, response).catch(() => {
       if (!response.headersSent) response.writeHead(500);
       response.end();
@@ -32,7 +57,7 @@ const server = createServer(
   },
 );
 const app = next({
-  dev: process.env.NODE_ENV !== "production",
+  dev: true,
   hostname,
   port,
   httpServer: server,

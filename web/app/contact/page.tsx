@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import { pageMetadata } from "@/lib/metadata";
 import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
@@ -21,7 +20,6 @@ function publicText(value: string | undefined, maxLength: number) {
 }
 
 export default async function Contact() {
-  await connection();
   // Optional public contact values are read only on the server. Invalid values
   // remain visibly unconfigured and never become unusable mailto/tel links.
   const configuredEmail = publicText(process.env.RUSHES_CONTACT_EMAIL, 254);

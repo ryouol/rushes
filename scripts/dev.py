@@ -1,4 +1,4 @@
-"""Run the four local RUSHES processes in the foreground; Ctrl-C stops only these children."""
+"""Run the local RUSHES processes in the foreground; Ctrl-C stops only these children."""
 
 import argparse
 import os
@@ -23,7 +23,7 @@ def occupied(port):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--production", action="store_true", help="Serve a prebuilt Next.js application"
+        "--production", action="store_true", help="Serve the exported web application without a Node server"
     )
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -86,12 +86,12 @@ def main():
             [
                 sys.executable,
                 "-m",
-                "uvicorn",
-                "rushes.api:app",
+                "rushes.http_server",
+                *([] if args.production else ["--api-only"]),
                 "--host",
                 "127.0.0.1",
                 "--port",
-                "8741",
+                "3741" if args.production else "8741",
             ],
         )
         launch("worker", [sys.executable, "-m", "rushes.worker"])
@@ -100,12 +100,13 @@ def main():
             **os.environ,
             "PORT": "3741",
             "RUSHES_BIND_HOST": "127.0.0.1",
-            "RUSHES_ORIGIN": config.origin,
+            **{"RUSHES_" + key.upper(): value for key, value in config.public_web_config.items()},
             "RUSHES_UPLOAD_TIMEOUT_SECONDS": str(config.upload_timeout_seconds),
         }
         if config.client_ip_header:
             web_env["RUSHES_CLIENT_IP_HEADER"] = config.client_ip_header
-        launch("web", ["npm", "run", "start" if args.production else "dev"], root / "web", web_env)
+        if not args.production:
+            launch("web", ["npm", "run", "dev"], root / "web", web_env)
         print("RUSHES: http://localhost:3741 · Temporal: http://localhost:8233", flush=True)
         print(
             "Logs: .local/logs · Ctrl-C stops this launcher’s children. Database and persisted work remain.",

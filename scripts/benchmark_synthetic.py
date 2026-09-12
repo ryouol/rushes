@@ -67,7 +67,7 @@ def main():
         raise SystemExit(
             "Synthetic load run requires Gemini disabled to avoid unnecessary provider charges"
         )
-    with httpx.Client(base_url="http://127.0.0.1:8741/api", headers=origins, timeout=180) as client:
+    with httpx.Client(base_url=settings().origin + "/api", headers=origins, timeout=180) as client:
         email, password = f"synthetic-load-{identity}@example.com", secrets.token_urlsafe(32)
         client.post(
             "/auth/register",

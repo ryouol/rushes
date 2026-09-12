@@ -164,7 +164,7 @@ async def running_workers():
             task_queue=MEDIA_QUEUE,
             workflows=list(WORKFLOWS.values()),
             activities=[*MEDIA_ACTIVITIES, render_export],
-            max_concurrent_activities=2,
+            max_concurrent_activities=1,
             max_concurrent_workflow_tasks=4,
             max_cached_workflows=8,
             graceful_shutdown_timeout=timedelta(seconds=30),

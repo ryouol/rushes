@@ -1,7 +1,7 @@
 import "server-only";
 
 export function applicationOrigin(): URL {
-  const origin = new URL(process.env.RUSHES_ORIGIN ?? "http://localhost:3741");
+  const origin = new URL(process.env.RUSHES_ORIGIN || process.env.RENDER_EXTERNAL_URL || "http://localhost:3741");
   if (
     origin.href !== `${origin.origin}/` ||
     !["http:", "https:"].includes(origin.protocol) ||

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { connection } from "next/server";
 import { applicationOrigin } from "../lib/server-config";
 import localFont from "next/font/local";
 import { AppearanceProvider, appearanceScript } from "@/components/appearance";
@@ -9,7 +8,6 @@ import "./globals.css";
 const inter = localFont({ src: "./fonts/InterVariable.woff2", display: "swap", variable: "--font-ui", weight: "100 900" });
 
 export async function generateMetadata(): Promise<Metadata> {
-  await connection();
   return {
     title: {
       default: "RUSHES — Your footage. Organized by AI.",

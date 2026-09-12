@@ -1,4 +1,4 @@
-"""Run the public web server and its private API in one service container."""
+"""Supervise the public application and private durable workflow service."""
 
 import json
 import os
@@ -21,7 +21,6 @@ def main():
         raise SystemExit(
             "PORT must be between 1 and 65535 and cannot use the private API port 8741"
         )
-    root = Path(__file__).resolve().parents[1]
     stopping = False
     children = []
     temporal = None
@@ -84,29 +83,12 @@ def main():
                     [
                         sys.executable,
                         "-m",
-                        "uvicorn",
-                        "rushes.api:app",
+                        "rushes.http_server",
                         "--host",
-                        "127.0.0.1",
+                        "0.0.0.0",
                         "--port",
-                        "8741",
-                        "--no-proxy-headers",
-                        "--timeout-graceful-shutdown",
-                        "10",
+                        str(port),
                     ],
-                    start_new_session=True,
-                )
-            )
-            children.append(
-                subprocess.Popen(
-                    ["node", "server.mjs"],
-                    cwd=root / "web",
-                    env={
-                        **os.environ,
-                        "RUSHES_BIND_HOST": "0.0.0.0",
-                        "PORT": str(port),
-                        "RUSHES_UPLOAD_TIMEOUT_SECONDS": str(config["upload_timeout_seconds"]),
-                    },
                     start_new_session=True,
                 )
             )

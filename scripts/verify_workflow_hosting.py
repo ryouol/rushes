@@ -80,7 +80,7 @@ def service_processes():
             continue
         if args[0] == b"/opt/temporal/temporal-server":
             found["temporal"] = int(path.parent.name)
-        elif args[1:4] == [b"-m", b"uvicorn", b"rushes.api:app"]:
+        elif args[1:3] == [b"-m", b"rushes.http_server"]:
             found["api"] = int(path.parent.name)
     return found
 
@@ -127,8 +127,15 @@ def verify_lifecycle(image, run, app, proxy, folder, client):
             code = command("docker", "wait", app, timeout=75)
             elapsed = round(time.monotonic() - started, 2)
             assert code == ("0" if case == "readiness" else "1"), (case, code)
-            with socket.socket() as connection:
-                assert connection.connect_ex(("127.0.0.1", 3844)) != 0
+            # Docker Desktop can release its host port after the container exit event.
+            port_deadline = time.monotonic() + 5
+            while True:
+                with socket.socket() as connection:
+                    connection.settimeout(.25)
+                    if connection.connect_ex(("127.0.0.1", 3844)) != 0:
+                        break
+                assert time.monotonic() < port_deadline, "Stopped container's public port remains open"
+                time.sleep(.1)
             results[case] = {"passed": True, "exit_code": int(code), "seconds": elapsed}
             logs = command("docker", "logs", app)
             (folder / f"{case}.log").write_text(logs)

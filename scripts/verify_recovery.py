@@ -75,7 +75,6 @@ def main():
         check=True,
     )
     original = hashlib.sha256(source.read_bytes()).hexdigest()
-    stop_existing(args.worker_pid, "-m rushes.worker")
 
     def launch(name, command):
         with (folder / f"{name}.log").open("ab") as log:
@@ -86,7 +85,7 @@ def main():
 
     identity = secrets.token_hex(6)
     with httpx.Client(
-        base_url="http://127.0.0.1:8741/api", headers={"Origin": config.origin}, timeout=90
+        base_url=config.origin + "/api", headers={"Origin": config.origin}, timeout=90
     ) as client:
         email, password = f"recovery-{identity}@example.com", secrets.token_urlsafe(30)
         client.post(
@@ -103,6 +102,7 @@ def main():
         project = client.post(
             f"{base}/projects", json={"name": "SYNTHETIC worker and server restart"}
         ).json()["id"]
+        stop_existing(args.worker_pid, "-m rushes.worker")
         response = client.post(
             f"{base}/projects/{project}/upload",
             params={"filename": source.name},

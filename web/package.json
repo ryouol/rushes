@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "NODE_ENV=development node server.mjs",
     "build": "next build",
-    "start": "NODE_ENV=production node server.mjs",
+    "start": "cd .. && .venv/bin/python -m rushes.http_server",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test"
   },
