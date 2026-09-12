@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-09-12T17:52:39.874868+00:00",
+  "current_gemini_key_matches_initial_deployment": true,
+  "scope": "Read-only provider Files listing; no upload or generation dispatched",
+  "list_succeeded": true,
+  "listed_files": 0,
+  "bounded_at_1000": false,
+  "logged_cleanup_names_listed": {
+    "files/k6uk34rauc6w": false,
+    "files/lf9z60wcpfos": false,
+    "files/4t1kchwq3txj": false
+  },
+  "deletion_confirmed": false,
+  "references_cleared": false
+}

@@ -1,0 +1,39 @@
+{
+  "checked_at": "2026-09-12T17:50:59.605467+00:00",
+  "deployment": {
+    "id": "dep-daip0kvqj5pc73b0rlng",
+    "status": "live",
+    "createdAt": "2026-09-12T17:48:03.654225Z",
+    "updatedAt": "2026-09-12T17:50:03.02075Z",
+    "finishedAt": "2026-09-12T17:50:03.020406Z"
+  },
+  "runtime_commit": "7ba9a34ca747a3b69182d36c0e1133367bdaccb3",
+  "service_id": "srv-dahk822d0e5s73fo22o0",
+  "url": "https://rushes.onrender.com",
+  "previous_runtime_commit": "83d875836bffe62e2909bf606997892ff2403c6b",
+  "service_plan": "1c-2g",
+  "instances": 1,
+  "environment_values_unchanged": true,
+  "environment_variable_count": 22,
+  "service_plan_instances_disk_unchanged": true,
+  "automatic_deployments_disabled": true,
+  "database_external_access_disabled": true,
+  "public_http_checks": {
+    "/": 200,
+    "/privacy": 200,
+    "/terms": 200,
+    "/api/health": 200,
+    "/api/auth/providers": 200,
+    "unauthenticated_account": 401
+  },
+  "application_startup_complete_logged": true,
+  "local_full_container_evidence": "supervisor-hosting.json",
+  "pre_deploy_saved_qa_session_status": 401,
+  "limitations": [
+    "Saved historical QA session expired; authenticated asset/playback checks were not repeated on this deployment",
+    "No paid Gemini or Modal generation was dispatched by this validation",
+    "Full hosted paid-processing journey remains historical evidence on 2cb0774; real Google flow remains historical evidence on 83d8758",
+    "Preexisting Google file cleanup calls returned 403 and remain tracked; this deployment does not claim those files were deleted",
+    "Fixed hosting remains approximately $35/month before variable charges and tax; $20 combined budget decision remains pending"
+  ]
+}

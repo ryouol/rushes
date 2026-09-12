@@ -20,9 +20,10 @@
           "name": "rushes-media",
           "sizeGB": 10
         },
-        "deploy_id": "dep-dai1us9594qs73e2glqg",
+        "deploy_id": "dep-daip0kvqj5pc73b0rlng",
         "status": "live",
-        "runtime_commit": "83d875836bffe62e2909bf606997892ff2403c6b"
+        "runtime_commit": "7ba9a34ca747a3b69182d36c0e1133367bdaccb3",
+        "num_instances": 1
       }
     ],
     "databases": [
@@ -37,19 +38,23 @@
         "disk_autoscaling": false,
         "storage_gb": 5
       }
-    ]
+    ],
+    "checked_at": "2026-09-12T17:50:59.605467+00:00"
   },
   "budget": {
     "combined_monthly_usd": 20,
-    "hard_cap_required": false,
+    "hard_cap_required": null,
     "render_total_spend_cap_available": false,
     "billable_resources_created": true,
     "period": "calendar month",
-    "note": "User clarified $20/month is a target, not a hard cap; modest overage is acceptable. Keep recurring and variable spending low. Previous absolute-ceiling blocker is superseded.",
+    "note": "Current task requests $20/month combined. A separate task later allowed limited overage, but the working topology is approximately $35/month fixed. A concrete clarification is pending; neither the desired strictness nor approval of this amount should be inferred from the separate provider allowance.",
     "combined_monthly_target_usd": 20,
     "fixed_monthly_estimate_usd": 35,
     "provider_monthly_allowance_usd": 2,
-    "allowance_scope": "Combined Gemini and Modal call reservations; excludes fixed hosting, build/deploy compute, egress and tax."
+    "allowance_scope": "Combined Gemini and Modal call reservations; excludes fixed hosting, build/deploy compute, egress and tax.",
+    "clarification_pending": true,
+    "local_provider_monthly_allowance_usd": 2,
+    "local_allowance_scope": "Separate local database ledger; not shared with production and not a combined invoice cap."
   },
   "other_projects_observed": [
     {
@@ -92,20 +97,22 @@
     "app_provider_allowance_configured": true
   },
   "production_deployed": true,
-  "checked_at": "2026-09-11T15:37:47Z",
+  "checked_at": "2026-09-12T17:50:59.605467+00:00",
   "gemini": {
     "configured": true,
     "model": "gemini-3.6-flash",
     "project": "projects/50426910677",
     "standalone_video_validation": "passed",
-    "full_browser_validation": "Historical evidence on runtime 2cb077468e1fd8ecbcb46265c7e8109dc51f870f: passed fresh end-to-end hosted browser test on prompt v6. Earlier invalid response and provider-status failures are documented; strict validation and single generation dispatch retained. This full processing journey was not repeated for the Google deployment; current deployment evidence is in validation/production-google-deployment.json."
+    "full_browser_validation": "Historical fresh paid-processing/browser evidence on runtime 2cb0774. Google connection/returning login verified on 83d8758. Supervisor deployment on 7ba9a34 passed public startup checks; paid processing and real Google login were not repeated."
   },
   "production_image": {
-    "id": "sha256:295dde5f522d03e825ab7d3c8015f842e25b3e59c6484ef3cd0dfbcdc7abceb6",
+    "id": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
     "architecture": "linux/amd64",
     "local_runtime_verified": true,
     "published": false,
-    "matches_current_source": false,
-    "historical_local_qa_only": true
+    "runtime_source_commit": "7ba9a34ca747a3b69182d36c0e1133367bdaccb3",
+    "matches_current_runtime_source": true,
+    "note": "Locally built from the repository Dockerfile; Render built its own image from the same runtime source commit. Local hash is not asserted to be the Render image hash.",
+    "validation": "validation/supervisor-hosting.json"
   }
 }
