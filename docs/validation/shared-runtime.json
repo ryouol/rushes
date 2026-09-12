@@ -1,0 +1,192 @@
+{
+  "checked_at": "2026-09-12T19:28:44.655935+00:00",
+  "scope": "Local owned disposable verification only; production unchanged, no paid provider calls",
+  "goal_budget_usd_per_month_combined": 20,
+  "current_fixed_estimate_usd_per_month": 35,
+  "production_revision": "3584971008ff25880950ab677c9f739908e11dce",
+  "host_architecture": "arm64",
+  "image_architecture": "amd64",
+  "emulated": true,
+  "tiny_512mb": {
+    "passed": true,
+    "image": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+    "architecture": "amd64",
+    "source_revision": "3584971 with isolated shared API/worker lifespan prototype and 128MiB Go memory target",
+    "memory_limit_bytes": 536870912,
+    "cpus": 0.5,
+    "peak_memory_bytes": 477646848,
+    "api_upload_processed_by_worker": true,
+    "same_job_after_restart": true,
+    "preview_stream_verified": true,
+    "synthetic_duration_seconds": 2,
+    "provider_allowance_microusd": 0,
+    "scope": "Disposable local container: real API signup/upload, durable interruption/resumption and preview; no provider calls, no representative capacity claim",
+    "scope_note": "Prototype only. Peak comes from the resumed container; first-container peak was not retained."
+  },
+  "four_k_512mb": {
+    "passed": false,
+    "resolution": "3840x2160",
+    "duration_seconds": 2,
+    "memory_limit_bytes": 536870912,
+    "cpus": 0.5,
+    "provider_allowance_microusd": 0,
+    "failure": "Connection dropped while polling resumed preparation; Docker recorded OOMKilled=true",
+    "state": {
+      "Status": "running",
+      "Running": true,
+      "OOMKilled": true,
+      "ExitCode": 0,
+      "StartedAt": "2026-09-12T18:58:08.724851846Z",
+      "FinishedAt": "0001-01-01T00:00:00Z"
+    },
+    "harness_sha256": "39c2d1c2c83e597e976c4ca5343afd12689b7b1f85d13a078817be66a7d3034e"
+  },
+  "four_k_2gb": {
+    "checked_at": "2026-09-12T19:18:37.568542+00:00",
+    "passed": true,
+    "image": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+    "architecture": "amd64",
+    "temporal_server": "1.31.2",
+    "schema_setup_idempotent": true,
+    "verified_tls_postgres_bootstrap_and_runtime": true,
+    "workflow_resumed_after_container_recreation": true,
+    "api_upload_processed_by_worker": true,
+    "active_media_resumed_after_shutdown": true,
+    "active_processing_shutdown_seconds": 2.09,
+    "same_job_after_restart": true,
+    "source_preserved": true,
+    "sessions_and_preview_preserved": true,
+    "temporal_unreachable_from_peer": true,
+    "peak_container_memory_bytes": 571924480,
+    "shutdown_seconds": 2.2,
+    "lifecycle": {
+      "readiness": {
+        "passed": true,
+        "exit_code": 0,
+        "seconds": 15.26
+      },
+      "api": {
+        "passed": true,
+        "exit_code": 1,
+        "seconds": 1.34
+      },
+      "temporal": {
+        "passed": true,
+        "exit_code": 1,
+        "seconds": 0.3
+      }
+    },
+    "limits": "Local Docker, 2 GiB / 1 CPU. Synthetic two-second muted 3840x2160 footage; canonical current Python source mounted onto prior image, no paid provider calls. Active media is held before FFmpeg executes, so this verifies job resumption but not interrupted partial-file cleanup. Not representative capacity or actual Render ingress verification.",
+    "stock_mount_source_cli_flag": false,
+    "python_source_mounted": true,
+    "source_sha256": {
+      "backend/rushes/api.py": "2961e784eb9e54dd3445b607fb1138165b2e76db33d7745b3cda563c1c2e31df",
+      "backend/rushes/api_lifespan.py": "a3f7cb11aedc5f88e2eb0ba97b4ac0d89e80870c1d901a06e59a4286205e4df6",
+      "backend/rushes/worker.py": "9b34c8cdf85fc28d7eebfe34e57ed41a58dc1b87d90f9e1dffbeac505e3645a5",
+      "backend/rushes/exports.py": "2d5e06e24d05c741511ca34b0fcf8ce62b80fa40fff34c56edea5d8913c24f84",
+      "backend/rushes/export_documents.py": "ebbb22abcd0fae5edb2cf998aa276491e2c32253e379ea070d5542b597aab663",
+      "backend/rushes/storage.py": "8a3dacaeec5f05d6c9fc48af15eb83a22ff738813af02f66e5fc96ee9ecb6375",
+      "scripts/serve.py": "d4aebe078fc3df0fff7f4e0c8485a5bcd40a4605a057f7719c818355b58dc402",
+      "scripts/verify_workflow_hosting.py": "cdd61f0039956a25439cb2db34194cc6b27f04055d614b74212d22336293c755"
+    },
+    "adapted_harness_sha256": "2f24d1539985a0af85e8f9f8fe580d330ebc8da8e52359a80b760f3c3b0b5367",
+    "scope_note": "Earlier shared-worker source tested with current dependencies/image; final filesystem-thread/lease refinements followed and are covered by 132 isolated tests. No final fresh Docker build, Render deploy, concurrent4K or paid-provider test in this stage."
+  },
+  "isolated_regressions": {
+    "isolated_database": "rushes_shared_test_bc9272615356",
+    "exit_code": 0,
+    "schema": "0007",
+    "forced_rls_tables": 17,
+    "provider_allowance_microusd": 0,
+    "tests": [
+      "test_worker_lifecycle",
+      "test_workflow_service",
+      "test_supervisor",
+      "test_export_documents",
+      "test_organization_exports",
+      "test_review_regressions",
+      "test_deletion",
+      "test_checkpoint_io",
+      "test_storage",
+      "test_storage_activity",
+      "test_hosted_lifespan",
+      "test_interchange",
+      "test_provider_budget",
+      "test_production_regressions"
+    ],
+    "tests_passed": 132,
+    "seconds": 15.48,
+    "source_sha256": {
+      "backend/rushes/activities.py": "6feb2468f18b0a3e97ef3d91213c01b7b7854971ee1d13e2155c3f0577326d9c",
+      "backend/rushes/worker.py": "9b34c8cdf85fc28d7eebfe34e57ed41a58dc1b87d90f9e1dffbeac505e3645a5",
+      "backend/rushes/auth.py": "4f7340837b85156ca4cfe44033dbcfae92bbf173279e878bb31d31c95c90c3b2",
+      "backend/rushes/exports.py": "24037559ac9fb945628bbd86d04c7d519f824078b1c6eb48637b63decc929cd9",
+      "backend/rushes/routes_exports.py": "0e28785e993dae6013984466f665ff29ccfc8aa28c24b2cce71a4116546fd977",
+      "backend/rushes/db.py": "745ef2cf9a006883040110ad04c7adf670f5abafe9968dd75f5e0be64bc45a5e",
+      "backend/rushes/api_common.py": "dc96d87bd6c1aacc488370fae60eaec5669735c9afeed82f8e50b45e7843e04b",
+      "backend/rushes/routes_google_auth.py": "694f85e526bba5f8edb64996aac0387eebd71d1862176296bb151c172dcddbb2",
+      "backend/rushes/api_lifespan.py": "a3f7cb11aedc5f88e2eb0ba97b4ac0d89e80870c1d901a06e59a4286205e4df6",
+      "backend/rushes/media.py": "838aa282e15bdb2d2dc2800f3450f9fd9bc971cccd9492c7dfd57dcaef557ad6",
+      "backend/rushes/config.py": "5a4c301fc54505aed7cea32961219001df86dd73cd96584fe44ba5b0f5b6f6e3",
+      "backend/rushes/provider_files.py": "b42b7bff3d4050f0fa0c6cfa23c5fd602765b7796f2d909f849cfdaf8d49c220",
+      "backend/rushes/routes_search.py": "b2f792ae11601cb8c2452e502d3b8842e930b7f9cac84e13249c426a6ce9ff6d",
+      "backend/rushes/export_documents.py": "ebbb22abcd0fae5edb2cf998aa276491e2c32253e379ea070d5542b597aab663",
+      "backend/rushes/models.py": "da2623979c182c3d98023c36aa7cecd3d0151195d4cbbdd172d7689a08441018",
+      "backend/rushes/routes_media.py": "72220bd11935f860b7621e3e837c02657a12454fb343c893f6e78aa6babfcea9",
+      "backend/rushes/maintenance.py": "b4c7aa84f07c611a781aa68f595d0d54f11bb642c99304971d16bdbc5ede037f",
+      "backend/rushes/organization.py": "6dd420cb1cfd9a4e338579014c910ad35a398148be490589dce75efb35bcc09b",
+      "backend/rushes/security.py": "e37a3db7d1aa5dce95706a301d4d940109b056168f78ba02cd53d0f65c298f71",
+      "backend/rushes/source_frames.py": "db417b64551f5a1596218be91b2cfdb6d454a60fe69a6433dd43d5e54e1e53ca",
+      "backend/rushes/__init__.py": "c597b688dbb4884fe5592821ec7c9cf26f03cfa755a07362ae3e43f36d1a2d0e",
+      "backend/rushes/routes_organization.py": "a0d6497877feb30cb53511edee3033df185c23ac31acf2cdcd578be8c469a6cb",
+      "backend/rushes/workflow_service.py": "6407fc58d58ef058c65fb394a282daa6af3db617ddfa52e1211171a48b8039e6",
+      "backend/rushes/routes_collections.py": "9b55990d596728f55ec6855df4a140b6f4afbc71a9b8eb98adf4ea2cd87d693c",
+      "backend/rushes/api.py": "2961e784eb9e54dd3445b607fb1138165b2e76db33d7745b3cda563c1c2e31df",
+      "backend/rushes/timing.py": "0f37f41b60fb9cfa0a72b0b281153649f03493bf3d41fd58058e7799d9b5ae39",
+      "backend/rushes/pipeline.py": "5d4e5241fec27688de0213cda1f1249221c3bbf700f9474532500338b30e62c8",
+      "backend/rushes/interchange.py": "4ec42dba63c8dd8511ee5cf2f2bf2e2473e978ce7e991b42459e1fdd1ae70719",
+      "backend/rushes/local_models.py": "3ef01af60716deb3832dbf73545e1f53c8a85ec46535f781116df5562a0d2d55",
+      "backend/rushes/storage.py": "e851dabcc237dd1a2c0f6583aa84419ba8bacac08233bc65aa8c2a2a2d0eebdd",
+      "backend/rushes/routes_settings.py": "b205b2a415f395134de278bccd036d71e34a231302cd49b59001368b54ffa321",
+      "backend/rushes/workflows.py": "6343d8e732aa8fe966b24f0ef53a556a44653a6dbcd91f2a51efbd607640ef67",
+      "backend/rushes/deletion.py": "00fbe41f61f3d9f8d84b5680301635efa5e70284b446138b81cd6a79a2c29a96",
+      "backend/rushes/inference.py": "8f799aa892880f437ec05ae364373d1bf942a5146a659b7dadfb46e6f90be6d2",
+      "backend/rushes/routes_deletion.py": "d4672010fd2c4a2df34ad0bba0e4885005ad79915c6709b6732b4b13d726b9ed",
+      "backend/rushes/google_oauth.py": "fcc8360855c5035612f225036553720d04a02f8a549f405932076226ef0c371d",
+      "backend/rushes/remote_compute.py": "0957592005b663ef08cc26b0552bd0c473179ac3dfe6786fb49dee5404a52597",
+      "backend/rushes/credits.py": "83c074d8d6d471ef58d98a39589d27cf0d1a4a4c1ac6d0f80b95e4072cd19fb8",
+      "backend/rushes/provider_budget.py": "1179d43dc2d8a7c48a7a41e364c3821409d6d65c7cc61cc046a7dbb50e2084ce",
+      "backend/rushes/scene_detect.py": "bed348c8eae4813496f0e09fd07c98a0f7793c5c401bdd6613d35c9e129bbf56",
+      "backend/rushes/job_actions.py": "c572c192503f11d7ae532f2ccf942458a450c245936ebc21dc1b65b8668ab076",
+      "tests/test_worker_lifecycle.py": "c9ba3f4f65bfae66596a58f70b7e84432921b3084930e98dbab854ecdc0cdd80",
+      "tests/test_hosted_lifespan.py": "dabb100a6ae14fc2a58a71b68088eccc0068548c8a7cf33b468da320e1cf70ce",
+      "tests/test_checkpoint_io.py": "f21f1ee3ff552023f4461d8748260b33c19ae2782ee5fd32bb222476a6ee33e0"
+    }
+  },
+  "owned_experiment_cleanup": {
+    "checked_at": "2026-09-12T19:25:45.665486+00:00",
+    "checks": [
+      {
+        "identity": "1ae2d2d30708",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      },
+      {
+        "identity": "4490695accbf",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      },
+      {
+        "identity": "69d538f2501b",
+        "containers_removed": true,
+        "volumes_removed": true,
+        "databases_removed": true,
+        "roles_removed": true
+      }
+    ]
+  }
+}

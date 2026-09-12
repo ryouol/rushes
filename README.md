@@ -2,7 +2,7 @@
 
 A working local footage library, persistent worklog, search workspace, and clip exporter. This is a **local release candidate with explicit verification gaps**, not a completed production release. Gemini analysis sends derived clips and transcript context to Google; local-first does not mean fully offline.
 
-**RUSHES is live at [rushes.onrender.com](https://rushes.onrender.com).** Render hosts the web/API, durable workflows and media; private Modal functions handle speech and embeddings. The $20/month budget is a soft target: this lean configuration is approximately $35/month fixed, with a separate $2 monthly provider-call allowance. See [deployment status and verification](docs/PRODUCTION.md) and [the numbered review record](docs/PRODUCTION-REVIEW.md).
+**RUSHES is live at [rushes.onrender.com](https://rushes.onrender.com).** Render hosts the web/API, durable workflows and media; private Modal functions handle speech and embeddings. The requested $20/month combined budget is not currently met: the deployed configuration is approximately $35/month fixed, with a separate $2 monthly provider-call allowance. A lower-memory candidate is under local verification; no total invoice cap is enforced. See [deployment status and verification](docs/PRODUCTION.md) and [the current review record](docs/SHARED-RUNTIME-REVIEW.md).
 
 ## Start locally
 
