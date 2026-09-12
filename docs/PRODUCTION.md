@@ -16,7 +16,7 @@ RUSHES is live at **https://rushes.onrender.com** on Render, with private speech
 
 - Render project `prj-dahh47mk1f9s73f99g70`, production environment `evm-dahh47mk1f9s73f99g7g`.
 - Web service `srv-dahk822d0e5s73fo22o0`; private GitHub repository [ryouol/rushes](https://github.com/ryouol/rushes), branch `codex/production`; automatic deployments disabled.
-- Postgres `dpg-dahk1qek1f9s73fk9n5g-a`; application schema `0006`; distinct `rushes`, `rushes_temporal`, and `rushes_visibility` databases.
+- Postgres `dpg-dahk1qek1f9s73fk9n5g-a`; application schema `0007`; distinct `rushes`, `rushes_temporal`, and `rushes_visibility` databases.
 - Private Modal app [rushes-compute](https://modal.com/apps/royluo05/rushes-production/deployed/rushes-compute), environment `rushes-production`. Both functions scale to zero, cap at one container each, request/limit one CPU and 2 GiB, and have 60-second startup/120-second execution bounds. [Live resource-limit verification](validation/modal-resource-limits.json).
 
 ## Spending and storage controls
@@ -36,7 +36,7 @@ Uploads are limited to 1 GiB each and one hour of source duration. Disk-space ch
 - A controlled restart retained the session, ready asset and correction, preserved preview bytes, and completed a new original-copy export whose SHA-256 exactly matched the uploaded original. [Restart evidence](validation/render-restart.json).
 - The final local image workflow harness separately tested interrupted work recovery, private Temporal ports, unavailable startup termination and fail-closed worker/server crashes. [Workflow evidence](validation/workflow-hosting.json). Its historical image predates the provider allowance; Render builds the current application from the recorded repository commit.
 
-Provider preparation failures are handled separately from generation failures: bounded retries apply only to idempotent file-status reads; generation is dispatched once. Persistent preparation failure records zero generation usage, stops later windows, and preserves the checkpoint for explicit Resume processing. Failed file deletion remains recorded and must complete before another upload. Actual generation failures remain uncertain and are never automatically repeated.
+Provider preparation failures are handled separately from generation failures: bounded retries apply only to idempotent file-status reads; generation is dispatched once. Persistent preparation failure records zero generation usage, stops later windows, and preserves the checkpoint for explicit Resume processing. Failed file deletion remains recorded; deletion must succeed or its authoritative expiry must pass before another upload. Actual generation failures remain uncertain and are never automatically repeated.
 
 ## Operational boundaries
 
@@ -57,3 +57,11 @@ On 12 September, local Docker storage errors were recovered by clearing a downlo
 The supervisor now releases configuration/readiness dependencies after startup. Seven focused tests and the fresh full 2 GiB container upload/recovery/lifecycle harness passed. [Review](SUPERVISOR-REVIEW.md), [container evidence](validation/supervisor-hosting.json). Local tests of the $7, 512 MiB service size ran out of memory during sign-in, even with the smaller supervisor; emulation limits native-capacity conclusions. [Memory evidence](validation/supervisor-memory.json). The existing Render size remains in place and the $20/month budget discrepancy remains open.
 
 This supervisor follow-up is live at runtime `7ba9a34` / deployment `dep-daip0kvqj5pc73b0rlng`. Startup and public endpoint checks passed, and the existing plan, instance count, disk and all environment values were verified unchanged. [Deployment evidence](validation/supervisor-deployment.json). Paid processing and real Google login were not repeated; their earlier revision-specific evidence remains above. Preexisting Google file-cleanup 403 responses remain tracked for follow-up; deletion is not confirmed.
+
+## Provider cleanup follow-up
+
+Runtime `3584971` / deployment `dep-daipmk8ae00c73ffk0c0` is live. The additive `0007` migration preserved all 13 existing analysis windows and 17 forced-RLS tables. Ninety isolated tests, fresh migrations, and an existing-row upgrade check passed. [Review and all findings](PROVIDER-CLEANUP-REVIEW.md), [deployment evidence](validation/provider-cleanup-deployment.json).
+
+Uploaded files now retain their actual provider expiry before generation. Known expired files can be released without another remote call; unknown expiry stays conservative. Unresolved cleanup retries are delayed one hour so newer files can progress. Read-only production inspection confirmed the new implementation and delayed retries for the three retained ambiguous references. No uncertain generation was repeated.
+
+Local access is running at `http://localhost:3741`, with the existing signed-in workspace and all seven original videos visible. Those seven videos still need analysis after their historical missing-key failures; the key is configured now, but they were not reprocessed during this repair while the combined-budget clarification remains pending. The current Render plans, disk, instance count, environment values and provider allowance were preserved. Paid processing and real Google login were not repeated on this deployment.

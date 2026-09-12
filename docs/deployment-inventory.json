@@ -20,9 +20,9 @@
           "name": "rushes-media",
           "sizeGB": 10
         },
-        "deploy_id": "dep-daip0kvqj5pc73b0rlng",
+        "deploy_id": "dep-daipmk8ae00c73ffk0c0",
         "status": "live",
-        "runtime_commit": "7ba9a34ca747a3b69182d36c0e1133367bdaccb3",
+        "runtime_commit": "3584971008ff25880950ab677c9f739908e11dce",
         "num_instances": 1
       }
     ],
@@ -33,13 +33,13 @@
         "status": "available",
         "plan": "0.1c-256mb",
         "region": "ohio",
-        "application_schema": "0006",
+        "application_schema": "0007",
         "external_access_disabled": true,
         "disk_autoscaling": false,
         "storage_gb": 5
       }
     ],
-    "checked_at": "2026-09-12T17:50:59.605467+00:00"
+    "checked_at": "2026-09-12T18:38:58.157505+00:00"
   },
   "budget": {
     "combined_monthly_usd": 20,
@@ -97,13 +97,13 @@
     "app_provider_allowance_configured": true
   },
   "production_deployed": true,
-  "checked_at": "2026-09-12T17:50:59.605467+00:00",
+  "checked_at": "2026-09-12T18:38:58.157505+00:00",
   "gemini": {
     "configured": true,
     "model": "gemini-3.6-flash",
     "project": "projects/50426910677",
     "standalone_video_validation": "passed",
-    "full_browser_validation": "Historical fresh paid-processing/browser evidence on runtime 2cb0774. Google connection/returning login verified on 83d8758. Supervisor deployment on 7ba9a34 passed public startup checks; paid processing and real Google login were not repeated."
+    "full_browser_validation": "Historical paid-processing/browser evidence on 2cb0774; Google connection/returning login on 83d8758. Current cleanup runtime 3584971 passed public HTTP and read-only runtime checks. Three unknown-expiry ambiguous references are retained with delayed retries. No paid processing was repeated; seven local originals still need analysis."
   },
   "production_image": {
     "id": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
@@ -111,8 +111,8 @@
     "local_runtime_verified": true,
     "published": false,
     "runtime_source_commit": "7ba9a34ca747a3b69182d36c0e1133367bdaccb3",
-    "matches_current_runtime_source": true,
-    "note": "Locally built from the repository Dockerfile; Render built its own image from the same runtime source commit. Local hash is not asserted to be the Render image hash.",
+    "matches_current_runtime_source": false,
+    "note": "Historical local Dockerfile image verified at supervisor runtime 7ba9a34. Render built current runtime 3584971 from the repository. No current-source local image rebuild was attempted after the host disk-pressure incident; isolated source and migration tests passed.",
     "validation": "validation/supervisor-hosting.json"
   }
 }

@@ -1,0 +1,66 @@
+{
+  "checked_at": "2026-09-12T18:38:58.157505+00:00",
+  "deployment": {
+    "id": "dep-daipmk8ae00c73ffk0c0",
+    "status": "live",
+    "createdAt": "2026-09-12T18:34:57.462732Z",
+    "updatedAt": "2026-09-12T18:36:57.097628Z",
+    "finishedAt": "2026-09-12T18:36:57.097375Z"
+  },
+  "runtime_commit": "3584971008ff25880950ab677c9f739908e11dce",
+  "previous_runtime_commit": "7ba9a34ca747a3b69182d36c0e1133367bdaccb3",
+  "service_id": "srv-dahk822d0e5s73fo22o0",
+  "url": "https://rushes.onrender.com",
+  "service_plan": "1c-2g",
+  "instances": 1,
+  "environment_values_unchanged": true,
+  "environment_variable_count": 22,
+  "service_plan_instances_disk_unchanged": true,
+  "database_plan_unchanged": true,
+  "automatic_deployments_disabled": true,
+  "database_external_access_disabled": true,
+  "application_schema": "0007",
+  "public_http_checks": {
+    "/": 200,
+    "/privacy": 200,
+    "/terms": 200,
+    "/api/health": 200,
+    "/api/auth/providers": 200,
+    "unauthenticated_workspaces": 401
+  },
+  "provider_generation_dispatched": false,
+  "local_browser": {
+    "signed_in_session_preserved": true,
+    "workspace_and_existing_project_opened": true,
+    "original_videos_visible": 7,
+    "videos_still_need_analysis": 7,
+    "historical_missing_key_error_visible": true,
+    "gemini_key_currently_configured": true,
+    "processing_repeated": false
+  },
+  "limitations": [
+    "No paid Gemini or Modal generation was dispatched by this validation",
+    "Production authenticated playback and real Google login were not repeated; historical evidence remains revision-specific",
+    "Three legacy provider references remain ambiguous with unknown expiry; deletion is not claimed",
+    "Seven local originals remain unprocessed after their historical missing-key failure",
+    "Fixed hosting remains approximately $35/month before variable charges and tax; combined $20 budget clarification remains pending",
+    "Local Docker image verified in the supervisor stage predates this source; Render built this runtime from the repository"
+  ],
+  "read_only_live_runtime_inspection": {
+    "provider_files_source_sha256": "b42b7bff3d4050f0fa0c6cfa23c5fd602765b7796f2d909f849cfdaf8d49c220",
+    "analysis_window_count": 13,
+    "retained_file_references": 3,
+    "retained_states": [
+      "ambiguous",
+      "ambiguous",
+      "ambiguous"
+    ],
+    "all_retained_expiries_unknown": true,
+    "all_retained_retries_delayed": true,
+    "gemini_configured": true,
+    "compute_backend": "modal",
+    "provider_allowance_microusd": 2000000
+  },
+  "provider_cleanup_source_matches_deployed_file": true,
+  "local_launcher_pid": 44634
+}
