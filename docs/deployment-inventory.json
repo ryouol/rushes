@@ -13,16 +13,16 @@
         "branch": "codex/production",
         "repo": "https://github.com/ryouol/rushes",
         "url": "https://rushes.onrender.com",
-        "plan": "1c-2g",
+        "plan": "0.5c-512mb",
         "disk": {
           "id": "dsk-dahk82ad0e5s73fo25dg",
           "mountPath": "/var/data",
           "name": "rushes-media",
           "sizeGB": 10
         },
-        "deploy_id": "dep-daipmk8ae00c73ffk0c0",
+        "deploy_id": "dep-daisgte7bikc739tunb0",
         "status": "live",
-        "runtime_commit": "3584971008ff25880950ab677c9f739908e11dce",
+        "runtime_commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
         "num_instances": 1
       }
     ],
@@ -39,22 +39,23 @@
         "storage_gb": 5
       }
     ],
-    "checked_at": "2026-09-12T18:38:58.157505+00:00"
+    "checked_at": "2026-09-12T21:57:27.854353+00:00"
   },
   "budget": {
     "combined_monthly_usd": 20,
-    "hard_cap_required": null,
+    "hard_cap_required": true,
     "render_total_spend_cap_available": false,
     "billable_resources_created": true,
     "period": "calendar month",
-    "note": "Current task requests $20/month combined. A separate task later allowed limited overage, but the working topology is approximately $35/month fixed. A concrete clarification is pending; neither the desired strictness nor approval of this amount should be inferred from the separate provider allowance.",
+    "note": "User confirmed $20/month combined. One 512 MiB web service plus database/disks totals about $17/month; separate cloud/local provider ledgers cap $1.90/$0.85. These are conservative reservations, not invoices. Build/egress/tax and native Google cap enforcement latency prevent a guaranteed hard total invoice cap. No larger combined budget was approved.",
     "combined_monthly_target_usd": 20,
-    "fixed_monthly_estimate_usd": 35,
-    "provider_monthly_allowance_usd": 2,
+    "fixed_monthly_estimate_usd": 17,
+    "provider_monthly_allowance_usd": 1.9,
     "allowance_scope": "Combined Gemini and Modal call reservations; excludes fixed hosting, build/deploy compute, egress and tax.",
-    "clarification_pending": true,
-    "local_provider_monthly_allowance_usd": 2,
-    "local_allowance_scope": "Separate local database ledger; not shared with production and not a combined invoice cap."
+    "clarification_pending": false,
+    "local_provider_monthly_allowance_usd": 0.85,
+    "local_allowance_scope": "Separate local database ledger; not shared with production and not a combined invoice cap.",
+    "combined_fixed_and_allowances_usd": 19.75
   },
   "other_projects_observed": [
     {
@@ -88,7 +89,10 @@
         "active_tasks": 0,
         "cpu_limit": 1,
         "memory_limit_mib": 2048,
-        "startup_timeout_seconds": 60
+        "startup_timeout_seconds": 60,
+        "code_tag": "2c8d80d",
+        "relevance_model": "Xenova/ms-marco-MiniLM-L-6-v2",
+        "function_signature_note": "embed accepts an optional query for bounded relevance scoring; existing embedding calls remain compatible."
       }
     ],
     "volumes": [],
@@ -97,22 +101,29 @@
     "app_provider_allowance_configured": true
   },
   "production_deployed": true,
-  "checked_at": "2026-09-12T18:38:58.157505+00:00",
+  "checked_at": "2026-09-12T21:57:27.854353+00:00",
   "gemini": {
     "configured": true,
-    "model": "gemini-3.6-flash",
+    "model": "gemini-3.1-pro-preview",
     "project": "projects/50426910677",
     "standalone_video_validation": "passed",
-    "full_browser_validation": "Historical paid-processing/browser evidence on 2cb0774; Google connection/returning login on 83d8758. Current cleanup runtime 3584971 passed public HTTP and read-only runtime checks. Three unknown-expiry ambiguous references are retained with delayed retries. No paid processing was repeated; seven local originals still need analysis."
+    "full_browser_validation": "Current Pro 12-second synthetic QA analysis passed in 21.86 seconds after linking billing. Production semantic search returned blue at5\u201312s and excluded an unrelated elephant query. Upload-through-rendered-export passed on59e9cc8; continuation on ec10442 verified collection adjustment, XML/JSON/CSV, responsive settings and logout.",
+    "thinking_level": "low",
+    "project_id": "gen-lang-client-0912851229",
+    "billing_linked": true,
+    "billing_account_id": "0182A6-217CA7-8222A6",
+    "billing_tier": "Tier 1",
+    "project_spend_cap_usd": 2.75,
+    "spend_cap_experimental_latency_minutes": 10
   },
   "production_image": {
-    "id": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+    "build_provider": "Render",
+    "runtime_source_commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
     "architecture": "linux/amd64",
-    "local_runtime_verified": true,
-    "published": false,
-    "runtime_source_commit": "7ba9a34ca747a3b69182d36c0e1133367bdaccb3",
-    "matches_current_runtime_source": false,
-    "note": "Historical local Dockerfile image verified at supervisor runtime 7ba9a34. Render built current runtime 3584971 from the repository. No current-source local image rebuild was attempted after the host disk-pressure incident; isolated source and migration tests passed.",
-    "validation": "validation/supervisor-hosting.json"
+    "runtime_verified": true,
+    "local_full_rebuild": false,
+    "historical_local_image_id": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+    "note": "Current production image built by Render. The retained local image ID is historical. No full local rebuild under host disk pressure.",
+    "validation": "validation/search-repair.json"
   }
 }

@@ -1,6 +1,6 @@
 # Static frontend review
 
-Candidate following `7f2d088`, reviewed on 12 September 2026. Production remains on `3584971` and its existing Render plan. The local launcher now serves the exported frontend through Python. This record retains every reported issue, including duplicates and fixed prototype findings. Locations are the file/line observed by each reviewer before subsequent edits.
+Implementation following `7f2d088`, reviewed on 12 September 2026. It was deployed and downsized to 512 MiB/0.5 CPU on 12 September; current runtime identity is in the deployment inventory. The local launcher now serves the exported frontend through Python. This record retains every reported issue, including duplicates and fixed prototype findings. Locations are the file/line observed by each reviewer before subsequent edits.
 
 ## Simplify: isolated prototype
 
@@ -38,8 +38,9 @@ Candidate following `7f2d088`, reviewed on 12 September 2026. Production remains
 - Canonical local frontend: 27 browser regressions passed. Earlier Node-static and ASGI prototypes also passed those 27 tests independently. Browser APIs were mocked; these do not establish provider or Google authentication success.
 - Isolated 512 MiB/0.5 CPU prototypes passed synthetic 4K interrupted preparation/recovery and three actual short source video streams (10-bit HEVC, 60 fps portrait H.264, and full-range 1440×1920 H.264), copied into muted derivatives for local verification. Login succeeded during each preparation. Cumulative peak for the resumed actual-format container was 499,167,232 bytes; no OOM was recorded. Original source files were read only. No new AI quality or representative long-footage capacity claim.
 - The real Next development proxy passed a streamed 128 KiB body, separate cookies, Host rejection and Origin rejection with a synthetic API and no provider/database calls.
-- The final frozen-source 512 MiB/0.5 CPU harness passed durable interruption/recovery, source hash and session preservation, private Temporal isolation, startup termination and API/Temporal crash shutdown. Its resumed-container peak was 486,518,784 bytes, including an extra workflow probe process. The full accepted 8K input limit remains under capacity qualification.
-- Production, Render plan, disks, provider allowances and other projects are unchanged. The requested $20/month combined budget is not yet met or enforced as an invoice cap.
+- The final frozen-source 512 MiB/0.5 CPU harness passed durable interruption/recovery, source hash and session preservation, private Temporal isolation, startup termination and API/Temporal crash shutdown. Its resumed-container peak was 486,518,784 bytes, including an extra workflow probe process. A later basic two-second, one-frame-per-second flat-color 8K fixture passed at 502,222,848 bytes; complex and long 8K remain unqualified.
+- Production was deployed on the $7 service with 512 MiB/0.5 CPU. Fixed hosting is now $17/month; current local and production provider allowances total $2.75, for $19.75 before build/egress/tax. Other projects were untouched. A hard $20 total invoice cap remains unavailable.
+- On actual Render runtime `59e9cc8`, the paid browser journey completed upload, Gemini/Modal processing, playback, corrections, rendered export, saved search, notes and source checks. It stopped on a test-selector ambiguity at the collection-adjustment step; the selector was corrected. Peak memory was 356,548,608 bytes with no OOM events. This resolves the fresh production image portion of finding 13; it does not establish long-footage capacity.
 - No PR exists; no GitHub comments or review label were posted.
 
 Detailed scope and resource cleanup are recorded in [static-frontend.json](validation/static-frontend.json).

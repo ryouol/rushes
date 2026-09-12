@@ -1,0 +1,203 @@
+{
+  "checked_at": "2026-09-12T21:57:27.854353+00:00",
+  "runtime_commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
+  "deploy_id": "dep-daisgte7bikc739tunb0",
+  "ci": {
+    "url": "https://github.com/ryouol/rushes/actions/runs/34720754278",
+    "conclusion": "success",
+    "backend_passed": 315,
+    "skipped": 2,
+    "browser_passed": 27,
+    "build_typecheck_lint": "passed"
+  },
+  "local_pilot": {
+    "actual_footage": [
+      {
+        "query": "airplanes leaving smoke trails over a city",
+        "seconds_first_repeat": [
+          0.867,
+          0.02
+        ],
+        "notice": null,
+        "results": [
+          {
+            "asset": "IMG_6175.MOV",
+            "start_us": 0,
+            "end_us": 14006667,
+            "score": 7.326
+          },
+          {
+            "asset": "IMG_1152.mov",
+            "start_us": 0,
+            "end_us": 2000000,
+            "score": 6.736
+          },
+          {
+            "asset": "IMG_1152.mov",
+            "start_us": 8500000,
+            "end_us": 14133333,
+            "score": 0.902
+          }
+        ]
+      },
+      {
+        "query": "people dancing at a nightclub",
+        "seconds_first_repeat": [
+          0.139,
+          0.021
+        ],
+        "notice": null,
+        "results": [
+          {
+            "asset": "IMG_6232.MOV",
+            "start_us": 0,
+            "end_us": 7403333,
+            "score": 2.937
+          }
+        ]
+      },
+      {
+        "query": "computer monitors on a desk",
+        "seconds_first_repeat": [
+          0.181,
+          0.022
+        ],
+        "notice": null,
+        "results": [
+          {
+            "asset": "IMG_7744.MOV",
+            "start_us": 0,
+            "end_us": 5475000,
+            "score": 4.668
+          },
+          {
+            "asset": "IMG_7744.MOV",
+            "start_us": 2000000,
+            "end_us": 3800000,
+            "score": -2.281
+          }
+        ]
+      },
+      {
+        "query": "a dog running on a beach",
+        "seconds_first_repeat": [
+          0.054,
+          0.017
+        ],
+        "notice": null,
+        "results": []
+      }
+    ],
+    "synthetic_concept_scores": {
+      "ocean": [
+        -0.461,
+        -11.266,
+        -11.042
+      ],
+      "car": [
+        0.764,
+        -11.116,
+        -11.136
+      ],
+      "driving": [
+        2.375,
+        -10.996,
+        -11.173
+      ],
+      "hashmaps": [
+        -11.396,
+        5.941,
+        -11.363
+      ]
+    }
+  },
+  "production_search": [
+    {
+      "query": "blue screen",
+      "text_first_semantic_repeat_seconds": [
+        0.165,
+        9.236,
+        0.088
+      ],
+      "mode": "hybrid",
+      "notice": null,
+      "ranges": [
+        {
+          "start_us": 5000000,
+          "end_us": 12000000,
+          "evidence": [
+            "Solid blue screen display."
+          ]
+        }
+      ]
+    },
+    {
+      "query": "an elephant walking through a forest",
+      "text_first_semantic_repeat_seconds": [
+        0.071,
+        0.46,
+        0.077
+      ],
+      "mode": "hybrid",
+      "notice": null,
+      "ranges": []
+    }
+  ],
+  "production_pro_analysis": {
+    "model": "gemini-3.1-pro-preview",
+    "asset_id": "8d7dbbe1-e5e1-4cfd-a56e-9411856a8121",
+    "scope": "One existing 12-second synthetic QA source; not long-footage qualification",
+    "state": "ready",
+    "job_id": "15ab174d-3670-4e75-ba18-003bfa0d7b02",
+    "processing_seconds": 21.86,
+    "job_error": null,
+    "passed": true
+  },
+  "google_billing": {
+    "project_number": "50426910677",
+    "project_id": "gen-lang-client-0912851229",
+    "account": "0182A6-217CA7-8222A6",
+    "tier": "Tier 1",
+    "project_cap_usd": 2.75,
+    "cap_latency_warning_minutes": 10,
+    "new_payment_method_or_prepayment_purchase": false
+  },
+  "runtime": {
+    "commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
+    "model": "gemini-3.1-pro-preview",
+    "thinking": "low",
+    "backend": "modal",
+    "allowance_microusd": 1900000,
+    "reserved_by_provider_microusd": {
+      "modal": 580000,
+      "gemini": 1290000
+    },
+    "memory_limit_bytes": 536870912,
+    "memory_peak_bytes": 333586432,
+    "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+    "cpu_limit": "50000 100000"
+  },
+  "quota_recovery": {
+    "window": "8814bba2-bf29-4c52-a0c9-e631bc24d04d",
+    "job": "190334e6-3854-4aff-8eb4-d3cbc32fe760",
+    "state": "pending",
+    "reason": "Explicit HTTP429 in Render log for this exact workflow/activity; not an uncertain transport outcome",
+    "provider_reservations_changed": false,
+    "generation_dispatched": false
+  },
+  "historical_cleanup_note": "The original rejected request had no saved generation response. Its stale provider file reference prevented same-job resume; it remains tracked for cleanup. A fresh analysis operation after billing linkage completed, with no monetary reservation refund.",
+  "scope": "Small actual-footage pilot plus one 12-second synthetic live Pro call. Not a representative long-footage/human-labeled retrieval benchmark.",
+  "production_browser_continuation": {
+    "passed": true,
+    "runtime_commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
+    "seconds": 14.3,
+    "steps": [
+      "collection range adjusted to 3\u20135 seconds",
+      "FCP7 XML export created",
+      "JSON and CSV downloads verified",
+      "desktop and mobile settings layouts",
+      "logout"
+    ],
+    "new_ai_requests": 0
+  }
+}

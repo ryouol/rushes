@@ -1,0 +1,79 @@
+{
+  "date": "2026-09-12",
+  "production_commit": "59e9cc830b388cbc99002cb86c8bcb7c828bd95e",
+  "actual_render_service_plan": "0.5c-512mb",
+  "actual_render_memory": {
+    "sample_count": 240,
+    "sampled_peak_bytes": 356548608,
+    "final_bytes": 320634880,
+    "cgroup_peak_bytes": 356548608,
+    "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+    "memory_limit_bytes": 536870912
+  },
+  "paid_browser_steps_passed": [
+    "signup",
+    "upload",
+    "processing ready",
+    "playback",
+    "correction",
+    "selection",
+    "rendered export",
+    "persistent correction",
+    "search",
+    "saved search",
+    "note",
+    "source check",
+    "analysis estimate"
+  ],
+  "paid_browser_interruption": "Ambiguous Selected moments test selector before adjustment; selector fixed. Continuation result recorded separately.",
+  "basic_8k": {
+    "passed": true,
+    "image": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+    "architecture": "amd64",
+    "source_revision": "7cf600e frozen canonical source; 128MiB Go target; 8K synthetic media",
+    "memory_limit_bytes": 536870912,
+    "cpus": 0.5,
+    "peak_memory_bytes": 502222848,
+    "api_upload_processed_by_worker": true,
+    "same_job_after_restart": true,
+    "preview_stream_verified": true,
+    "synthetic_duration_seconds": 2,
+    "media_activity_concurrency": 1,
+    "static_frontend": true,
+    "synthetic_resolution": "7680x4320",
+    "provider_allowance_microusd": 0,
+    "scope": "Disposable local container: real API signup/upload, durable interruption/resumption and preview; no provider calls, no representative capacity claim"
+  },
+  "local_originals": {
+    "count": 7,
+    "all_ready": true,
+    "sha256_matches_original_fingerprints": true,
+    "new_gemini_calls": 7,
+    "generation_repeated_for_rounding_recovery": false
+  },
+  "rounding_recovery": {
+    "asset_id": "490f3a1b-c03e-4cd5-877e-aa4af8b587a3",
+    "window_id": "99d90211-a7cf-4cde-893d-2bacac002eda",
+    "job_id": "e572350e-f737-4ddb-8907-0a8b15b9c8b8",
+    "same_original_job": true,
+    "raw_response_sha256": "b01ebabe05ab88570daed166f2fa6485b5d805713ba7342a40f8952a0c28f62b",
+    "raw_response_preserved": true,
+    "generation_dispatched": false,
+    "proposed_end_us": 14007000,
+    "refined_end_us": 14006667
+  },
+  "scope": "Short synthetic/actual-format functional checks; not representative long footage or complex8K qualification.",
+  "production_browser_continuation": {
+    "passed": true,
+    "runtime_commit": "ec10442f428abdea7fc4ac7dd54d39bab9e56ea6",
+    "seconds": 14.3,
+    "steps": [
+      "collection range adjusted to 3\u20135 seconds",
+      "FCP7 XML export created",
+      "JSON and CSV downloads verified",
+      "desktop and mobile settings layouts",
+      "logout"
+    ],
+    "new_ai_requests": 0
+  }
+}
