@@ -29,6 +29,7 @@ from rushes.storage import (
     open_source,
     require_space,
     run_storage_thread,
+    sync_file,
 )
 from rushes.timing import Interval, bounded_windows
 
@@ -123,7 +124,7 @@ async def prepare_asset(workspace_id: str, asset_id: str, progress=None) -> dict
     result = await run_storage_thread(
         _prepare, workspace_id, asset_id, root, relative, progress, expected_digest
     )
-    folder = asset_folder(workspace_id, asset_id)
+    folder = await run_storage_thread(asset_folder, workspace_id, asset_id)
     async with tenant_session(workspace_id) as db:
         asset = await db.get(Asset, UUID(asset_id))
         asset.fingerprint = result["source_hash"]
@@ -234,7 +235,7 @@ def extraction_provenance(requested: Interval, extracted: Interval) -> dict:
 
 
 async def ensure_prepared(workspace_id: str, asset_id: str, progress=None) -> dict:
-    path = asset_folder(workspace_id, asset_id) / "manifest.json"
+    path = (await run_storage_thread(asset_folder, workspace_id, asset_id)) / "manifest.json"
     try:
         return json.loads(await run_storage_thread(path.read_text))
     except FileNotFoundError:
@@ -255,8 +256,16 @@ def prepare_audio(workspace_id: str, asset_id: str, window: Interval, progress=N
     return output
 
 
+def save_transcript(transcript_file, rows):
+    temporary = transcript_file.with_suffix(".partial.json")
+    with temporary.open("w") as file:
+        json.dump(rows, file)
+        sync_file(file)
+    os.replace(temporary, transcript_file)
+
+
 async def transcribe_asset(workspace_id: str, asset_id: str, progress=None) -> dict:
-    folder = asset_folder(workspace_id, asset_id)
+    folder = await run_storage_thread(asset_folder, workspace_id, asset_id)
     manifest = await ensure_prepared(workspace_id, asset_id, progress)
     if not manifest["source"]["has_audio"]:
         return {"state": "no_audio", "segments": 0}
@@ -295,18 +304,16 @@ async def transcribe_asset(workspace_id: str, asset_id: str, progress=None) -> d
         extracted = proxy_interval(manifest, window)
         transcript_file = folder / f"transcript-{cache_key}.json"
         try:
-            rows = json.loads(transcript_file.read_text())
+            rows = json.loads(await run_storage_thread(transcript_file.read_text))
         except (OSError, ValueError):
             chunk = await run_storage_thread(
                 prepare_audio, workspace_id, asset_id, window, progress
             )
             try:
                 rows = await run_storage_thread(transcribe, chunk, extracted)
+                await run_storage_thread(save_transcript, transcript_file, rows)
             finally:
-                chunk.unlink(missing_ok=True)
-            temporary = transcript_file.with_suffix(".partial.json")
-            temporary.write_text(json.dumps(rows))
-            os.replace(temporary, transcript_file)
+                await run_storage_thread(chunk.unlink, missing_ok=True)
         async with tenant_session(workspace_id) as db:
             for number, row in enumerate(rows):
                 await db.execute(

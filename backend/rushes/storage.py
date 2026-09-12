@@ -3,6 +3,7 @@ import fcntl
 import hashlib
 import os
 import shutil
+import sys
 from contextlib import contextmanager, suppress
 from functools import wraps
 from pathlib import Path
@@ -145,8 +146,13 @@ def storage_activity(function):
 
     @wraps(function)
     async def guarded(args: dict):
-        with workspace_file_lease(UUID(args["workspace_id"])):
+        lease = workspace_file_lease(UUID(args["workspace_id"]))
+        try:
+            await run_storage_thread(lease.__enter__)
             return await function(args)
+        finally:
+            # Acquisition may finish after cancellation; release it only after its thread drains.
+            await run_storage_thread(lease.__exit__, *sys.exc_info())
 
     return guarded
 

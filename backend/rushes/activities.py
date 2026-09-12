@@ -449,8 +449,10 @@ async def analyze_window(args: dict):
         return await apply_received_response(args)
     chunk = None
     try:
-        chunk = await run_storage_thread(
-            prepare_chunk, args["workspace_id"], args["asset_id"], interval, heartbeat
+        chunk = await keep_alive(
+            run_storage_thread(
+                prepare_chunk, args["workspace_id"], args["asset_id"], interval, heartbeat
+            )
         )
         loop = asyncio.get_running_loop()
 
@@ -462,7 +464,9 @@ async def analyze_window(args: dict):
         def uploaded(name, expires_at):
             asyncio.run_coroutine_threadsafe(save_upload(name, expires_at), loop).result(timeout=30)
 
-        chunk_plan = json.loads(chunk.with_suffix(".timing.json").read_text())
+        chunk_plan = json.loads(
+            await keep_alive(run_storage_thread(chunk.with_suffix(".timing.json").read_text))
+        )
         effective_window = effective_source_interval(chunk_plan, interval)
         result = await keep_alive(
             run_storage_thread(
@@ -527,7 +531,7 @@ async def analyze_window(args: dict):
         return await apply_received_response(args)
     finally:
         if chunk is not None:
-            chunk.unlink(missing_ok=True)
+            await keep_alive(run_storage_thread(chunk.unlink, missing_ok=True))
 
 
 @activity.defn(name="embed_asset")
