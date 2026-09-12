@@ -6,7 +6,7 @@ import shutil
 from contextlib import contextmanager, suppress
 from functools import wraps
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, TextIO
 from uuid import UUID
 
 from rushes.config import settings
@@ -17,7 +17,7 @@ class StorageError(ValueError):
     pass
 
 
-def sync_file(file: BinaryIO) -> None:
+def sync_file(file: BinaryIO | TextIO) -> None:
     file.flush()
     os.fsync(file.fileno())
 

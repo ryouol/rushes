@@ -1,5 +1,4 @@
 import asyncio
-import csv
 import json
 import os
 import re
@@ -13,6 +12,13 @@ from temporalio import activity
 from rushes.activities import heartbeat, keep_alive, stage
 from rushes.config import settings
 from rushes.db import tenant_session
+from rushes.export_documents import (
+    append_worklog,
+    finish_worklog,
+    start_worklog,
+    write_document,
+    write_selections,
+)
 from rushes.interchange import fcp7_xml, fcpxml
 from rushes.media import RENDERER_VERSION, Timeline, render_clip
 from rushes.models import Asset, Export, Job, MediaTimeline, Observation, Usage
@@ -30,14 +36,6 @@ from rushes.timing import Interval
 
 def safe_name(name: str) -> str:
     return re.sub(r"[^\w.-]+", "_", Path(name).stem).strip("._")[:100] or "footage"
-
-
-def csv_safe(value):
-    if isinstance(value, (dict, list)):
-        value = json.dumps(value)
-    if isinstance(value, str) and value.lstrip(" \t\r\n\ufeff").startswith(("=", "+", "-", "@")):
-        return "'" + value
-    return value
 
 
 def export_folder(workspace_id: UUID | str, export_id: UUID | str) -> Path:
@@ -159,6 +157,25 @@ def verify_sources(entries):
                 raise StorageError("Source changed; interchange references must be reviewed")
 
 
+def prepare_export_entries(plan, assets, folder, kind):
+    for entry in plan["entries"]:
+        asset = assets.get(UUID(entry["asset_id"]))
+        if asset is None or asset.fingerprint != entry["fingerprint"]:
+            raise StorageError("The reviewed source changed. Create a new export preview.")
+        entry["source_root"] = str(
+            authorized_source_root(asset.source_root, asset.workspace_id, asset.id)
+        )
+        entry["relative_path"] = asset.relative_path
+        entry["import_relative_path"] = asset.import_relative_path
+    require_space(folder, plan["estimated_bytes"], settings().min_free_bytes)
+    if kind in {"clips", "copies"}:
+        filenames = [entry["filename"] for entry in plan["entries"]]
+        if len(filenames) != len(set(filenames)):
+            raise StorageError("Export outputs contain duplicate filenames; review a new preview")
+        for filename in filenames:
+            media_output_path(folder, filename)
+
+
 @activity.defn(name="render_export")
 @storage_activity
 async def render_export(args: dict):
@@ -178,24 +195,10 @@ async def render_export(args: dict):
                 select(Asset).where(Asset.id.in_(asset_ids), Asset.project_id == project_id)
             )
         }
-        for entry in plan["entries"]:
-            asset = assets.get(UUID(entry["asset_id"]))
-            if asset is None or asset.fingerprint != entry["fingerprint"]:
-                raise StorageError("The reviewed source changed. Create a new export preview.")
-            entry["source_root"] = str(
-                authorized_source_root(asset.source_root, asset.workspace_id, asset.id)
-            )
-            entry["relative_path"] = asset.relative_path
-            entry["import_relative_path"] = asset.import_relative_path
-    folder = export_folder(args["workspace_id"], export_id)
-    require_space(folder, plan["estimated_bytes"], settings().min_free_bytes)
+        folder = export_folder(args["workspace_id"], export_id)
+        await keep_alive(run_storage_thread(prepare_export_entries, plan, assets, folder, kind))
     outputs = []
     if kind in {"clips", "copies"}:
-        filenames = [entry["filename"] for entry in plan["entries"]]
-        if len(filenames) != len(set(filenames)):
-            raise StorageError("Export outputs contain duplicate filenames; review a new preview")
-        for filename in filenames:
-            media_output_path(folder, filename)
         for key, entries in source_groups(plan["entries"]):
             outputs.extend(
                 await keep_alive(
@@ -210,16 +213,15 @@ async def render_export(args: dict):
         order = {entry["filename"]: index for index, entry in enumerate(plan["entries"])}
         outputs.sort(key=lambda output: order[output["output"]])
         manifest = folder / "provenance.json"
-        manifest.write_text(
-            json.dumps(
-                {
-                    "schema": "rushes-export-v1",
-                    "outputs": outputs,
-                    **({"organization": plan["organization"]} if "organization" in plan else {}),
-                },
-                indent=2,
-            )
-        )
+        data = json.dumps(
+            {
+                "schema": "rushes-export-v1",
+                "outputs": outputs,
+                **({"organization": plan["organization"]} if "organization" in plan else {}),
+            },
+            indent=2,
+        ).encode()
+        await keep_alive(run_storage_thread(write_document, manifest, data))
         output_path = str(folder)
     elif kind in {"selections_json", "selections_csv"}:
         rows = [
@@ -237,44 +239,17 @@ async def render_export(args: dict):
             for entry in plan["entries"]
         ]
         target = folder / ("selections.json" if kind == "selections_json" else "selections.csv")
-        temporary = target.with_suffix(".partial")
-        with temporary.open("w", newline="") as file:
-            if kind == "selections_json":
-                json.dump(
-                    {
-                        "schema": "rushes-selections-v1",
-                        "interval_convention": "half-open source elapsed microseconds",
-                        "selections": rows,
-                    },
-                    file,
-                    indent=2,
-                )
-            else:
-                writer = csv.DictWriter(file, fieldnames=list(rows[0]))
-                writer.writeheader()
-                writer.writerows(
-                    {key: csv_safe(value) for key, value in row.items()} for row in rows
-                )
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(temporary, target)
+        outputs = [await keep_alive(run_storage_thread(write_selections, target, kind, rows))]
         output_path = str(target)
-        outputs = [{"output": target.name, "bytes": target.stat().st_size}]
     elif kind in {"fcp7xml", "fcpxml"}:
         target = folder / ("selects.xml" if kind == "fcp7xml" else "selects.fcpxml")
         await keep_alive(run_storage_thread(verify_sources, plan["entries"]))
         writer = fcp7_xml if kind == "fcp7xml" else fcpxml
         data = await keep_alive(run_storage_thread(writer, plan["entries"], "RUSHES selects"))
-        temporary = target.with_suffix(".partial")
-        temporary.write_bytes(data)
-        os.replace(temporary, target)
+        output = await keep_alive(run_storage_thread(write_document, target, data))
         output_path = str(target)
         outputs = [
-            {
-                "output": target.name,
-                "bytes": target.stat().st_size,
-                "validation": "XML structure only; target-editor round trip needs input",
-            }
+            {**output, "validation": "XML structure only; target-editor round trip needs input"}
         ]
     else:
         filename = "worklog.json" if kind == "json" else "worklog.csv"
@@ -290,72 +265,16 @@ async def render_export(args: dict):
             rows = await db.stream(
                 query.order_by(Asset.id, Observation.start_us).execution_options(yield_per=200)
             )
-            with temporary.open("w", newline="") as file:
-                if kind == "json":
-                    file.write(
-                        '{"schema":"rushes-worklog-v1","interval_convention":"half-open source elapsed microseconds","observations":['
-                    )
-                first = True
-                fields = [
-                    "observation_id",
-                    "asset_id",
-                    "source_name",
-                    "source_relative_path",
-                    "import_relative_path",
-                    "source_sha256",
-                    "start_us",
-                    "end_us",
-                    "proposed_start_us",
-                    "proposed_end_us",
-                    "kind",
-                    "description",
-                    "producer",
-                    "model",
-                    "prompt_version",
-                    "preprocessing_version",
-                    "review_status",
-                    "source_timecode",
-                    "time_base",
-                    "timeline_id",
-                    "run_id",
-                    "window_id",
-                    "attributes",
-                    "evidence",
-                    "uncertainty",
-                    "version",
-                ]
-                writer = csv.DictWriter(file, fieldnames=fields)
-                if kind == "csv":
-                    writer.writeheader()
-                async for observation, asset, timeline in rows:
-                    row = {
-                        key: getattr(observation, key)
-                        for key in fields
-                        if hasattr(observation, key)
-                    }
-                    row.update(
-                        observation_id=str(observation.id),
-                        asset_id=str(asset.id),
-                        source_name=asset.name,
-                        source_relative_path=asset.relative_path,
-                        import_relative_path=asset.import_relative_path,
-                        source_sha256=asset.fingerprint,
-                        source_timecode=timeline.details.get("source_timecode"),
-                        time_base=timeline.details["time_base"],
-                    )
-                    if kind == "json":
-                        file.write(("" if first else ",") + json.dumps(row, default=str))
-                    else:
-                        # Spreadsheet consumers must not evaluate transcript/OCR text as formulas.
-                        writer.writerow({key: csv_safe(value) for key, value in row.items()})
-                    require_space(folder, 0, settings().min_free_bytes)
-                    first = False
-                    heartbeat("Writing worklog export")
-                if kind == "json":
-                    file.write("]}")
-        os.replace(temporary, target)
+            await keep_alive(run_storage_thread(start_worklog, temporary, kind))
+            first = True
+            async for records in rows.partitions():
+                await keep_alive(
+                    run_storage_thread(append_worklog, temporary, kind, records, first)
+                )
+                first = False
+                heartbeat("Writing worklog export")
+        outputs = [await keep_alive(run_storage_thread(finish_worklog, temporary, target, kind))]
         output_path = str(target)
-        outputs = [{"output": target.name, "bytes": target.stat().st_size}]
     async with tenant_session(args["workspace_id"]) as db:
         job = await db.scalar(select(Job).where(Job.id == UUID(args["job_id"])).with_for_update())
         if job.state in {"failed", "canceled", "cancel_requested"}:
