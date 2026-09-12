@@ -1,0 +1,67 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: rushes
+          POSTGRES_USER: rushes_admin
+          POSTGRES_PASSWORD: synthetic-ci-owner
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rushes_admin -d rushes"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      RUSHES_DATABASE_URL: postgresql+psycopg://rushes_app:synthetic-ci-runtime@127.0.0.1:55432/rushes
+      RUSHES_ADMIN_DATABASE_URL: postgresql+psycopg://rushes_admin:synthetic-ci-owner@127.0.0.1:55432/rushes
+      RUSHES_APP_PASSWORD: synthetic-ci-runtime
+      RUSHES_SECRET: synthetic-ci-secret-never-used-in-production
+      RUSHES_ORIGIN: http://localhost:3741
+      RUSHES_GEMINI_MODEL: gemini-3.1-pro-preview
+      RUSHES_GEMINI_API_KEY: ""
+      RUSHES_PROVIDER_MONTHLY_ALLOWANCE_MICROUSD: "0"
+      RUSHES_STORAGE_ROOT: .local/ci-storage
+      RUSHES_OUTPUT_ROOT: .local/ci-exports
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.8"
+          python-version: "3.12"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg libgl1
+      - run: uv sync --locked
+      - run: uv run python scripts/bootstrap_db.py
+      - run: uv run ruff check backend scripts deploy tests
+      - run: uv run pytest -q -m "not provider"
+      - run: npm ci --prefix web
+      - run: uv run python scripts/build_web.py
+      - run: npm run typecheck --prefix web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Browser regressions with synthetic API responses
+        run: |
+          .venv/bin/python -m rushes.http_server > .local/ci-http.log 2>&1 &
+          RUSHES_CI_SERVER_PID=$!
+          trap 'kill "$RUSHES_CI_SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:3741/api/health; then break; fi
+            sleep 0.5
+          done
+          cd web
+          npx playwright test e2e/auth.spec.ts e2e/state-regressions.spec.ts --workers=1 --retries=0 --reporter=line
