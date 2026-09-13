@@ -1,21 +1,79 @@
-# RUSHES
+<div align="center">
+  <img src="web/public/brand/mark.png" width="64" alt="RUSHES logo">
+  <h1>RUSHES</h1>
+  <p><strong>Drop in footage. Let AI organize it. Find the shot you need.</strong></p>
+  <p>
+    <a href="https://rushes.onrender.com">Live app</a> ·
+    <a href="https://screen.studio/share/9dYaSqmr">Watch the demo</a> ·
+    <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+    <a href="#run-locally">Run locally</a>
+  </p>
+  <a href="https://github.com/ryouol/rushes/actions/workflows/ci.yml"><img src="https://github.com/ryouol/rushes/actions/workflows/ci.yml/badge.svg?branch=codex%2Fproduction" alt="CI status"></a>
+</div>
 
-A working local footage library, persistent worklog, search workspace, and clip exporter. This is a **local release candidate with explicit verification gaps**, not a completed production release. Gemini analysis sends derived clips and transcript context to Google; local-first does not mean fully offline.
+RUSHES turns a folder of video into a searchable footage library. It analyzes shots, produces timestamped observations, groups footage by content, and lets you review the evidence before saving or exporting a selection. The core workflow is **ingest → analyze → organize → search → review → export**.
 
-**RUSHES is live at [rushes.onrender.com](https://rushes.onrender.com).** Render hosts the web/API, durable workflows and media; private Modal functions handle speech and embeddings. The requested $20/month combined budget is not currently met: the deployed configuration is approximately $35/month fixed, with a separate $2 monthly provider-call allowance. A lower-memory candidate is under local verification; no total invoice cap is enforced. See [deployment status and verification](docs/PRODUCTION.md) and [the current review record](docs/STATIC-FRONTEND-REVIEW.md).
+[![RUSHES: Your footage. Organized by AI.](docs/screenshots/landing.png)](https://screen.studio/share/9dYaSqmr)
 
-## Start locally
+**[Watch the recorded walkthrough →](https://screen.studio/share/9dYaSqmr)**
 
-Tested on Apple M1 Pro, 16 GiB RAM, macOS, Node 22.23.2, Python 3.12.12, Docker, and FFmpeg/ffprobe 8.0.1. Requires `uv`, Node 22+, Docker Compose, FFmpeg/ffprobe, and a supported Python 3.12/3.13. The local transcription backend uses CPU int8, two threads, and the tiny Whisper model. Whisper and FastEmbed download public model weights on first use. Allow several GB for dependencies/models **plus footage, proxies, and exports**; the default working-disk floor is 2 GiB.
+## What you can do
 
-From this repository:
+- **Import a shoot:** upload files or folders, or index explicitly configured local source folders. Originals remain intact.
+- **Organize automatically:** browse AI-generated categories and inspect or correct assignments.
+- **Search the content:** combine keyword and embedding retrieval to find footage through timestamped evidence.
+- **Review the source:** play video, jump to observations, and keep versioned human corrections alongside model provenance.
+- **Collect and export:** save searches and selections, adjust ranges, render clips, or copy originals into an organized output.
+- **Manage access and storage:** isolated workspaces, owner/editor/viewer roles, Google or password sign-in, and explicit deletion controls.
+
+### Organized library
+
+![A production project with AI categories, footage search, and library navigation](docs/screenshots/library.png)
+
+### Review with evidence
+
+![Source video beside a timestamped AI worklog observation and its provenance](docs/screenshots/review.png)
+
+Screenshots show the running application. See [capture notes](docs/screenshots/README.md).
+
+## Engineering overview
+
+| Layer | Implementation |
+| --- | --- |
+| Interface | React 19, Next.js 16, TypeScript, Radix UI |
+| Public server | FastAPI / Uvicorn serving both the API and exported frontend in production |
+| Persistence | PostgreSQL, SQLAlchemy, Alembic, pgvector, workspace row-level security |
+| Durable processing | Temporal workflows, persisted checkpoints, bounded activity concurrency |
+| Media | FFmpeg / ffprobe, scene detection, source timestamp mappings |
+| AI | Gemini visual analysis; faster-whisper transcription and FastEmbed embeddings |
+| Deployment | Render web/API/workflows with persistent media storage; private Modal speech and embedding functions |
+
+Next.js is used to build the frontend; **production does not run a separate Node server**. Local development can run speech and embeddings on the same machine. Visual analysis sends derived video and transcript context to Google; local operation is not fully offline.
+
+### Where to start reviewing
+
+| Concern | Start here |
+| --- | --- |
+| Ingestion, checkpoints, retries | [workflows.py](backend/rushes/workflows.py), [pipeline.py](backend/rushes/pipeline.py) |
+| AI request validation and uncertain outcomes | [inference.py](backend/rushes/inference.py), [provider_budget.py](backend/rushes/provider_budget.py) |
+| Tenant isolation and identity | [db.py](backend/rushes/db.py), [auth.py](backend/rushes/auth.py), [migrations](backend/migrations/versions) |
+| Retrieval and organization | [routes_search.py](backend/rushes/routes_search.py), [organization.py](backend/rushes/organization.py) |
+| Timing and export correctness | [source_frames.py](backend/rushes/source_frames.py), [media.py](backend/rushes/media.py), [exports.py](backend/rushes/exports.py) |
+| UI and navigation | [rushes.tsx](web/components/rushes.tsx), [project.tsx](web/components/project.tsx), [player.tsx](web/components/player.tsx) |
+| Verification | [tests](tests), [browser regressions](web/e2e), [CI](.github/workflows/ci.yml) |
+
+The [architecture guide](docs/ARCHITECTURE.md) explains the runtime, data flow, and design tradeoffs. The [documentation index](docs/README.md) separates current guides from historical review and deployment evidence.
+
+## Run locally
+
+Requires **Python 3.12 or 3.13**, **uv**, **Node.js 22+**, **Docker Compose**, and **FFmpeg/ffprobe**. Leave room for model downloads, originals, previews, and exports; processing keeps a 2 GiB disk reserve by default.
 
 ```sh
+git clone https://github.com/ryouol/rushes.git
+cd rushes
 uv sync --locked
 uv run python scripts/configure.py
-
-docker compose up -d
-# Wait for `docker compose ps` to show PostgreSQL healthy.
+docker compose up -d --wait
 uv run python scripts/bootstrap_db.py
 uv run python scripts/setup_temporal.py
 npm --prefix web ci
@@ -23,91 +81,41 @@ uv run python scripts/reindex.py
 uv run python scripts/dev.py
 ```
 
-Open [RUSHES](http://localhost:3741). Create an account, workspace, and project. No seeded login or shared password is provided. Local workspaces receive an explicit development-credit grant; no money is collected.
+Open **[localhost:3741](http://localhost:3741)** and create your account. There is no shared demo password. `configure.py` generates a private `.env` and preserves it on subsequent runs.
 
-`configure.py` creates `.env` once with private generated credentials and mode 0600; it preserves an existing file. The PostgreSQL service is isolated on **55432**. RUSHES uses public web/API **3741**, Temporal **7233**, and the local Temporal UI **8233**, all bound to loopback. Development mode also uses **8741** behind the Next development server; clients and verification helpers use the public origin. The production build serves exported pages directly from Python. The launcher refuses occupied service ports and stops only its own children on Ctrl-C. Logs are under `.local/logs`. PostgreSQL remains running with its persistent Docker volume.
+For visual analysis, set `RUSHES_GEMINI_API_KEY` in `.env` and restart the app. Without it, previews and transcription remain available; visual analysis is reported as incomplete. Google sign-in is optional locally and requires your own OAuth client—see [Google setup](docs/GOOGLE-AUTH.md).
 
-For the production build:
+For the exported production frontend:
 
 ```sh
 uv run python scripts/build_web.py
 uv run python scripts/dev.py --production
 ```
 
-The API and worker must share this machine's storage. Do not run the worker remotely against these local path references. Keep `.local/temporal.db`, the PostgreSQL volume, uploaded originals, and working storage together when backing up. A database-only restore does not restore media. Do not delete the database volume to fix a setup problem.
+See [development and configuration](docs/DEVELOPMENT.md) for ports, tests, model settings, storage, and troubleshooting.
 
-## Configuration
+## Tests and verification
 
-See `.env.example`. Set server values in the private `.env`, then restart the API and worker. Changes to the public origin, contact details, legal entity or analytics identifier also require `uv run python scripts/build_web.py` before starting a production build. The server verifies that the exported pages match those public values; private credentials are excluded from this check.
-
-| Variable | Purpose |
-| --- | --- |
-| `RUSHES_GEMINI_MODEL` | Only `gemini-3.6-flash` is supported by the bounded analyzer configuration; other models fail validation before upload. |
-| `RUSHES_GEMINI_API_KEY` | Optional for local previews/transcription; required for visual analysis. Never put it in a browser/public variable. |
-| `RUSHES_ANALYSIS_WINDOW_SECONDS` | Default 20 seconds. Combined video/transcript content is counted and rejected above 10,000 tokens before generation. Live synthetic counting has passed. |
-| `RUSHES_COMPUTE_BACKEND` | `local` (default) or private `modal` speech and embeddings; Modal mode requires authenticated SDK credentials. |
-| `RUSHES_MODAL_ENVIRONMENT` | Dedicated Modal environment, default `rushes-production`. Never change the account default or another project’s environment. |
-| `RUSHES_SOURCE_ROOTS` | JSON list of explicit absolute, non-overlapping source folders, e.g. `["/Volumes/Footage/Shoot"]`. Empty by default. |
-| `RUSHES_STORAGE_ROOT` / `RUSHES_OUTPUT_ROOT` | Separate private working and export directories. Neither may overlap a source root. |
-| `RUSHES_DATABASE_URL` / `RUSHES_ADMIN_DATABASE_URL` | Generated runtime and migration credentials. Runtime is not a table owner and cannot bypass RLS. |
-| `RUSHES_TRANSCRIPTION_MODEL` | Whisper model. Modal mode is pinned to `tiny`; larger local models need measured hardware capacity. |
-| `RUSHES_EMBEDDING_MODEL` | Text model; Modal mode is pinned to `BAAI/bge-small-en-v1.5`. After changing it, run `scripts/reindex.py` to create a model/dimension-specific index and queue durable re-embedding. |
-| `RUSHES_LOCAL_CREDITS` / `RUSHES_MAX_ANALYSIS_CREDITS` | Initial development grant and per-analysis spending cap. Defaults: 600 / 120 credits. |
-| `RUSHES_CREDITS_PER_MINUTE` | Configurable footage-minute rate; defaults to one credit per minute. No cost/margin claim. |
-| `RUSHES_MIN_FREE_BYTES` | Disk reserve; default 2 GiB. |
-
-Changing storage roots does not migrate existing paths. Keep existing storage available or back it up and perform an explicit migration. Removing an indexed source root revokes reads on the next configured service run; managed uploads remain scoped to their workspace and asset. Changing a source's contents requires a new import; relinking accepts only matching SHA-256 bytes. File-picker uploads copy into private storage; indexing references originals without moving or renaming them. Interrupted uploads require reselection. Completed imports continue after the browser closes.
-
-## Demonstration
-
-1. Create a workspace and project; choose **Import footage**. Use files/folders, or index selected files from a configured source root.
-2. Open a source when its preview appears. Speech and configured visual analysis populate the worklog. Without a Gemini key, processing ends **partial**, with previews and any transcript usable.
-3. Click worklog timestamps to seek. Edit an observation and inspect its history. Mark in/out with **I/O** or numeric elapsed seconds; use **J/K/L** for transport. Add a manual note if needed.
-4. Search a phrase or visual description. Results link to recorded evidence and bounded source intervals. Save a query or create a collection and request suggested ranges; review before adding.
-5. Adjust collection ranges. Preview and start a clip export or a full-source organized copy. Download completed outputs or open the separate local output folder. Selection JSON/CSV, worklog JSON/CSV, and experimental XML formats are available.
-6. Inspect **Settings & usage** for storage, service status, credit ledger, and owner-managed access to existing local accounts. Review an explicit estimate before new visual analysis.
-
-## Verification
+CI runs Python lint, backend tests, the production frontend build, TypeScript checks, and browser regressions. Ordinary CI does not make paid AI calls. See the [workflow](.github/workflows/ci.yml) for its isolated PostgreSQL setup and exact commands.
 
 ```sh
-uv run ruff check backend scripts tests
-uv run pytest -q
-# With the local API/Temporal/worker running and synthetic fixture present:
-uv run python scripts/create_fixture.py
-# For selected-root integration, allowlist .local/fixtures in RUSHES_SOURCE_ROOTS
-# and restart API/worker with the same configuration first.
-RUSHES_TEST_TEMPORAL=1 uv run pytest tests/test_temporal.py -q
-npm --prefix web exec -- playwright install chromium
-npm --prefix web run test:e2e
+# After local database setup; explicitly disable paid provider calls.
+RUSHES_GEMINI_API_KEY= RUSHES_PROVIDER_MONTHLY_ALLOWANCE_MICROUSD=0 uv run pytest -q -m "not provider"
+uv run ruff check backend scripts deploy tests
 uv run python scripts/build_web.py
-uv run python scripts/audit_local.py
-uv run python scripts/verify_schema.py
+npm --prefix web run typecheck
 ```
 
-Tests create clearly labeled synthetic accounts/workspaces and private test artifacts. Browser tests default to a development instance with Gemini disabled and assert the honest partial state. The opt-in `RUSHES_TEST_LIVE_GEMINI=1` expects complete visual analysis and makes paid provider calls when the worker is configured with a real key. `create_fixture.py` uses macOS `say`; portable FFmpeg-only fixtures are generated by the media tests.
+The [export-memory incident report](docs/EXPORT-MEMORY-REVIEW.md) is one example of the engineering evidence: a reproduced production failure, a measured fix, regression coverage, deployment checks, and the resulting compression tradeoff. Historical results are labeled by revision and fixture rather than presented as general throughput guarantees.
 
-Pre-review recorded evidence is under `docs/validation` (throughput was not re-benchmarked after the final fixes): 50 synthetic files / ten source hours at 160×90 processed in 168.03 seconds; all originals preserved; no Gemini requests or customer debits. This highly compressible, muted fixture is **not representative camera-footage throughput or retrieval evaluation**. A separate in-flight worker kill plus persistent Temporal restart recovered a five-minute 1080p synthetic source in 140.5 seconds and isolated a corrupt file; source usage was recorded once.
+## Current scope
 
-The recovery harness requires explicit PIDs and interrupts only the selected RUSHES services:
+RUSHES is deployed and usable, with active work on reliability and evaluation. Model descriptions, localization, and search ranking still need human review. Representative long-footage capacity and retrieval quality have not been established across a labeled benchmark.
 
-```sh
-uv run python scripts/verify_recovery.py --worker-pid <RUSHES_WORKER_PID> --temporal-pid <RUSHES_TEMPORAL_PID>
-```
+Rendered clips use H.264/AAC and the first video/audio streams; they are not an archival mastering format. FCP7 XML and FCPXML interchange are experimental and have not been verified by a round trip through a target editor. Paid subscriptions are not implemented. The hosted instance has limited storage and AI allowance.
 
-Do not run it against unrelated services or while using the instance for real work. It leaves replacement RUSHES services running and records their PIDs in `.local/recovery/services.json`.
+## Contributing and security
 
-## Accuracy and release gaps
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for development and review expectations. Report security issues through the private process in [SECURITY.md](SECURITY.md), not public issues. Credentials, uploaded originals, databases, and local runtime artifacts are excluded from Git.
 
-- Intervals are half-open source elapsed microseconds. Original frame PTS, rational time bases, source start timecode where supplied, and explicit proxy mappings are retained. Export selects decoded source frames whose presentation starts fall inside the interval; a final frame can extend beyond the requested out point.
-- Browser seeking, model localization, scene detection, and transcription are approximate. Human review remains necessary. A fixed-rate proxy is never used to infer VFR source frame indices.
-- Clips are re-encoded H.264/AAC from the original; only the first video/audio stream is supported. This is not archival mastering, multichannel audio preservation, HDR/color-managed finishing, or a claim of bit-identical export. Organized copies are byte-for-byte originals.
-- FCP7 XML and FCPXML are experimental straight-cut exports for shared-rate, unrotated CFR sources. Mixed rates, VFR and rotated sources require rendered clips. **No target editor is installed; a structural XML check is not a verified round trip.** EDL is N/A until a concrete need justifies its narrower format.
-- Provider requests can succeed before a result is saved. In-flight requests with uncertain outcomes become **ambiguous** and are not automatically repeated. Received responses and usage commit before local validation; invalid output stays reviewable. Internal recovery retains the original billing operation and confirmed checkpoints, re-reserves only unused exposure, and charges only new confirmed coverage; new analysis uses a new reviewed estimate. This does not promise exactly-once provider execution or zero external charges.
-- Search ranks bounded keyword and local embedding candidates. The distance cutoff is a heuristic, not a quality guarantee. **TODO: provide representative footage and a human-labeled query set**, separated by interview, B-roll, OCR, and mixed content.
-- **Live Gemini:** the private key is configured. A bounded synthetic video passed upload, token counting, generation, interval validation and file deletion. A subsequent full browser run received HTTP 503 and safely ended partial without an automatic paid repeat. Representative semantic quality and a successful full hosted journey remain unverified. Physical chunks are the provisional implementation.
-- **TODO: provide a supported target editor** for real interchange validation. **TODO: provide reviewed legal/operator/support information** before any hosted commercial release. Privacy/Terms pages clearly remain drafts.
-- Optional WebMCP search is feature-detected; no supported browser registry was available for live contract verification. Ordinary browser search was verified.
-
-The requested simplify and final review are recorded in [all numbered findings and dispositions](docs/REVIEW.md). The remaining review-process limitation is the size of this initial application snapshot; the report provides a concrete staged landing plan.
-
-See [the phase checklist](docs/IMPLEMENTATION.md), [decisions](docs/DECISIONS.md), and [security inventory](docs/validation/security-inventory.json). The hosted Render/Modal deployment and its soft budget target are documented in [production status](docs/PRODUCTION.md). [Container operation](docs/HOSTING.md) covers the web/API entrypoint. Stripe and payment collection remain deferred by scope; editor round trips and production-scale qualification remain unverified.
+No open-source license has been selected. Public visibility allows inspection but does not grant a general license to reuse the code or footage.

@@ -1,0 +1,9 @@
+# Reviewed false positives: source-file SHA-256 values in a historical validation record.
+# Exact finding fingerprints only; no file, directory, or credential rule is excluded.
+7f2d0883cd33e832eb482db1712478f13efa9e7b:docs/validation/shared-runtime.json:generic-api-key:83
+7f2d0883cd33e832eb482db1712478f13efa9e7b:docs/validation/shared-runtime.json:generic-api-key:84
+7f2d0883cd33e832eb482db1712478f13efa9e7b:docs/validation/shared-runtime.json:generic-api-key:122
+7f2d0883cd33e832eb482db1712478f13efa9e7b:docs/validation/shared-runtime.json:generic-api-key:127
+7f2d0883cd33e832eb482db1712478f13efa9e7b:docs/validation/shared-runtime.json:generic-api-key:128
+7f2d0883cd33e832eb482db1712478f13efa9e7b:docs/validation/shared-runtime.json:generic-api-key:144
+7f2d0883cd33e832eb482db1712478f13efa9e7b:docs/validation/shared-runtime.json:generic-api-key:155

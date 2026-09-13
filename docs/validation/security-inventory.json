@@ -1,5 +1,5 @@
 {
-  "source_and_bundle_files_scanned": 387,
+  "source_and_bundle_files_scanned": 451,
   "known_secret_variable_names_checked": [
     "RUSHES_DATABASE_URL",
     "RUSHES_ADMIN_DATABASE_URL",
