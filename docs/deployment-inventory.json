@@ -20,9 +20,9 @@
           "name": "rushes-media",
           "sizeGB": 10
         },
-        "deploy_id": "dep-daitrmtg1s2s738nu8jg",
+        "deploy_id": "dep-daiuh23m8hqs73eat6f0",
         "status": "live",
-        "runtime_commit": "0a110712ba2b08cb3a88de1460a816d577ea6bfb",
+        "runtime_commit": "1322635683ab5bc3fa629d5ccd144f968ada98ad",
         "num_instances": 1
       }
     ],
@@ -39,7 +39,7 @@
         "storage_gb": 5
       }
     ],
-    "checked_at": "2026-09-12T23:26:29.755157+00:00"
+    "checked_at": "2026-09-13T00:09:07.747896+00:00"
   },
   "budget": {
     "combined_monthly_usd": 20,
@@ -59,7 +59,8 @@
     "current_accounted_microusd": {
       "local": 459891,
       "production": 1483716
-    }
+    },
+    "current_accounted_note": "Retained last budget-repair measurement; the export-memory deployment did not rerun provider accounting. See validation/budget-repair.json."
   },
   "other_projects_observed": [
     {
@@ -105,7 +106,7 @@
     "app_provider_allowance_configured": true
   },
   "production_deployed": true,
-  "checked_at": "2026-09-12T23:26:29.755157+00:00",
+  "checked_at": "2026-09-13T00:09:07.747896+00:00",
   "gemini": {
     "configured": true,
     "model": "gemini-3.1-pro-preview",
@@ -122,12 +123,12 @@
   },
   "production_image": {
     "build_provider": "Render",
-    "runtime_source_commit": "0a110712ba2b08cb3a88de1460a816d577ea6bfb",
+    "runtime_source_commit": "1322635683ab5bc3fa629d5ccd144f968ada98ad",
     "architecture": "linux/amd64",
     "runtime_verified": true,
     "local_full_rebuild": false,
     "historical_local_image_id": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
     "note": "Current production image built by Render. The retained local image ID is historical. No full local rebuild under host disk pressure.",
-    "validation": "validation/budget-repair.json"
+    "validation": "validation/export-memory.json"
   }
 }

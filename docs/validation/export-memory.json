@@ -1,0 +1,150 @@
+{
+  "checked_at": "2026-09-13T00:09:07.747896+00:00",
+  "incident": {
+    "events": [
+      {
+        "event": {
+          "details": {},
+          "id": "evt-daiub7eq1p3s73a0sceg",
+          "serviceId": "srv-dahk822d0e5s73fo22o0",
+          "timestamp": "2026-09-12T23:51:57.627138Z",
+          "type": "server_available"
+        },
+        "cursor": "74A6IYR-5BBiN2VxMXAzczczYTBzY2Vn"
+      },
+      {
+        "event": {
+          "details": {
+            "instanceID": "srv-dahk822d0e5s73fo22o0-shp68",
+            "reason": {
+              "evicted": false,
+              "oomKilled": {
+                "memoryLimit": "512Mi"
+              }
+            }
+          },
+          "id": "evt-daiub0eq1p3s73a0sc1g",
+          "serviceId": "srv-dahk822d0e5s73fo22o0",
+          "timestamp": "2026-09-12T23:51:29.915714Z",
+          "type": "server_failed"
+        },
+        "cursor": "74A6IYR-5BBiMGVxMXAzczczYTBzYzFn"
+      }
+    ],
+    "trigger": "Three-second selection from an approximately 60fps rotated 1920x1080 HEVC source",
+    "original_export_recovered_without_mutation": true
+  },
+  "change": {
+    "commit": "1322635683ab5bc3fa629d5ccd144f968ada98ad",
+    "renderer_version": "source-pts-v4",
+    "x264_parameters": "rc-lookahead=0:sync-lookahead=0:bframes=0:ref=1",
+    "resolution_frame_selection_audio_preserved": true,
+    "total_memory_hard_cap": false,
+    "cost_configuration_changed": false
+  },
+  "synthetic_comparison": {
+    "verification": "Synthetic same-format comparison; 220 MiB Python ballast, not the full application",
+    "container_memory_bytes": 536870912,
+    "container_cpu": 0.5,
+    "container_image_id": "7627745f4c71",
+    "container_architecture": "amd64",
+    "host_architecture": "arm64",
+    "emulated": true,
+    "input": {
+      "codec": "HEVC",
+      "pixel_format": "yuv420p10le",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60,
+      "seconds": 5,
+      "audio": "AAC sine fixture",
+      "sha256": "e9a4632cf21c0b3f143718896338569dc7d9ad5d6576333f61288073a9a2e876"
+    },
+    "output": {
+      "width": 1080,
+      "height": 1920,
+      "seconds": 3,
+      "codec": "libx264",
+      "crf": 18,
+      "preset": "veryfast"
+    },
+    "before": {
+      "seconds": 24.22,
+      "ffmpeg_peak_rss_bytes": 301322240,
+      "sampled_container_peak_bytes": 513593344,
+      "oom_kills": 0
+    },
+    "after": {
+      "seconds": 24.8,
+      "ffmpeg_peak_rss_bytes": 187277312,
+      "sampled_container_peak_bytes": 404418560,
+      "oom_kills": 0
+    },
+    "limitation": "Not a total-memory cap, native production capacity benchmark, or qualification of arbitrary footage/concurrent traffic."
+  },
+  "ci": {
+    "url": "https://github.com/ryouol/rushes/actions/runs/34726839741",
+    "conclusion": "success",
+    "backend_passed": 318,
+    "backend_skipped": 2,
+    "browser_passed": 27,
+    "lint_typecheck_build": "passed"
+  },
+  "deployment": {
+    "id": "dep-daiuh23m8hqs73eat6f0",
+    "status": "live",
+    "finishedAt": "2026-09-13T00:06:30.887231Z"
+  },
+  "production_export": {
+    "commit": "1322635683ab5bc3fa629d5ccd144f968ada98ad",
+    "export_id": "e0884a8c-54bd-44de-9bc0-aa98820f2c08",
+    "state": "completed",
+    "job_state": "completed",
+    "renderer_version": "source-pts-v4",
+    "dimensions": [
+      1080,
+      1920
+    ],
+    "has_audio": true,
+    "frames": 180,
+    "maximum_timestamp_error_us": 0,
+    "duration_us": 3005000,
+    "original_audio_offset_seconds": 0.0,
+    "export_audio_offset_seconds": 0.0,
+    "source_sha256_verified": true,
+    "prior_completed_export_preserved": true,
+    "output_sha256_verified": true,
+    "output_bytes": 5964964,
+    "memory": {
+      "memory.current": "289746944",
+      "memory.peak": "349282304",
+      "memory.max": "536870912",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0"
+    }
+  },
+  "http_health": {
+    "samples": 90,
+    "failed": [],
+    "maximum_seconds": 0.634,
+    "from": "2026-09-13T00:06:51.597451+00:00",
+    "to": "2026-09-13T00:08:31.235504+00:00"
+  },
+  "after_deployment_events": [
+    {
+      "event": {
+        "details": {
+          "deployId": "dep-daiuh23m8hqs73eat6f0",
+          "deployStatus": "succeeded",
+          "reason": {},
+          "status": 2
+        },
+        "id": "evt-daiui1g9qbnc73fh3hi0",
+        "serviceId": "srv-dahk822d0e5s73fo22o0",
+        "timestamp": "2026-09-13T00:06:30.9977Z",
+        "type": "deploy_ended"
+      },
+      "cursor": "74A6IYR-5BBpMWc5cWJuYzczZmgzaGkw"
+    }
+  ],
+  "qualification": "One actual clip export on the current 512 MiB server, including operator verification overhead; not arbitrary-format, long-export or concurrent-user capacity qualification. The new clip is 5,964,964 bytes versus 3,176,003 bytes for the older recipe."
+}

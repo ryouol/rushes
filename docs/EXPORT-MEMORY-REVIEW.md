@@ -8,9 +8,12 @@ This trades compression efficiency for reduced frame buffering; output size and 
 
 ## Verification
 
-- All five existing real FFmpeg media regressions passed in 11.49 seconds: rational frame rates and original preservation, VFR half-open selections, subframe MOV timestamps, rotated audio/video previews, and late selection with nonzero PTS/delayed audio.
+- All five real FFmpeg media regressions, including the added rendered rotation/audio checks, passed locally in 12.51 seconds: rational frame rates and original preservation, VFR half-open selections, subframe MOV timestamps, rotated audio/video previews, and late selection with nonzero PTS/delayed audio.
 - A synthetic 1080p60 10-bit HEVC input with audio was exported as a three-second portrait clip in separate disposable containers limited to 512 MiB and 0.5 CPU, with 220 MiB of synthetic Python ballast. This used the existing Debian amd64 runtime image under emulation on the arm64 development machine, not the native production application. Both recipes completed without OOM. The buffering change reduced sampled container peak from 513,593,344 to 404,418,560 bytes and FFmpeg peak RSS from 301,322,240 to 187,277,312 bytes. Durations were 24.22 and 24.80 seconds. Measurements establish this comparison only; ballast does not reproduce all application activity.
-- CI and production verification results will be recorded after deployment.
+- [CI](https://github.com/ryouol/rushes/actions/runs/34726839741) passed: 318 backend tests, two opt-in skips, 27 browser regressions, lint, type checking and the production build.
+- Render deployment `dep-daiuh23m8hqs73eat6f0` became live at 00:06:30 UTC on 13 September (20:06 Toronto on 12 September), running `1322635683ab5bc3fa629d5ccd144f968ada98ad`. The local app was also restarted with the fix.
+- A second export of the actual selection completed through the production worker. All 180 frames matched source timestamps exactly; output remained 1080×1920 with audio and zero audio/video start offset. Source SHA-256, the earlier completed export, and the new output hash were verified. Peak container memory, including operator inspection, was 349,282,304 bytes (333 MiB); no memory-limit/OOM events or server failures were observed. All 90 HTTP health requests over 100 seconds returned 200, with a maximum response time of 0.634 seconds.
+- The new output is 5,964,964 bytes versus 3,176,003 bytes for the older recipe. Both exports remain available, and the original file is unchanged. This records the concrete compression tradeoff. [Structured evidence](validation/export-memory.json).
 
 ## Review record
 
@@ -23,3 +26,5 @@ All issues and qualifications from the requested review passes are retained belo
 5. **Final / breaking changes:** no findings. Reviewed `backend/rushes/media.py:24,447`, both render callers, and export receipt/resume handling. Completed exports and original copies remain usable.
 6. **Final / model context:** no findings. `backend/rushes/media.py:447`, the test additions, and this document do not alter prompts or model-visible context. The Rust context-fragment requirement does not apply.
 7. **Final / change size:** no findings. `backend/rushes/media.py:444`, focused media assertions, and this incident report form one small coherent change, below both skill size thresholds.
+
+The final testing follow-up found no new issues in the added rendered orientation, timing, and audio-gap assertions. Production verification above resolves the scoped live-export check. All review passes were read-only; fixes were applied by the parent.
