@@ -21,7 +21,7 @@ from rushes.timing import Interval, pts_to_us, seconds, to_us
 
 Progress = Callable[[str], None]
 DEMUXERS = "mov,matroska,avi,mpegts,mpeg,mxf,asf,ogg"
-RENDERER_VERSION = "source-pts-v3"
+RENDERER_VERSION = "source-pts-v4"
 
 
 class MediaError(RuntimeError):
@@ -441,6 +441,10 @@ def render_clip(
         "veryfast",
         "-crf",
         "18",
+        # Full-resolution lookahead can evict the shared web process on small hosts.
+        # Set buffering explicitly: zerolatency's force-CFR option would change VFR timing.
+        "-x264-params",
+        "rc-lookahead=0:sync-lookahead=0:bframes=0:ref=1",
         "-pix_fmt",
         "yuv420p",
         "-threads",

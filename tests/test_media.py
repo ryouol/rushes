@@ -3,7 +3,7 @@ import json
 import subprocess
 
 import pytest
-from rushes.media import detect_shots, inspect, make_proxy, proxy_mapping, render_clip
+from rushes.media import detect_shots, inspect, make_proxy, probe, proxy_mapping, render_clip
 from rushes.storage import fingerprint, open_source
 from rushes.timing import Interval, pts_to_us
 
@@ -163,6 +163,14 @@ def test_rotation_and_audio(tmp_path):
             mapped = inspect(preview, tmp_path / "preview-frames.jsonl.gz")
         assert mapped.height > mapped.width
         assert mapped.rotation == 0
+        render_clip(
+            source, timeline, Interval(start_us=0, end_us=timeline.duration_us), tmp_path / "clip.mp4"
+        )
+        with (tmp_path / "clip.mp4").open("rb") as clip:
+            rendered = inspect(clip, tmp_path / "rendered-frames.jsonl.gz")
+        assert (rendered.width, rendered.height) == (timeline.height, timeline.width)
+        assert rendered.rotation == 0 and rendered.has_audio
+        assert proxy_mapping(timeline, rendered)["maximum_error_us"] == 0
 
 
 @pytest.mark.media
@@ -202,6 +210,18 @@ def test_late_selection_preserves_nonzero_pts_and_delayed_audio(tmp_path):
         with clip.open("rb") as result:
             rendered = inspect(result, tmp_path / "render.gz")
         assert rendered.frame_count == 24
+        original_streams = {stream["codec_type"]: stream for stream in probe(source)["streams"]}
+        original_offset = float(original_streams["audio"]["start_time"]) - float(
+            original_streams["video"]["start_time"]
+        )
+        assert abs(original_offset - 1.0) < 0.03
+        delayed_clip = tmp_path / "delayed.mp4"
+        render_clip(source, timeline, Interval(start_us=0, end_us=2_000_000), delayed_clip)
+        with delayed_clip.open("rb") as result:
+            streams = {stream["codec_type"]: stream for stream in probe(result)["streams"]}
+        offset = float(streams["audio"]["start_time"]) - float(streams["video"]["start_time"])
+        # Re-encoding adds AAC priming; preserve the source gap within one audio frame.
+        assert abs(offset - original_offset) < 0.03
     pcm = subprocess.check_output(
         [
             "ffmpeg",
