@@ -30,6 +30,7 @@ from rushes.models import (
 )
 from rushes.organization import CATEGORY_SLUG_PATTERN, asset_organizations, category_asset_query
 from rushes.storage import StorageError, open_source, require_space, sync_file, workspace_file_lease
+from rushes.telemetry import traced
 from rushes.timing import Interval
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}")
@@ -170,6 +171,7 @@ async def upload(
         raise HTTPException(409, str(error)) from error
 
 
+@traced("upload_file")
 async def upload_file(project_id, request, access, filename, relative_path):
     require_editor(access)
     async with tenant_session(access.workspace_id) as db:

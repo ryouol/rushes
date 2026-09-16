@@ -1,0 +1,38 @@
+{
+  "date": "2026-09-16",
+  "host": "macOS-26.6.2-arm64-arm-64bit",
+  "host_architecture": "arm64",
+  "image_id": "sha256:7627745f4c717242a1517c1841bf88bd7535977fb512afea543e56ffd5069259",
+  "image_architecture": "amd64",
+  "worker_cpu_max": "200000 100000",
+  "worker_memory_max_bytes": 2147483648,
+  "media_threads": 2,
+  "inference_activity_slots": 1,
+  "baseline_media_activity_slots": 1,
+  "candidate_media_activity_slots": 2,
+  "compute_backend": "local",
+  "visual_analysis": "disabled",
+  "api_and_postgres": "same development host; outside worker cgroup",
+  "python_profile_scope": "20-second preliminary diagnostic; independent FFmpeg processes excluded",
+  "sample_interval_seconds": 0.05,
+  "baseline_revision": "69ec2dac1847355cd0433f3960a73652f20b1fef",
+  "final_candidate_runs": [
+    "controlled-candidate-3",
+    "controlled-candidate-4"
+  ],
+  "exploratory_candidate_runs": [
+    "controlled-candidate-1",
+    "controlled-candidate-2"
+  ],
+  "candidate_shared_local_transcription": "serialized through full generator consumption",
+  "runtime_libraries": {
+    "faster-whisper": "1.2.1",
+    "fastembed": "0.8.0",
+    "temporalio": "1.32.0",
+    "sqlalchemy": "2.0.52"
+  },
+  "worker_ffmpeg": "ffmpeg version 5.1.9-0+deb12u1 Copyright (c) 2000-2026 the FFmpeg developers",
+  "fixture_ffmpeg": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+  "uv_lock_sha256": "18f3542e04e076676661fd88f5b32a51582f154263efc3b2e19e49eb3da86650",
+  "py_spy_version": "0.4.2"
+}

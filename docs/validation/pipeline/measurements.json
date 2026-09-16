@@ -1,0 +1,344 @@
+[
+  {
+    "label": "controlled-baseline-1",
+    "corpus_wall_seconds": 162.87378478050232,
+    "media_minutes_per_wall_minute": 1.2586433125273615,
+    "time_to_searchable_seconds": [
+      161.04766937499517,
+      162.72926287501468,
+      162.64143812499242
+    ],
+    "activity_execution_seconds": {
+      "activity.prepare": 74.425460491,
+      "activity.transcribe": 80.59820178599999,
+      "activity.plan_analysis": 0.001452208,
+      "activity.embed_asset": 2.543614417,
+      "activity.finish_asset": 0.043841458
+    },
+    "activity_queue_seconds": {
+      "activity.prepare": 62.45175,
+      "activity.transcribe": 148.970656999,
+      "activity.plan_analysis": 98.770894,
+      "activity.embed_asset": 2.6281879999999997,
+      "activity.finish_asset": 0.006332000000000001
+    },
+    "retry_attempts": 0,
+    "peak_container_bytes": 1018789888,
+    "peak_individual_ffmpeg_rss_bytes": 178835456,
+    "peak_aggregate_ffmpeg_rss_bytes": 178835456,
+    "memory_samples": 2951,
+    "query_p50_seconds": 0.029622499976539984,
+    "query_p95_seconds": 0.21982208301778883,
+    "query_count": 25,
+    "query_modes": [
+      "hybrid"
+    ],
+    "export_wall_seconds": 5.348849208996398,
+    "export_activity_seconds": 2.917320585,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793",
+    "export_bytes": 5124559,
+    "transcript_bounds_valid": true,
+    "transcripts": [
+      {
+        "fixture": "synthetic-15s-640x360-h264.mp4",
+        "segments": 4,
+        "sha256": "4992735fb6438b8271917260274560de0e86bbe696a59ba4e2bde892063e82bd"
+      },
+      {
+        "fixture": "synthetic-65s-1280x720-h264.mp4",
+        "segments": 14,
+        "sha256": "68b50514e9beeac2ebadcbd0f7183642d6af2ff5417d43fc99fd48d85aab3a46"
+      },
+      {
+        "fixture": "synthetic-125s-1920x1080-hevc.mp4",
+        "segments": 32,
+        "sha256": "40925143795964e2e53c047400b8f45a3b302f18ebe3fa2134ee8a0594d47bfe"
+      }
+    ]
+  },
+  {
+    "label": "controlled-baseline-2",
+    "corpus_wall_seconds": 164.7593011856079,
+    "media_minutes_per_wall_minute": 1.2442393147143744,
+    "time_to_searchable_seconds": [
+      163.65130949998274,
+      163.5973481249821,
+      164.56409583298955
+    ],
+    "activity_execution_seconds": {
+      "activity.prepare": 73.634876991,
+      "activity.transcribe": 83.01942328800001,
+      "activity.plan_analysis": 0.001883666,
+      "activity.embed_asset": 2.6588475430000003,
+      "activity.finish_asset": 0.044150332
+    },
+    "activity_queue_seconds": {
+      "activity.prepare": 30.843229,
+      "activity.transcribe": 156.553235,
+      "activity.plan_analysis": 126.09928500000001,
+      "activity.embed_asset": 2.791994,
+      "activity.finish_asset": 0.007301
+    },
+    "retry_attempts": 0,
+    "peak_container_bytes": 1060446208,
+    "peak_individual_ffmpeg_rss_bytes": 179073024,
+    "peak_aggregate_ffmpeg_rss_bytes": 179073024,
+    "memory_samples": 2972,
+    "query_p50_seconds": 0.030506167007843032,
+    "query_p95_seconds": 0.24532645900035277,
+    "query_count": 25,
+    "query_modes": [
+      "hybrid"
+    ],
+    "export_wall_seconds": 5.396859000000404,
+    "export_activity_seconds": 2.947770335,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793",
+    "export_bytes": 5124559,
+    "transcript_bounds_valid": true,
+    "transcripts": [
+      {
+        "fixture": "synthetic-15s-640x360-h264.mp4",
+        "segments": 4,
+        "sha256": "4992735fb6438b8271917260274560de0e86bbe696a59ba4e2bde892063e82bd"
+      },
+      {
+        "fixture": "synthetic-65s-1280x720-h264.mp4",
+        "segments": 14,
+        "sha256": "68b50514e9beeac2ebadcbd0f7183642d6af2ff5417d43fc99fd48d85aab3a46"
+      },
+      {
+        "fixture": "synthetic-125s-1920x1080-hevc.mp4",
+        "segments": 29,
+        "sha256": "48d393410e350e9bbd244bd6341a3d597b5affbc52840449f760b87079a13994"
+      }
+    ]
+  },
+  {
+    "label": "controlled-candidate-1",
+    "corpus_wall_seconds": 159.48959398269653,
+    "media_minutes_per_wall_minute": 1.2853503158471957,
+    "time_to_searchable_seconds": [
+      118.28793404099997,
+      120.05112458299845,
+      159.29839250000077
+    ],
+    "activity_execution_seconds": {
+      "activity.prepare": 124.824758473,
+      "activity.transcribe": 141.53871193999998,
+      "activity.plan_analysis": 0.00254475,
+      "activity.embed_asset": 4.445536876999999,
+      "activity.finish_asset": 0.063534708
+    },
+    "activity_queue_seconds": {
+      "activity.prepare": 11.488275,
+      "activity.transcribe": 38.079592,
+      "activity.plan_analysis": 43.037611999999996,
+      "activity.embed_asset": 0.010252,
+      "activity.finish_asset": 18.981476
+    },
+    "retry_attempts": 0,
+    "peak_container_bytes": 1230475264,
+    "peak_individual_ffmpeg_rss_bytes": 178999296,
+    "peak_aggregate_ffmpeg_rss_bytes": 247349248,
+    "memory_samples": 2519,
+    "query_p50_seconds": 0.031218957999954,
+    "query_p95_seconds": 0.24113604199374095,
+    "query_count": 25,
+    "query_modes": [
+      "hybrid"
+    ],
+    "export_wall_seconds": 5.973990333994152,
+    "export_activity_seconds": 2.91847396,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793",
+    "export_bytes": 5124559,
+    "transcript_bounds_valid": true,
+    "transcripts": [
+      {
+        "fixture": "synthetic-15s-640x360-h264.mp4",
+        "segments": 4,
+        "sha256": "4992735fb6438b8271917260274560de0e86bbe696a59ba4e2bde892063e82bd"
+      },
+      {
+        "fixture": "synthetic-65s-1280x720-h264.mp4",
+        "segments": 14,
+        "sha256": "68b50514e9beeac2ebadcbd0f7183642d6af2ff5417d43fc99fd48d85aab3a46"
+      },
+      {
+        "fixture": "synthetic-125s-1920x1080-hevc.mp4",
+        "segments": 29,
+        "sha256": "f667fde4b861907f0a564a64ce416b5cf0a12223d9c2071c299eed4402886476"
+      }
+    ]
+  },
+  {
+    "label": "controlled-candidate-2",
+    "corpus_wall_seconds": 158.42169380187988,
+    "media_minutes_per_wall_minute": 1.2940146963481551,
+    "time_to_searchable_seconds": [
+      120.34535524999956,
+      121.84541541599901,
+      158.18644116600626
+    ],
+    "activity_execution_seconds": {
+      "activity.prepare": 124.022454141,
+      "activity.transcribe": 141.719528774,
+      "activity.plan_analysis": 0.002277875,
+      "activity.embed_asset": 4.247489752,
+      "activity.finish_asset": 0.055552124999999994
+    },
+    "activity_queue_seconds": {
+      "activity.prepare": 11.973255,
+      "activity.transcribe": 38.264617,
+      "activity.plan_analysis": 41.466339,
+      "activity.embed_asset": 0.009492,
+      "activity.finish_asset": 21.100407
+    },
+    "retry_attempts": 0,
+    "peak_container_bytes": 1213530112,
+    "peak_individual_ffmpeg_rss_bytes": 178864128,
+    "peak_aggregate_ffmpeg_rss_bytes": 247840768,
+    "memory_samples": 2491,
+    "query_p50_seconds": 0.030766166979447007,
+    "query_p95_seconds": 0.23873841698514298,
+    "query_count": 25,
+    "query_modes": [
+      "hybrid"
+    ],
+    "export_wall_seconds": 4.136029707995476,
+    "export_activity_seconds": 2.93011321,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793",
+    "export_bytes": 5124559,
+    "transcript_bounds_valid": true,
+    "transcripts": [
+      {
+        "fixture": "synthetic-15s-640x360-h264.mp4",
+        "segments": 4,
+        "sha256": "4992735fb6438b8271917260274560de0e86bbe696a59ba4e2bde892063e82bd"
+      },
+      {
+        "fixture": "synthetic-65s-1280x720-h264.mp4",
+        "segments": 14,
+        "sha256": "68b50514e9beeac2ebadcbd0f7183642d6af2ff5417d43fc99fd48d85aab3a46"
+      },
+      {
+        "fixture": "synthetic-125s-1920x1080-hevc.mp4",
+        "segments": 29,
+        "sha256": "f667fde4b861907f0a564a64ce416b5cf0a12223d9c2071c299eed4402886476"
+      }
+    ]
+  },
+  {
+    "label": "controlled-candidate-3",
+    "corpus_wall_seconds": 163.25915098190308,
+    "media_minutes_per_wall_minute": 1.255672339143328,
+    "time_to_searchable_seconds": [
+      134.5453012920043,
+      135.90069358301116,
+      163.02471387499827
+    ],
+    "activity_execution_seconds": {
+      "activity.prepare": 132.222116686,
+      "activity.transcribe": 153.538528487,
+      "activity.plan_analysis": 0.00272925,
+      "activity.embed_asset": 4.054941084999999,
+      "activity.finish_asset": 0.06813216600000001
+    },
+    "activity_queue_seconds": {
+      "activity.prepare": 12.925163,
+      "activity.transcribe": 41.713013000000004,
+      "activity.plan_analysis": 41.910501,
+      "activity.embed_asset": 0.007543,
+      "activity.finish_asset": 30.99842
+    },
+    "retry_attempts": 0,
+    "peak_container_bytes": 1163350016,
+    "peak_individual_ffmpeg_rss_bytes": 179056640,
+    "peak_aggregate_ffmpeg_rss_bytes": 247791616,
+    "memory_samples": 2555,
+    "query_p50_seconds": 0.02661912501207553,
+    "query_p95_seconds": 0.23025883300579153,
+    "query_count": 25,
+    "query_modes": [
+      "hybrid"
+    ],
+    "export_wall_seconds": 4.700058250018628,
+    "export_activity_seconds": 3.210339501,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793",
+    "export_bytes": 5124559,
+    "transcript_bounds_valid": true,
+    "transcripts": [
+      {
+        "fixture": "synthetic-15s-640x360-h264.mp4",
+        "segments": 4,
+        "sha256": "4992735fb6438b8271917260274560de0e86bbe696a59ba4e2bde892063e82bd"
+      },
+      {
+        "fixture": "synthetic-65s-1280x720-h264.mp4",
+        "segments": 14,
+        "sha256": "68b50514e9beeac2ebadcbd0f7183642d6af2ff5417d43fc99fd48d85aab3a46"
+      },
+      {
+        "fixture": "synthetic-125s-1920x1080-hevc.mp4",
+        "segments": 29,
+        "sha256": "f667fde4b861907f0a564a64ce416b5cf0a12223d9c2071c299eed4402886476"
+      }
+    ]
+  },
+  {
+    "label": "controlled-candidate-4",
+    "corpus_wall_seconds": 160.2491979598999,
+    "media_minutes_per_wall_minute": 1.2792575726419446,
+    "time_to_searchable_seconds": [
+      133.48190483401413,
+      134.5941650000168,
+      160.03284283398534
+    ],
+    "activity_execution_seconds": {
+      "activity.prepare": 129.404942227,
+      "activity.transcribe": 152.106297194,
+      "activity.plan_analysis": 0.0022001240000000004,
+      "activity.embed_asset": 3.88276571,
+      "activity.finish_asset": 0.065990125
+    },
+    "activity_queue_seconds": {
+      "activity.prepare": 12.157731,
+      "activity.transcribe": 41.087933,
+      "activity.plan_analysis": 43.267158998999996,
+      "activity.embed_asset": 0.00984,
+      "activity.finish_asset": 29.891361
+    },
+    "retry_attempts": 0,
+    "peak_container_bytes": 1201926144,
+    "peak_individual_ffmpeg_rss_bytes": 178823168,
+    "peak_aggregate_ffmpeg_rss_bytes": 247820288,
+    "memory_samples": 2505,
+    "query_p50_seconds": 0.03394625001237728,
+    "query_p95_seconds": 0.2465526660089381,
+    "query_count": 25,
+    "query_modes": [
+      "hybrid"
+    ],
+    "export_wall_seconds": 4.463885457982542,
+    "export_activity_seconds": 3.45472021,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793",
+    "export_bytes": 5124559,
+    "transcript_bounds_valid": true,
+    "transcripts": [
+      {
+        "fixture": "synthetic-15s-640x360-h264.mp4",
+        "segments": 4,
+        "sha256": "4992735fb6438b8271917260274560de0e86bbe696a59ba4e2bde892063e82bd"
+      },
+      {
+        "fixture": "synthetic-65s-1280x720-h264.mp4",
+        "segments": 14,
+        "sha256": "68b50514e9beeac2ebadcbd0f7183642d6af2ff5417d43fc99fd48d85aab3a46"
+      },
+      {
+        "fixture": "synthetic-125s-1920x1080-hevc.mp4",
+        "segments": 29,
+        "sha256": "f667fde4b861907f0a564a64ce416b5cf0a12223d9c2071c299eed4402886476"
+      }
+    ]
+  }
+]

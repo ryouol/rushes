@@ -1,7 +1,9 @@
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 
+from rushes.telemetry import traced
 from rushes.timing import Interval, to_us
 
 RERANKER_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2"
@@ -38,7 +40,17 @@ def transcription_model(options: ModelOptions):
     )
 
 
+_transcription_lock = Lock()
+
+
 def transcribe_local(chunk: Path, window: Interval, options: ModelOptions) -> list[dict]:
+    # A process shares one WhisperModel. Consume its generator under the same lock
+    # as language detection/encoding so concurrent activities cannot interleave calls.
+    with _transcription_lock:
+        return _transcribe_local(chunk, window, options)
+
+
+def _transcribe_local(chunk: Path, window: Interval, options: ModelOptions) -> list[dict]:
     segments, info = transcription_model(options).transcribe(
         str(chunk), beam_size=3, vad_filter=True, word_timestamps=True
     )
@@ -71,8 +83,10 @@ class LocalEmbedder:
             cache_dir=str(options.cache_root / "embedding"),
         )
 
+    @traced("provider.embedding")
     def embed(self, texts: list[str]) -> list[list[float]]:
         return [vector.tolist() for vector in self.backend.embed(texts, batch_size=16)]
 
+    @traced("provider.rerank")
     def rerank(self, query: str, texts: list[str]) -> list[float]:
         return list(relevance_model(self.options).rerank(query, texts, batch_size=4))

@@ -773,6 +773,7 @@ async def batch_page(args: dict):
                     "asset_id": str(job.asset_id),
                     "job_id": str(job.id),
                     "workflow_id": job.workflow_id,
+                    "trace_context": job.payload.get("trace_context", {}),
                 }
             )
         return result

@@ -31,6 +31,7 @@ from rushes.storage import (
     run_storage_thread,
     sync_file,
 )
+from rushes.telemetry import traced
 from rushes.timing import Interval, bounded_windows
 
 
@@ -114,6 +115,7 @@ def _prepare(
         return result
 
 
+@traced("prepare_asset")
 async def prepare_asset(workspace_id: str, asset_id: str, progress=None) -> dict:
     async with tenant_session(workspace_id) as db:
         asset = await db.get(Asset, UUID(asset_id))
@@ -183,6 +185,7 @@ async def prepare_asset(workspace_id: str, asset_id: str, progress=None) -> dict
     }
 
 
+@traced("prepare_chunk")
 def prepare_chunk(workspace_id: str, asset_id: str, window: Interval, progress=None) -> Path:
     folder = asset_folder(workspace_id, asset_id)
     manifest = json.loads((folder / "manifest.json").read_text())
@@ -244,6 +247,7 @@ async def ensure_prepared(workspace_id: str, asset_id: str, progress=None) -> di
         return json.loads(await run_storage_thread(path.read_text))
 
 
+@traced("prepare_audio")
 def prepare_audio(workspace_id: str, asset_id: str, window: Interval, progress=None):
     folder = asset_folder(workspace_id, asset_id)
     manifest = json.loads((folder / "manifest.json").read_text())
@@ -264,6 +268,7 @@ def save_transcript(transcript_file, rows):
     os.replace(temporary, transcript_file)
 
 
+@traced("transcribe_asset")
 async def transcribe_asset(workspace_id: str, asset_id: str, progress=None) -> dict:
     folder = await run_storage_thread(asset_folder, workspace_id, asset_id)
     manifest = await ensure_prepared(workspace_id, asset_id, progress)

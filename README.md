@@ -108,6 +108,8 @@ npm --prefix web run typecheck
 
 The [export-memory incident report](docs/EXPORT-MEMORY-REVIEW.md) is one example of the engineering evidence: a reproduced production failure, a measured fix, regression coverage, deployment checks, and the resulting compression tradeoff. Historical results are labeled by revision and fixture rather than presented as general throughput guarantees.
 
+The [pipeline case study](docs/PIPELINE-CASE-STUDY.md) adds correlated activity traces, a fixed synthetic speech corpus, controlled concurrency measurements, and a checkpoint crash/recovery experiment. It separates ingestion, search, and export costs.
+
 ## Current scope
 
 RUSHES is deployed and usable, with active work on reliability and evaluation. Model descriptions, localization, and search ranking still need human review. Representative long-footage capacity and retrieval quality have not been established across a labeled benchmark.

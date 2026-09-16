@@ -16,6 +16,7 @@ from rushes.local_models import LocalEmbedder, ModelOptions, transcribe_local
 from rushes.organization import ORGANIZATION_SCHEMA_VERSION, category_records
 from rushes.provider_budget import ProviderBudgetError, reserve_provider_call, settle_gemini_call
 from rushes.provider_files import delete_provider_file
+from rushes.telemetry import span
 from rushes.timing import Interval, to_us
 
 PROMPT_VERSION = "footage-evidence-v8"
@@ -378,11 +379,17 @@ def model_options() -> ModelOptions:
 
 
 def transcribe(chunk: Path, window: Interval) -> list[dict]:
-    if settings().compute_backend == "modal":
-        from rushes.remote_compute import transcribe_remote
+    with span(
+        "provider.transcription",
+        start_us=window.start_us,
+        end_us=window.end_us,
+        media_us=window.end_us - window.start_us,
+    ):
+        if settings().compute_backend == "modal":
+            from rushes.remote_compute import transcribe_remote
 
-        return transcribe_remote(chunk, window)
-    return transcribe_local(chunk, window, model_options())
+            return transcribe_remote(chunk, window)
+        return transcribe_local(chunk, window, model_options())
 
 
 class Embedder(Protocol):

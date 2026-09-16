@@ -11,10 +11,12 @@ from rushes.inference import embedder
 from rushes.models import Asset, Embedding, Observation, Project
 from rushes.provider_budget import ProviderBudgetError
 from rushes.search_compute import cache_key, computations, relevance_scores
+from rushes.telemetry import traced
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}")
 
 
+@traced("search_evidence")
 async def search_evidence(
     db, access, project_id: UUID, query: str, limit: int, vector, semantic_error
 ):
@@ -106,6 +108,7 @@ async def search_evidence(
     return results, semantic_error
 
 
+@traced("query_embedding")
 async def query_embedding(query, workspace=""):
     # The BGE model card recommends this instruction for query-to-passage retrieval.
     text = (
@@ -149,6 +152,7 @@ def distinct_moments(results, limit):
     return selected
 
 
+@traced("retrieve")
 async def retrieve(access, project_id, query, limit=20, semantic=True):
     async with tenant_session(access.workspace_id) as db:
         await owned(db, Project, project_id, access)

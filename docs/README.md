@@ -18,6 +18,7 @@
 
 Useful examples of investigated changes:
 
+- [Pipeline case study](PIPELINE-CASE-STUDY.md): correlated traces, controlled concurrency, and measured checkpoint recovery.
 - [Export memory](EXPORT-MEMORY-REVIEW.md): production incident, measured encoder tradeoff, real-source verification.
 - [Static frontend](STATIC-FRONTEND-REVIEW.md): removing the production Node process and testing HTTP/lifecycle behavior.
 - [Search repair](SEARCH-REPAIR-REVIEW.md): retrieval behavior and regression evidence.

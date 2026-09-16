@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import signal
+import time
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
@@ -16,6 +17,7 @@ from rushes.db import session_factory, tenant_session
 from rushes.exports import render_export
 from rushes.maintenance import maintain
 from rushes.models import Job, Workspace
+from rushes.telemetry import TraceInterceptor, job_trace_id, span
 from rushes.workflows import (
     INFERENCE_QUEUE,
     MEDIA_QUEUE,
@@ -83,17 +85,26 @@ async def dispatch_workspace(client, workspace_id):
                 "job_id": str(job.id),
                 "asset_id": str(job.asset_id),
                 "project_id": str(job.project_id),
+                "trace_context": job.payload.get("trace_context", {}),
             }
             try:
-                await asyncio.wait_for(
-                    client.start_workflow(
-                        WORKFLOWS[job.kind].run,
-                        args,
-                        id=job.workflow_id,
-                        task_queue=MEDIA_QUEUE,
-                    ),
-                    timeout=5,
-                )
+                with span(
+                    "job.dispatch",
+                    trace_id=args["trace_context"].get("trace_id") or job_trace_id(job.id),
+                    linked_span_id=args["trace_context"].get("span_id"),
+                    job_id=str(job.id),
+                    workflow_id=job.workflow_id,
+                    outbox_wait_ns=max(0, time.time_ns() - int(job.created_at.timestamp() * 1e9)),
+                ):
+                    await asyncio.wait_for(
+                        client.start_workflow(
+                            WORKFLOWS[job.kind].run,
+                            args,
+                            id=job.workflow_id,
+                            task_queue=MEDIA_QUEUE,
+                        ),
+                        timeout=5,
+                    )
             except WorkflowAlreadyStartedError:
                 pass
             job.state, job.stage = "dispatched", "Waiting for worker"
@@ -164,7 +175,8 @@ async def running_workers():
             task_queue=MEDIA_QUEUE,
             workflows=list(WORKFLOWS.values()),
             activities=[*MEDIA_ACTIVITIES, render_export],
-            max_concurrent_activities=1,
+            max_concurrent_activities=config.media_activity_concurrency,
+            interceptors=[TraceInterceptor()],
             max_concurrent_workflow_tasks=4,
             max_cached_workflows=8,
             graceful_shutdown_timeout=timedelta(seconds=30),
@@ -175,6 +187,7 @@ async def running_workers():
             task_queue=INFERENCE_QUEUE,
             activities=INFERENCE_ACTIVITIES,
             max_concurrent_activities=1,
+            interceptors=[TraceInterceptor()],
             graceful_shutdown_timeout=timedelta(seconds=30),
             on_fatal_error=on_fatal_error,
         ),

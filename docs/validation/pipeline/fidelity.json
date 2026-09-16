@@ -1,0 +1,74 @@
+[
+  {
+    "label": "controlled-baseline-1",
+    "frames": 72,
+    "width": 1920,
+    "height": 1080,
+    "timestamps": "all 72 frames equal ordinal/24 to 1 microsecond",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "audio_video_start_offset_seconds": 0,
+    "source_sha256_preserved": true,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793"
+  },
+  {
+    "label": "controlled-candidate-1",
+    "frames": 72,
+    "width": 1920,
+    "height": 1080,
+    "timestamps": "all 72 frames equal ordinal/24 to 1 microsecond",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "audio_video_start_offset_seconds": 0,
+    "source_sha256_preserved": true,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793"
+  },
+  {
+    "label": "controlled-candidate-2",
+    "frames": 72,
+    "width": 1920,
+    "height": 1080,
+    "timestamps": "all 72 frames equal ordinal/24 to 1 microsecond",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "audio_video_start_offset_seconds": 0,
+    "source_sha256_preserved": true,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793"
+  },
+  {
+    "label": "controlled-candidate-3",
+    "frames": 72,
+    "width": 1920,
+    "height": 1080,
+    "timestamps": "all 72 frames equal ordinal/24 to 1 microsecond",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "audio_video_start_offset_seconds": 0,
+    "source_sha256_preserved": true,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793"
+  },
+  {
+    "label": "controlled-baseline-2",
+    "frames": 72,
+    "width": 1920,
+    "height": 1080,
+    "timestamps": "all 72 frames equal ordinal/24 to 1 microsecond",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "audio_video_start_offset_seconds": 0,
+    "source_sha256_preserved": true,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793"
+  },
+  {
+    "label": "controlled-candidate-4",
+    "frames": 72,
+    "width": 1920,
+    "height": 1080,
+    "timestamps": "all 72 frames equal ordinal/24 to 1 microsecond",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "audio_video_start_offset_seconds": 0,
+    "source_sha256_preserved": true,
+    "export_sha256": "e5bb399c72e4b43f39a38a24b18bbd94b67bd7be5077ba0ba7dae28b3b4ab793"
+  }
+]

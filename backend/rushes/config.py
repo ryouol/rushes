@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     max_upload_bytes: int = Field(default=20 * 1024**3, gt=0)
     upload_timeout_seconds: int = Field(default=7200, ge=1, le=86400)
     max_source_seconds: int = Field(default=24 * 3600, gt=0)
+    media_activity_concurrency: int = Field(default=1, ge=1, le=4)
     media_threads: int = Field(default=2, ge=1, le=16)
     local_credits: int = Field(default=600, ge=0)
     max_analysis_credits: int = Field(default=120, ge=1)

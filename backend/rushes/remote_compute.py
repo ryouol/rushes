@@ -11,6 +11,7 @@ from pathlib import Path
 from rushes.config import settings
 from rushes.local_models import RERANKER_MODEL
 from rushes.provider_budget import reserve_provider_call
+from rushes.telemetry import traced
 from rushes.timing import Interval
 
 MODAL_APP = "rushes-compute"
@@ -98,6 +99,7 @@ class RemoteEmbedder:
         # Keep an uncertain call's handle: a later request polls it without paying to dispatch again.
         return self.poll(key, call, timeout=65)
 
+    @traced("provider.embedding")
     def embed(self, texts: list[str]) -> list[list[float]]:
         validate_texts(texts)
         result = self.call(texts)
@@ -112,6 +114,7 @@ class RemoteEmbedder:
             raise ValueError("Remote embedding returned invalid vectors")
         return vectors
 
+    @traced("provider.rerank")
     def rerank(self, query: str, texts: list[str]) -> list[float]:
         validate_texts(texts)
         validate_query(query)

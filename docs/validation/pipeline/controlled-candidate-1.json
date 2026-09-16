@@ -1,0 +1,257 @@
+{
+  "label": "controlled-candidate-1",
+  "fixtures": {
+    "source": "FFmpeg testsrc2 plus macOS Samantha synthetic speech",
+    "speech": "The red bicycle is parked beside the blue river. A yellow train passes the green forest. The camera follows a person walking across the bridge.",
+    "queries": [
+      "red bicycle",
+      "yellow train",
+      "walking across the bridge",
+      "blue river",
+      "green forest"
+    ],
+    "fixtures": [
+      {
+        "file": "synthetic-15s-640x360-h264.mp4",
+        "duration_seconds": 15,
+        "resolution": "640x360",
+        "codec": "h264",
+        "sha256": "ffcbed4d36029cf21466344818c2890454662c14ae484059545c7e7c003e5a39"
+      },
+      {
+        "file": "synthetic-65s-1280x720-h264.mp4",
+        "duration_seconds": 65,
+        "resolution": "1280x720",
+        "codec": "h264",
+        "sha256": "c9987f14e87faeb3481dc1cc230ee15891bb9b79bc8ac574539ab72ecbdc5887"
+      },
+      {
+        "file": "synthetic-125s-1920x1080-hevc.mp4",
+        "duration_seconds": 125,
+        "resolution": "1920x1080",
+        "codec": "hevc",
+        "sha256": "f56bd8fa4854a98c5978266e29eecdf218594337f57adbd02d0b4591ce153167"
+      }
+    ]
+  },
+  "queries": [
+    {
+      "query": "red bicycle",
+      "repeat": 0,
+      "seconds": 0.8688028330216184,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "yellow train",
+      "repeat": 0,
+      "seconds": 0.23276325000915676,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "walking across the bridge",
+      "repeat": 0,
+      "seconds": 0.23964383301790804,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "blue river",
+      "repeat": 0,
+      "seconds": 0.2163681250240188,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "green forest",
+      "repeat": 0,
+      "seconds": 0.24113604199374095,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "red bicycle",
+      "repeat": 1,
+      "seconds": 0.056327167025301605,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "yellow train",
+      "repeat": 1,
+      "seconds": 0.04163441699347459,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "walking across the bridge",
+      "repeat": 1,
+      "seconds": 0.030348000000230968,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "blue river",
+      "repeat": 1,
+      "seconds": 0.03221566599677317,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "green forest",
+      "repeat": 1,
+      "seconds": 0.030789249984081835,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "red bicycle",
+      "repeat": 2,
+      "seconds": 0.04259333299705759,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "yellow train",
+      "repeat": 2,
+      "seconds": 0.03276387500227429,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "walking across the bridge",
+      "repeat": 2,
+      "seconds": 0.02961524997954257,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "blue river",
+      "repeat": 2,
+      "seconds": 0.024367625010199845,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "green forest",
+      "repeat": 2,
+      "seconds": 0.02507675002561882,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "red bicycle",
+      "repeat": 3,
+      "seconds": 0.03977329199551605,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "yellow train",
+      "repeat": 3,
+      "seconds": 0.030642708006780595,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "walking across the bridge",
+      "repeat": 3,
+      "seconds": 0.02846074997796677,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "blue river",
+      "repeat": 3,
+      "seconds": 0.031218957999954,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "green forest",
+      "repeat": 3,
+      "seconds": 0.02864937501726672,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "red bicycle",
+      "repeat": 4,
+      "seconds": 0.026200791995506734,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "yellow train",
+      "repeat": 4,
+      "seconds": 0.024116957996739075,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "walking across the bridge",
+      "repeat": 4,
+      "seconds": 0.07529441697988659,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "blue river",
+      "repeat": 4,
+      "seconds": 0.028977125009987503,
+      "mode": "hybrid",
+      "results": 20
+    },
+    {
+      "query": "green forest",
+      "repeat": 4,
+      "seconds": 0.030558250000467524,
+      "mode": "hybrid",
+      "results": 20
+    }
+  ],
+  "workspace_id": "eb9a18c4-e58f-47dc-82d6-3597f91b026f",
+  "project_id": "12d893b5-d422-4ceb-b0af-2245de756ef6",
+  "corpus_wall_seconds": 159.48959398269653,
+  "corpus_media_minutes_per_wall_minute": 1.2853503158471957,
+  "query_p50_seconds": 0.031218957999954,
+  "query_p95_seconds": 0.24113604199374095,
+  "export": {
+    "seconds": 5.973990333994152,
+    "job_id": "75cab009-5ab3-4ec9-b4ac-dccff30daf55",
+    "id": "82b6b741-f551-4e0d-98de-ffa507233153"
+  },
+  "runs": [
+    {
+      "asset_id": "eafe627b-0a5b-40a0-8b16-677f4605778a",
+      "job_id": "4e30fded-a755-4c34-9489-16ed43628a26",
+      "fixture": "synthetic-15s-640x360-h264.mp4",
+      "started_ns": 1789574803090003000,
+      "ended_ns": 1789574921406332000,
+      "time_to_searchable_seconds": 118.28793404099997,
+      "media_minutes_per_wall_minute": 0.12680921449520646,
+      "state": "partial"
+    },
+    {
+      "asset_id": "ff0c796e-f52b-448e-945e-7acfeac3630f",
+      "job_id": "6361c578-4acb-46a6-b958-d0cc69a53ed5",
+      "fixture": "synthetic-65s-1280x720-h264.mp4",
+      "started_ns": 1789574803165677000,
+      "ended_ns": 1789574923239614000,
+      "time_to_searchable_seconds": 120.05112458299845,
+      "media_minutes_per_wall_minute": 0.5414359942547781,
+      "state": "partial"
+    },
+    {
+      "asset_id": "30ad7e26-92e0-440d-9a0c-e0e16f125630",
+      "job_id": "6a4af139-f760-4934-bbd1-c4374331a804",
+      "fixture": "synthetic-125s-1920x1080-hevc.mp4",
+      "started_ns": 1789574803255552000,
+      "ended_ns": 1789574962579597000,
+      "time_to_searchable_seconds": 159.29839250000077,
+      "media_minutes_per_wall_minute": 0.784690906406977,
+      "state": "partial"
+    }
+  ]
+}

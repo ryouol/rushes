@@ -31,6 +31,7 @@ from rushes.organization import (
     organization_memberships,
 )
 from rushes.storage import StorageError, require_space
+from rushes.telemetry import context, traced
 from rushes.timing import Interval
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}")
@@ -62,6 +63,7 @@ class ExportInput(BaseModel):
 
 
 @router.post("/projects/{project_id}/export-preview", status_code=201)
+@traced("export.preview")
 async def preview_export(project_id: uuid.UUID, body: ExportInput, db: DB, access: Access):
     require_editor(access)
     await owned(db, Project, project_id, access)
@@ -267,6 +269,7 @@ async def preview_export(project_id: uuid.UUID, body: ExportInput, db: DB, acces
         state="draft",
         stage="Review export preview",
         workflow_id=f"export:{export_id}",
+        payload={"trace_context": context()},
     )
     db.add(job)
     await db.flush()

@@ -1,0 +1,34 @@
+{
+  "source": "FFmpeg testsrc2 plus macOS Samantha synthetic speech",
+  "speech": "The red bicycle is parked beside the blue river. A yellow train passes the green forest. The camera follows a person walking across the bridge.",
+  "queries": [
+    "red bicycle",
+    "yellow train",
+    "walking across the bridge",
+    "blue river",
+    "green forest"
+  ],
+  "fixtures": [
+    {
+      "file": "synthetic-15s-640x360-h264.mp4",
+      "duration_seconds": 15,
+      "resolution": "640x360",
+      "codec": "h264",
+      "sha256": "ffcbed4d36029cf21466344818c2890454662c14ae484059545c7e7c003e5a39"
+    },
+    {
+      "file": "synthetic-65s-1280x720-h264.mp4",
+      "duration_seconds": 65,
+      "resolution": "1280x720",
+      "codec": "h264",
+      "sha256": "c9987f14e87faeb3481dc1cc230ee15891bb9b79bc8ac574539ab72ecbdc5887"
+    },
+    {
+      "file": "synthetic-125s-1920x1080-hevc.mp4",
+      "duration_seconds": 125,
+      "resolution": "1920x1080",
+      "codec": "hevc",
+      "sha256": "f56bd8fa4854a98c5978266e29eecdf218594337f57adbd02d0b4591ce153167"
+    }
+  ]
+}

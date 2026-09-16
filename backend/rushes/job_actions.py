@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select
 
 from rushes.models import Asset, Job
+from rushes.telemetry import context
 
 
 def queue_asset(db, asset, *, kind="asset", payload=None):
@@ -13,7 +14,7 @@ def queue_asset(db, asset, *, kind="asset", payload=None):
         project_id=asset.project_id,
         asset_id=asset.id,
         kind=kind,
-        payload=payload or {},
+        payload={**(payload or {}), "trace_context": context()},
         workflow_id=f"{kind}:{asset.id}:{job_id}",
     )
     db.add(job)

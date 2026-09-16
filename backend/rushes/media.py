@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from rushes.config import settings
 from rushes.source_frames import selected_frames
 from rushes.storage import require_space
+from rushes.telemetry import traced
 from rushes.timing import Interval, pts_to_us, seconds, to_us
 
 Progress = Callable[[str], None]
@@ -152,6 +153,7 @@ def probe_lines(process, errors, progress):
             yield line.decode()
 
 
+@traced("inspect")
 def inspect(
     file: BinaryIO, frame_map: Path, *, progress: Progress | None = None, max_seconds: int = 86400
 ) -> Timeline:
@@ -266,6 +268,7 @@ def inspect(
     )
 
 
+@traced("make_proxy")
 def make_proxy(
     file: BinaryIO,
     output: Path,
@@ -358,6 +361,7 @@ def proxy_mapping(source: Timeline, proxy: Timeline) -> dict:
     }
 
 
+@traced("detect_shots")
 def detect_shots(proxy: Path, duration_us: int, progress=None) -> list[Interval]:
     response = run_media(
         [sys.executable, "-m", "rushes.scene_detect", str(proxy), str(duration_us)],
@@ -366,6 +370,7 @@ def detect_shots(proxy: Path, duration_us: int, progress=None) -> list[Interval]
     return [Interval.model_validate(row) for row in json.loads(response)]
 
 
+@traced("thumbnail")
 def thumbnail(proxy: Path, output: Path, at_us: int = 0):
     run_media(
         [
@@ -390,6 +395,7 @@ def thumbnail(proxy: Path, output: Path, at_us: int = 0):
     )
 
 
+@traced("render_clip")
 def render_clip(
     file: BinaryIO,
     timeline: Timeline,
@@ -484,6 +490,7 @@ def render_clip(
     }
 
 
+@traced("extract_audio")
 def extract_audio(
     file: BinaryIO, timeline: Timeline, interval: Interval, output: Path, progress=None
 ):
