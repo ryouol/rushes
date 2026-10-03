@@ -12,6 +12,7 @@ from temporalio import activity
 from rushes.activities import heartbeat, keep_alive, stage
 from rushes.config import settings
 from rushes.db import tenant_session
+from rushes.evidence import current_observation
 from rushes.export_documents import (
     append_worklog,
     finish_worklog,
@@ -260,7 +261,7 @@ async def render_export(args: dict):
                 select(Observation, Asset, MediaTimeline)
                 .join(Asset, Asset.id == Observation.asset_id)
                 .join(MediaTimeline, MediaTimeline.id == Observation.timeline_id)
-                .where(Asset.project_id == project_id)
+                .where(Asset.project_id == project_id, current_observation())
             )
             rows = await db.stream(
                 query.order_by(Asset.id, Observation.start_us).execution_options(yield_per=200)

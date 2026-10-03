@@ -15,6 +15,7 @@ from rushes.api_common import DB, Access, owned, row_json
 from rushes.auth import require_editor, stream_access
 from rushes.config import settings
 from rushes.db import WorkspaceBusyError, tenant_session
+from rushes.evidence import current_observation
 from rushes.job_actions import cancel_batch_children, queue_asset
 from rushes.models import (
     Asset,
@@ -361,9 +362,12 @@ async def observations(
     limit: int = Query(100, ge=1, le=200),
     kind: Literal["all", "speech", "visual"] = "all",
     near_us: int | None = Query(None, ge=0),
+    include_history: bool = False,
 ):
     await owned(db, Asset, asset_id, access)
     filters = [Observation.asset_id == asset_id]
+    if not include_history:
+        filters.append(current_observation())
     if kind != "all":
         filters.append(
             Observation.kind == "speech" if kind == "speech" else Observation.kind != "speech"
@@ -394,14 +398,18 @@ async def observations(
             offset = (before // limit) * limit
     count = await db.scalar(select(func.count()).select_from(Observation).where(*filters))
     offset = min(offset, max(0, ((count - 1) // limit) * limit))
-    rows = await db.scalars(
-        select(Observation)
+    rows = await db.execute(
+        select(Observation, (~current_observation()).label("superseded"))
         .where(*filters)
         .order_by(Observation.start_us, Observation.id)
         .offset(offset)
         .limit(limit)
     )
-    return {"items": [row_json(row) for row in rows], "total": count, "offset": offset}
+    return {
+        "items": [{**row_json(row), "superseded": superseded} for row, superseded in rows],
+        "total": count,
+        "offset": offset,
+    }
 
 
 class Correction(BaseModel):
