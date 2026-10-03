@@ -11,6 +11,7 @@
 | [Security](../SECURITY.md) | Private reporting and handling sensitive material |
 | [Google authentication](GOOGLE-AUTH.md) | OAuth setup and identity/session design |
 | [Hosting](HOSTING.md) | Container operation, public build configuration, and backups |
+| [Weekly product improvements](PM-WORKFLOW.md) | PM cadence, linked planning records, delivery checks, and current-evidence policy |
 
 ## Deployment and engineering evidence
 

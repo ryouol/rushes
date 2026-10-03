@@ -2,11 +2,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import cast, func, literal, select, text
+from sqlalchemy import cast, func, literal, literal_column, select, text
 
 from rushes.api_common import DB, Access, owned, row_json
 from rushes.config import settings
 from rushes.db import tenant_session
+from rushes.evidence import current_observation
 from rushes.inference import embedder
 from rushes.models import Asset, Embedding, Observation, Project
 from rushes.provider_budget import ProviderBudgetError
@@ -20,13 +21,19 @@ router = APIRouter(prefix="/api/workspaces/{workspace_id}")
 async def search_evidence(
     db, access, project_id: UUID, query: str, limit: int, vector, semantic_error
 ):
+    document = func.to_tsvector(literal_column("'english'"), Observation.description)
+    phrase = func.websearch_to_tsquery(literal_column("'english'"), query)
     keywords = await db.execute(
-        text("""SELECT o.id FROM observation o JOIN asset a ON a.id=o.asset_id
-        WHERE o.workspace_id=:workspace AND a.project_id=:project
-        AND to_tsvector('english', o.description) @@ websearch_to_tsquery('english', :query)
-        ORDER BY ts_rank_cd(to_tsvector('english', o.description), websearch_to_tsquery('english', :query)) DESC
-        LIMIT 60"""),
-        {"workspace": access.workspace_id, "project": project_id, "query": query},
+        select(Observation.id)
+        .join(Asset, Asset.id == Observation.asset_id)
+        .where(
+            Observation.workspace_id == access.workspace_id,
+            Asset.project_id == project_id,
+            current_observation(),
+            document.op("@@")(phrase),
+        )
+        .order_by(func.ts_rank_cd(document, phrase).desc())
+        .limit(60)
     )
     keyword_ids = list(keywords.scalars())
     vector_ids = []
@@ -45,6 +52,7 @@ async def search_evidence(
                             Observation.workspace_id == access.workspace_id,
                             Embedding.workspace_id == access.workspace_id,
                             Asset.project_id == project_id,
+                            current_observation(),
                             Embedding.model
                             == literal(settings().embedding_model, literal_execute=True),
                             Embedding.dimension == len(vector),
@@ -67,7 +75,9 @@ async def search_evidence(
         row.id: row
         for row in await db.scalars(
             select(Observation).where(
-                Observation.id.in_(ids), Observation.workspace_id == access.workspace_id
+                Observation.id.in_(ids),
+                Observation.workspace_id == access.workspace_id,
+                current_observation(),
             )
         )
     }
@@ -213,11 +223,15 @@ async def search(
 @router.get("/observations/{observation_id}/context")
 async def context(observation_id: UUID, db: DB, access: Access):
     observation = await owned(db, Observation, observation_id, access)
+    superseded = not await db.scalar(
+        select(current_observation()).where(Observation.id == observation.id)
+    )
     neighbors = await db.scalars(
         select(Observation)
         .where(
             Observation.asset_id == observation.asset_id,
             Observation.id != observation.id,
+            current_observation(),
             Observation.start_us < observation.end_us + 5_000_000,
             Observation.end_us > max(0, observation.start_us - 5_000_000),
         )
@@ -230,6 +244,10 @@ async def context(observation_id: UUID, db: DB, access: Access):
             "asset_id": observation.asset_id,
             "start_us": observation.start_us,
             "end_us": observation.end_us,
+            "superseded": superseded,
         },
-        "evidence": [row_json(observation), *[row_json(row) for row in neighbors]],
+        "evidence": [
+            {**row_json(observation), "superseded": superseded},
+            *[{**row_json(row), "superseded": False} for row in neighbors],
+        ],
     }
