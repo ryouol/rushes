@@ -75,3 +75,16 @@ retrieve retained rows with a `superseded` flag. Direct context links to older
 observations remain available and label their citation and evidence as superseded.
 No rows, original files, provenance, saved collections, or revision history are
 deleted. Whole-file category correction remains a separate backlog item.
+
+## Processing recovery acceptance policy
+
+Incomplete, failed, or canceled processing explains preview availability and
+retained worklog entries even when no error text was recorded. Detailed errors
+and the footage ID remain available in an expandable, keyboard-accessible panel.
+The UI does not infer a root cause from provider error wording or promise that a
+transcript exists. Recovery eligibility comes from the API's `can_retry` field;
+only workspace owners and editors receive processing controls. Resuming an
+existing attempt retains progress and does not automatically repeat uncertain
+provider requests. Unfinished steps may use credits. New analysis requires
+reviewing an estimate and explicitly confirming it; opening recovery details
+must never dispatch analysis. These notices do not change billing or job policy.

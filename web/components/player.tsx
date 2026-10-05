@@ -1,4 +1,5 @@
 "use client";
+
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   useCallback,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import "./editor.css";
 import { ReviewTimeline } from "./review-timeline";
+import { ProcessingNotice } from "./processing-notice";
 import { AssetTools, ObservationHistory } from "./asset-tools";
 import {
   api,
@@ -456,20 +458,19 @@ export function Player({
                         ? loading
                           ? "Loading footage…"
                           : "Footage could not load"
-                        : ["failed", "partial", "canceled"].includes(
+                        : ["queued", "processing", "preview_ready"].includes(
                               asset.status,
                             )
-                          ? "Preview unavailable"
-                          : "Preview is being prepared"}
+                          ? "Preview is being prepared"
+                          : "Preview unavailable"}
                     </h2>
                     <p>
-                      {asset?.error ||
-                        (asset &&
-                        ["queued", "processing", "preview_ready"].includes(
-                          asset.status,
-                        )
-                          ? "Processing continues in the background. You can close this view and return later."
-                          : "Source details and available worklog entries are below.")}
+                      {asset &&
+                      ["queued", "processing", "preview_ready"].includes(
+                        asset.status,
+                      )
+                        ? "Processing continues in the background. You can close this view and return later."
+                        : "Source details and available worklog entries are below."}
                     </p>
                     {!asset && !loading && (
                       <button
@@ -737,9 +738,7 @@ export function Player({
                   </p>
                 )}
               </details>
-              {asset?.error && (
-                <div className="notice small">{asset.error}</div>
-              )}
+              {asset && <ProcessingNotice asset={asset} canEdit={canEdit} />}
               {asset && (
                 <AssetTools
                   base={base}

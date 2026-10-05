@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ProcessingNotice } from "./processing-notice";
 import {
   ChevronDown,
   FileVideo,
@@ -292,7 +293,7 @@ export function OrganizationLibrary({
                   )}
                 </div>
               </button>
-              {asset.error && <p className="asset-notice">{asset.error}</p>}
+              <ProcessingNotice asset={asset} canEdit={canEdit} compact />
               {canEdit && (
                 <div className="asset-management">
                   {asset.can_retry && (

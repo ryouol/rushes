@@ -179,6 +179,180 @@ async function fixture(
   await page.goto("/app");
 }
 
+test("partial processing preserves usable evidence and requires an estimate and confirmation for new analysis", async ({
+  page,
+}) => {
+  const diagnostic =
+    "Provider response failed schema validation. Raw response retained.";
+  const asset = {
+    ...fixtureAsset("partial"),
+    status: "partial",
+    error: diagnostic,
+    has_preview: true,
+    organization: { ...fixtureAsset("partial").organization, state: "partial" },
+  };
+  await fixture(page, [asset]);
+  await page.route("**/assets/partial", (route) =>
+    route.fulfill({ json: asset }),
+  );
+  await page.route("**/assets/partial/observations?**", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            id: "speech",
+            asset_id: asset.id,
+            kind: "speech",
+            start_us: 0,
+            end_us: 1_000_000,
+            description: "Retained synthetic transcript",
+            producer: "fixture",
+            uncertainty: "high",
+            version: 1,
+            review_status: "unreviewed",
+          },
+        ],
+        total: 1,
+        offset: 0,
+      },
+    }),
+  );
+  const quote = {
+    amount_milli: 1000,
+    model: "synthetic",
+    fingerprint: "synthetic-estimate",
+    available: true,
+    notice: "Synthetic quote: no provider calls.",
+  };
+  let estimates = 0;
+  const analyses: unknown[] = [];
+  await page.route("**/assets/partial/analysis-estimate", (route) => {
+    estimates += 1;
+    return route.fulfill({ json: quote });
+  });
+  await page.route("**/assets/partial/reanalyze", (route) => {
+    analyses.push(route.request().postDataJSON());
+    return route.fulfill({ json: { status: "queued" } });
+  });
+  await page.locator(".workspace-project-row").first().click();
+  await expect(page.locator(".asset-card")).toContainText(
+    "Your preview is available",
+  );
+  await expect(page.getByText(diagnostic, { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Resume processing" }),
+  ).toHaveCount(0);
+  await page.locator(".asset-open").first().click();
+  const dialog = page.getByRole("dialog");
+  const notice = dialog.getByRole("region", { name: "Processing status" });
+  await expect(notice).toContainText("Processing is incomplete");
+  await expect(notice).toContainText(
+    "starts only after confirmation and may use credits",
+  );
+  await expect(dialog.getByText(diagnostic, { exact: true })).toBeHidden();
+  await notice.getByText("Processing details", { exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(notice.getByText(diagnostic, { exact: true })).toBeVisible();
+  await expect(notice).toContainText("Footage ID: partial");
+  await dialog.getByRole("button", { name: /^Worklog\b/ }).click();
+  await expect(dialog.locator(".worklog-item")).toContainText(
+    "Retained synthetic transcript",
+  );
+  await dialog.getByText("Footage details & analysis", { exact: true }).click();
+  expect(estimates).toBe(0);
+  expect(analyses).toHaveLength(0);
+  await expect(
+    dialog.getByRole("button", { name: "Resume processing" }),
+  ).toHaveCount(0);
+  await dialog
+    .getByRole("button", { name: "Review analysis estimate" })
+    .click();
+  await expect(
+    dialog.getByRole("button", { name: "Start new analysis" }),
+  ).toBeVisible();
+  expect(estimates).toBe(1);
+  expect(analyses).toHaveLength(0);
+  await dialog.getByRole("button", { name: "Start new analysis" }).click();
+  await expect(
+    dialog.getByText("New analysis queued. Corrections remain in the worklog."),
+  ).toBeVisible();
+  expect(analyses).toEqual([
+    {
+      amount_milli: quote.amount_milli,
+      model: quote.model,
+      fingerprint: quote.fingerprint,
+    },
+  ]);
+});
+
+for (const role of ["owner", "viewer"] as const) {
+  test(`${role} sees recovery options appropriate to their role for canceled processing without an error`, async ({
+    page,
+  }) => {
+    const asset = {
+      ...fixtureAsset("canceled"),
+      status: "canceled",
+      error: null,
+      can_retry: true,
+    };
+    await fixture(page, [asset]);
+    await page.route("**/api/workspaces", (route) =>
+      route.fulfill({
+        json: workspaces.map((workspace) => ({ ...workspace, role })),
+      }),
+    );
+    await page.route("**/assets/canceled", (route) =>
+      route.fulfill({ json: asset }),
+    );
+    await page.route("**/assets/canceled/observations?**", (route) =>
+      route.fulfill({ json: { items: [], total: 0, offset: 0 } }),
+    );
+    let retries = 0;
+    await page.route("**/assets/canceled/retry", (route) => {
+      retries += 1;
+      return route.fulfill({ json: { status: "queued" } });
+    });
+    await page.reload();
+    await page.locator(".workspace-project-row").first().click();
+    await expect(page.locator(".asset-card")).toContainText(
+      "No preview is available yet",
+    );
+    await expect(
+      page.getByRole("button", { name: "Resume processing" }),
+    ).toHaveCount(role === "owner" ? 1 : 0);
+    await page.locator(".asset-open").first().click();
+    const dialog = page.getByRole("dialog");
+    const notice = dialog.getByRole("region", { name: "Processing status" });
+    await expect(notice).toContainText("Processing was canceled");
+    await expect(
+      dialog.getByRole("heading", { name: "Preview unavailable" }),
+    ).toBeVisible();
+    await dialog
+      .getByText("Footage details & analysis", { exact: true })
+      .click();
+    expect(retries).toBe(0);
+    if (role === "owner") {
+      await expect(notice).toContainText("Unfinished steps may use credits");
+      await expect(notice).toContainText(
+        "requests with uncertain outcomes are not repeated automatically",
+      );
+      await dialog.getByRole("button", { name: "Resume processing" }).click();
+      await expect(
+        dialog.getByText(/Processing will resume from saved progress/),
+      ).toBeVisible();
+      expect(retries).toBe(1);
+    } else {
+      await expect(notice).toContainText("Ask a workspace owner or editor");
+      await expect(
+        dialog.getByRole("button", { name: "Resume processing" }),
+      ).toHaveCount(0);
+      await expect(
+        dialog.getByRole("button", { name: "Review analysis estimate" }),
+      ).toHaveCount(0);
+    }
+  });
+}
+
 for (const kind of ["project", "workspace"] as const) {
   test(`${kind} deletion requires its name, submits once, and retains a rejected item`, async ({
     page,
@@ -996,7 +1170,9 @@ test("footage paging preserves focus and stale category rows stay inactive after
   const staleOpen = grid.locator(".asset-open").first();
   await staleOpen.evaluate((button) => (button as HTMLElement).focus());
   await expect(staleOpen).not.toBeFocused();
-  await expect(staleOpen.click({ trial: true, timeout: 300 })).rejects.toThrow();
+  await expect(
+    staleOpen.click({ trial: true, timeout: 300 }),
+  ).rejects.toThrow();
   failCategory = false;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await expect(grid).not.toHaveAttribute("inert", "");
