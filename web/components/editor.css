@@ -60,9 +60,40 @@
 .project-view .asset-info > div {
   margin-top: 8px;
 }
-.project-view .asset-notice {
-  padding: 12px 0;
+.processing-notice {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.processing-notice p {
+  margin: 0;
+}
+.processing-notice p + p {
   margin-top: 8px;
+}
+.processing-notice strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.processing-notice-compact {
+  padding: 8px 0;
+  border: 0;
+}
+.processing-diagnostics {
+  margin-top: 8px;
+}
+.processing-diagnostics summary {
+  min-height: 44px;
+  align-content: center;
+  color: var(--text);
+  cursor: pointer;
+}
+.processing-diagnostics p {
+  white-space: pre-wrap;
 }
 .project-view .retry {
   margin: 0;

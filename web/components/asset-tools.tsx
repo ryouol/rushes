@@ -167,7 +167,7 @@ export function AssetTools({
                         method: "POST",
                       });
                       setStatus(
-                        "Recovery queued using the original operation. Completed checkpoints and existing settlements are retained.",
+                        "Processing will resume from saved progress. Completed work is retained; requests with uncertain outcomes will not be repeated automatically.",
                       );
                       await onChanged();
                     })
