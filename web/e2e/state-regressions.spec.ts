@@ -179,6 +179,157 @@ async function fixture(
   await page.goto("/app");
 }
 
+test("category reviews retain a conflicting draft, save explicitly, refresh the library, and restore AI labels", async ({
+  page,
+}) => {
+  const asset = {
+    ...fixtureAsset("review", [{ id: "wrong", name: "Wrong" }]),
+    organization: {
+      ...fixtureAsset("review", [{ id: "wrong", name: "Wrong" }]).organization,
+      category_review: undefined as
+        | undefined
+        | {
+            id: string;
+            version: number;
+            user_id: string;
+            created_at: string;
+            categories: { id: string; name: string }[] | null;
+          },
+    },
+  };
+  await fixture(page, [asset]);
+  await page.route("**/assets/review", (route) =>
+    route.fulfill({ json: asset }),
+  );
+  await page.route("**/assets/review/observations?**", (route) =>
+    route.fulfill({ json: { items: [], total: 0 } }),
+  );
+  const writes: { version: number; categories: string[] | null }[] = [];
+  await page.route("**/assets/review/categories", (route) => {
+    const body = route.request().postDataJSON();
+    writes.push(body);
+    if (writes.length === 1) {
+      asset.organization.category_review = {
+        id: "r1",
+        version: 1,
+        user_id: "u2",
+        created_at: "2026-10-12T12:00:00Z",
+        categories: [{ id: "road", name: "Road" }],
+      };
+      asset.organization.categories = [
+        { id: "road", name: "Road", evidence_count: 0 },
+      ];
+      return route.fulfill({
+        status: 409,
+        json: {
+          detail: "Categories changed. Reopen category review before saving.",
+        },
+      });
+    }
+    const categories =
+      body.categories === null
+        ? [{ id: "wrong", name: "Wrong" }]
+        : body.categories.map((name: string) => ({
+            id: name.toLowerCase(),
+            name,
+          }));
+    asset.organization.categories = categories.map((c: object) => ({
+      ...c,
+      evidence_count: 0,
+    }));
+    asset.organization.category_review = {
+      id: `r${body.version + 1}`,
+      version: body.version + 1,
+      user_id: "u",
+      created_at: "2026-10-12T13:00:00Z",
+      categories: body.categories === null ? null : categories,
+    };
+    return route.fulfill({ json: asset.organization.category_review });
+  });
+  await page.locator(".workspace-project-row").first().click();
+  await page.locator(".asset-open").first().click();
+  const panel = page.locator(".category-review");
+  await panel.locator("summary").click();
+  expect(writes).toHaveLength(0);
+  await panel
+    .getByRole("button", { name: "Edit categories", exact: true })
+    .click();
+  await panel.getByLabel("Categories, one per line").fill("Coast");
+  await panel.getByRole("button", { name: "Save reviewed categories" }).click();
+  await expect(panel.getByRole("alert")).toContainText("Categories changed");
+  await expect(panel.getByLabel("Categories, one per line")).toHaveValue(
+    "Coast",
+  );
+  await panel.getByRole("button", { name: "Cancel", exact: true }).click();
+  await panel
+    .getByRole("button", { name: "Edit categories", exact: true })
+    .click();
+  await expect(panel.getByLabel("Categories, one per line")).toHaveValue(
+    "Road",
+  );
+  await panel.getByLabel("Categories, one per line").fill("Coast");
+  await panel.getByRole("button", { name: "Save reviewed categories" }).click();
+  await expect(panel.getByRole("status")).toContainText(
+    "will survive new analysis",
+  );
+  expect(writes[1]).toEqual({ version: 1, categories: ["Coast"] });
+  await page.getByRole("button", { name: "Close review" }).click();
+  await expect(page.locator(".asset-card")).toContainText(
+    "Reviewed categories",
+  );
+  await expect(page.locator(".asset-card")).toContainText("Coast");
+  await page.locator(".asset-open").first().click();
+  await panel.locator("summary").click();
+  await panel.getByRole("button", { name: "Use AI categories" }).click();
+  await expect(panel.getByRole("status")).toContainText(
+    "AI categories restored",
+  );
+  expect(writes[2]).toEqual({ version: 2, categories: null });
+});
+
+test("viewers can inspect category history without editing", async ({
+  page,
+}) => {
+  const asset = fixtureAsset("review");
+  await fixture(page, [asset]);
+  await page.route("**/api/workspaces", (route) =>
+    route.fulfill({ json: workspaces.map((w) => ({ ...w, role: "viewer" })) }),
+  );
+  await page.route("**/assets/review", (route) =>
+    route.fulfill({ json: asset }),
+  );
+  await page.route("**/assets/review/observations?**", (route) =>
+    route.fulfill({ json: { items: [], total: 0 } }),
+  );
+  await page.route("**/assets/review/category-history", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "r1",
+          version: 1,
+          user_name: "Synthetic editor",
+          created_at: "2026-10-12T13:00:00Z",
+          categories: [],
+        },
+      ],
+    }),
+  );
+  await page.reload();
+  await page.locator(".workspace-project-row").first().click();
+  await page.locator(".asset-open").first().click();
+  const panel = page.locator(".category-review");
+  await panel.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    panel.getByRole("button", { name: "Edit categories", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    panel.getByRole("button", { name: "Use AI categories" }),
+  ).toHaveCount(0);
+  await panel.getByRole("button", { name: "Category review history" }).click();
+  await expect(panel).toContainText("Synthetic editor");
+});
+
 test("partial processing preserves usable evidence and requires an estimate and confirmation for new analysis", async ({
   page,
 }) => {

@@ -58,7 +58,7 @@ export function OrganizationStatus({
               ? `${processing_assets} ${processing_assets === 1 ? "file is" : "files are"} processing`
               : total_assets === 0
                 ? "AI groups your footage as it’s analyzed"
-                : `${categorized_assets} of ${total_assets} files have AI categories`}
+                : `${categorized_assets} of ${total_assets} files have categories`}
         </p>
       </div>
       {!analysis_configured ? (
@@ -118,7 +118,7 @@ export function OrganizationCategories({
       <div
         className="organization-category-strip"
         role="group"
-        aria-label="AI categories"
+        aria-label="Categories"
       >
         {categoryButton({
           id: "",
@@ -147,7 +147,7 @@ export function OrganizationCategories({
           id="organization-more-categories"
           className="organization-more-categories"
         >
-          <div role="group" aria-label="More AI categories">
+          <div role="group" aria-label="More categories">
             {remaining.map(categoryButton)}
           </div>
           <p>
@@ -274,6 +274,9 @@ export function OrganizationLibrary({
                 </div>
                 <div className="asset-info">
                   <h2 title={asset.name}>{asset.name}</h2>
+                  {organization?.category_review?.categories != null && (
+                    <p className="small muted">Reviewed categories</p>
+                  )}
                   {status && (
                     <p className="organization-asset-status">
                       {state === "processing" && (

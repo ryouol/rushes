@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import "./editor.css";
 import { ReviewTimeline } from "./review-timeline";
+import { CategoryReviewTools } from "./category-review";
 import { ProcessingNotice } from "./processing-notice";
 import { AssetTools, ObservationHistory } from "./asset-tools";
 import {
@@ -738,6 +739,15 @@ export function Player({
                   </p>
                 )}
               </details>
+              {asset && (
+                <CategoryReviewTools
+                  key={asset.id}
+                  asset={asset}
+                  base={base}
+                  canEdit={canEdit}
+                  onChanged={load}
+                />
+              )}
               {asset && <ProcessingNotice asset={asset} canEdit={canEdit} />}
               {asset && (
                 <AssetTools

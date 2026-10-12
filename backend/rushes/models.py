@@ -111,6 +111,16 @@ class Asset(Tenant, Base):
     __table_args__ = (UniqueConstraint("project_id", "source_root", "relative_path"),)
 
 
+class AssetCategoryReview(Tenant, Base):
+    __tablename__ = "asset_category_review"
+    asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("asset.id"), index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"))
+    version: Mapped[int]
+    # NULL restores AI categories; an empty array explicitly removes all categories.
+    categories: Mapped[list | None] = mapped_column(JSONB(none_as_null=True))
+    __table_args__ = (UniqueConstraint("asset_id", "version"), CheckConstraint("version > 0"))
+
+
 class MediaTimeline(Tenant, Base):
     __tablename__ = "media_timeline"
     asset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("asset.id"), index=True)

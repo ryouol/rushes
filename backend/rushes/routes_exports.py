@@ -15,6 +15,7 @@ from rushes.exports import export_folder, safe_name
 from rushes.interchange import validate_entries
 from rushes.models import (
     Asset,
+    AssetCategoryReview,
     Collection,
     CollectionItem,
     Export,
@@ -166,6 +167,18 @@ async def preview_export(project_id: uuid.UUID, body: ExportInput, db: DB, acces
                         "review_status": observation.review_status,
                     }
                 )
+            reviews = await db.execute(
+                select(AssetCategoryReview, memberships.c.category_name)
+                .join(memberships, memberships.c.category_review_id == AssetCategoryReview.id)
+                .where(memberships.c.asset_id.in_(asset_ids), memberships.c.category_id == body.category)
+            )
+            for review, category_name in reviews:
+                evidence_counts[review.asset_id] = 1
+                category_evidence[review.asset_id] = [{
+                    "category_review_id": str(review.id), "version": review.version,
+                    "user_id": str(review.user_id), "created_at": review.created_at.isoformat(),
+                    "category_name": category_name, "producer": "human", "review_status": "reviewed",
+                }]
             if body.category != "uncategorized" and category_evidence.keys() != asset_ids:
                 raise HTTPException(
                     409, "Category membership changed. Review a new export preview."

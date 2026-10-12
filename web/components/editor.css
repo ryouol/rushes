@@ -1,4 +1,7 @@
 /* RUSHES review surfaces: footage first, precise controls, optional context. */
+.category-review p {
+  overflow-wrap: anywhere;
+}
 .project-view,
 .settings-view {
   min-width: 0;

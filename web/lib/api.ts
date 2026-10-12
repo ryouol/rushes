@@ -28,7 +28,16 @@ export type ProjectOrganization = {
   not_analyzed_assets: number;
   analysis_configured: boolean;
 };
+export type CategoryReview = {
+  user_name?: string;
+  id: string;
+  version: number;
+  user_id: string;
+  created_at: string;
+  categories: { id: string; name: string }[] | null;
+};
 export type AssetOrganization = {
+  category_review?: CategoryReview;
   state: "processing" | "partial" | "organized" | "not_analyzed";
   categories: { id: string; name: string; evidence_count: number }[];
   category_total: number;

@@ -33,8 +33,11 @@ def main():
                 forced = db.execute(
                     "SELECT count(*) FROM pg_class WHERE relrowsecurity AND relforcerowsecurity AND relnamespace = 'public'::regnamespace"
                 ).fetchone()[0]
-                assert forced == 17
-                assert version == "0008"
+                assert forced == 18
+                assert version == "0009"
+                assert not db.execute(
+                    "SELECT has_table_privilege('rushes_app','asset_category_review','UPDATE')"
+                ).fetchone()[0]
                 assert db.execute(
                     "SELECT has_table_privilege('rushes_app','provider_spend_settlement','SELECT') "
                     "AND has_table_privilege('rushes_app','provider_spend_settlement','INSERT') "
