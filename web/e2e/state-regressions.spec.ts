@@ -273,7 +273,7 @@ test("category reviews retain a conflicting draft, save explicitly, refresh the 
     "will survive new analysis",
   );
   expect(writes[1]).toEqual({ version: 1, categories: ["Coast"] });
-  await page.getByRole("button", { name: "Close review" }).click();
+  await page.getByRole("button", { name: "Close media review" }).click();
   await expect(page.locator(".asset-card")).toContainText(
     "Reviewed categories",
   );
