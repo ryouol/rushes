@@ -78,6 +78,13 @@ async def test_review_controls_counts_filters_exports_and_survives_reanalysis(
     ).status_code == 200
     assert (await client.get(project_base + "/assets?category=uncategorized")).json()["total"] == 1
     # Explicit reset restores the newest model labels without deleting reviews.
+    uncategorized = await client.post(
+        project_base + "/export-preview", json={"kind": "copies", "category": "uncategorized"}
+    )
+    assert uncategorized.status_code == 201
+    async with tenant_session(ws) as db:
+        empty_export = await db.get(Export, uncategorized.json()["id"])
+        assert empty_export.plan["entries"][0]["organization"]["evidence"][0]["version"] == 2
     assert (
         await client.put(path + "/categories", json={"version": 2, "categories": None})
     ).status_code == 200

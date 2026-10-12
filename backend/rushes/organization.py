@@ -123,18 +123,19 @@ def organization_memberships(workspace_id: UUID, project_id: UUID, runs=None):
             ~exists(reviewed),
         )
     )
-    labels = func.jsonb_array_elements(reviews.c.categories).table_valued("value").lateral("review_labels")
-    label = type_coerce(labels.c.value, JSONB)
-    human = (
-        select(
-            reviews.c.asset_id,
-            cast(None, SQLUUID).label("observation_id"),
-            label["id"].as_string().label("category_id"),
-            label["name"].as_string().label("category_name"),
-            reviews.c.id.label("category_review_id"),
-        )
-        .join(labels, true())
+    labels = (
+        func.jsonb_array_elements(reviews.c.categories)
+        .table_valued("value")
+        .lateral("review_labels")
     )
+    label = type_coerce(labels.c.value, JSONB)
+    human = select(
+        reviews.c.asset_id,
+        cast(None, SQLUUID).label("observation_id"),
+        label["id"].as_string().label("category_id"),
+        label["name"].as_string().label("category_name"),
+        reviews.c.id.label("category_review_id"),
+    ).join(labels, true())
     return machine.union_all(human).cte("organization_memberships")
 
 
@@ -242,7 +243,8 @@ async def asset_organizations(db, workspace_id, project_id, asset_ids):
     reviews = latest_category_reviews(workspace_id, project_id)
     for row in await db.execute(select(reviews).where(reviews.c.asset_id.in_(asset_ids))):
         result[row.asset_id]["category_review"] = {
-            key: getattr(row, key) for key in ("id", "version", "user_id", "created_at", "categories")
+            key: getattr(row, key)
+            for key in ("id", "version", "user_id", "created_at", "categories")
         }
     return result
 
@@ -274,8 +276,7 @@ async def project_organization(db, workspace_id, project_id):
     total = sum(state_counts.values())
     return {
         "categories": [
-            {"id": row.id, "name": row.name, "asset_count": row.asset_count}
-            for row in categories
+            {"id": row.id, "name": row.name, "asset_count": row.asset_count} for row in categories
         ],
         "category_total": category_total,
         "has_more": category_total > 100,

@@ -73,34 +73,50 @@ class CategoryReviewInput(BaseModel):
 
 
 @router.get("/assets/{asset_id}/category-history")
-async def category_history(asset_id: uuid.UUID, db: DB, access: Access, offset: int = Query(0, ge=0)):
+async def category_history(
+    asset_id: uuid.UUID, db: DB, access: Access, offset: int = Query(0, ge=0)
+):
     await owned(db, Asset, asset_id, access)
-    return [{**row_json(row), "user_name": name or "Workspace member"} for row, name in await db.execute(
-        select(AssetCategoryReview, User.name).join(User, User.id == AssetCategoryReview.user_id)
-        .where(AssetCategoryReview.asset_id == asset_id)
-        .order_by(AssetCategoryReview.version.desc()).offset(offset).limit(20)
-    )]
+    return [
+        {**row_json(row), "user_name": name or "Workspace member"}
+        for row, name in await db.execute(
+            select(AssetCategoryReview, User.name)
+            .join(User, User.id == AssetCategoryReview.user_id)
+            .where(AssetCategoryReview.asset_id == asset_id)
+            .order_by(AssetCategoryReview.version.desc())
+            .offset(offset)
+            .limit(20)
+        )
+    ]
 
 
 @router.put("/assets/{asset_id}/categories")
 async def review_categories(asset_id: uuid.UUID, body: CategoryReviewInput, db: DB, access: Access):
     require_editor(access)
-    asset = await db.scalar(select(Asset).where(
-        Asset.id == asset_id, Asset.workspace_id == access.workspace_id
-    ).with_for_update())
+    asset = await db.scalar(
+        select(Asset)
+        .where(Asset.id == asset_id, Asset.workspace_id == access.workspace_id)
+        .with_for_update()
+    )
     if asset is None:
         raise HTTPException(404, "Record not found")
-    previous = await db.scalar(select(AssetCategoryReview).where(
-        AssetCategoryReview.asset_id == asset_id
-    ).order_by(AssetCategoryReview.version.desc()).limit(1))
+    previous = await db.scalar(
+        select(AssetCategoryReview)
+        .where(AssetCategoryReview.asset_id == asset_id)
+        .order_by(AssetCategoryReview.version.desc())
+        .limit(1)
+    )
     if body.version != (previous.version if previous else 0):
         raise HTTPException(409, "Categories changed. Reopen category review before saving.")
     categories = None if body.categories is None else category_records(body.categories)
     if previous and previous.categories == categories:
         return row_json(previous)
     review = AssetCategoryReview(
-        workspace_id=access.workspace_id, asset_id=asset_id, user_id=access.user_id,
-        version=body.version + 1, categories=categories,
+        workspace_id=access.workspace_id,
+        asset_id=asset_id,
+        user_id=access.user_id,
+        version=body.version + 1,
+        categories=categories,
     )
     db.add(review)
     await db.flush()
