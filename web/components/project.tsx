@@ -936,7 +936,10 @@ export function ProjectView({
                 : [...current, created],
             )
           }
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            setSelected(null);
+            void refresh();
+          }}
           onExport={(body) => exportPreview(body, true)}
         />
       )}

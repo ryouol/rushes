@@ -21,6 +21,7 @@ from rushes.models import (
     AnalysisRun,
     AnalysisWindow,
     Asset,
+    AssetCategoryReview,
     Collection,
     CollectionItem,
     Embedding,
@@ -131,6 +132,7 @@ async def delete_records(db, workspace_id, kind, project_ids, asset_ids, exports
         await db.execute(delete(model).where(model.workspace_id == workspace_id, condition))
 
     await remove(ObservationRevision, ObservationRevision.observation_id.in_(observations))
+    await remove(AssetCategoryReview, AssetCategoryReview.asset_id.in_(asset_ids))
     await remove(Embedding, Embedding.observation_id.in_(observations))
     await remove(Observation, Observation.asset_id.in_(asset_ids))
     await remove(AnalysisWindow, AnalysisWindow.asset_id.in_(asset_ids))

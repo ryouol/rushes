@@ -7,7 +7,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import and_, case, delete, exists, func, or_, select
 from starlette.requests import ClientDisconnect
 
@@ -19,6 +19,7 @@ from rushes.evidence import current_observation
 from rushes.job_actions import cancel_batch_children, queue_asset
 from rushes.models import (
     Asset,
+    AssetCategoryReview,
     CollectionItem,
     Embedding,
     Export,
@@ -28,8 +29,14 @@ from rushes.models import (
     ObservationRevision,
     Project,
     Shot,
+    User,
 )
-from rushes.organization import CATEGORY_SLUG_PATTERN, asset_organizations, category_asset_query
+from rushes.organization import (
+    CATEGORY_SLUG_PATTERN,
+    asset_organizations,
+    category_asset_query,
+    category_records,
+)
 from rushes.storage import StorageError, open_source, require_space, sync_file, workspace_file_lease
 from rushes.telemetry import traced
 from rushes.timing import Interval
@@ -52,6 +59,68 @@ def public_asset(asset: Asset, retry_available=False):
     row["can_retry"] = retry_available
     row["has_thumbnail"] = bool(asset.thumbnail_path)
     return row
+
+
+class CategoryReviewInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    version: int = Field(ge=0)
+    categories: list[str] | None = Field(max_length=100)
+
+    @field_validator("categories")
+    @classmethod
+    def validate_categories(cls, value):
+        return None if value is None else [item["name"] for item in category_records(value)]
+
+
+@router.get("/assets/{asset_id}/category-history")
+async def category_history(
+    asset_id: uuid.UUID, db: DB, access: Access, offset: int = Query(0, ge=0)
+):
+    await owned(db, Asset, asset_id, access)
+    return [
+        {**row_json(row), "user_name": name or "Workspace member"}
+        for row, name in await db.execute(
+            select(AssetCategoryReview, User.name)
+            .join(User, User.id == AssetCategoryReview.user_id)
+            .where(AssetCategoryReview.asset_id == asset_id)
+            .order_by(AssetCategoryReview.version.desc())
+            .offset(offset)
+            .limit(20)
+        )
+    ]
+
+
+@router.put("/assets/{asset_id}/categories")
+async def review_categories(asset_id: uuid.UUID, body: CategoryReviewInput, db: DB, access: Access):
+    require_editor(access)
+    asset = await db.scalar(
+        select(Asset)
+        .where(Asset.id == asset_id, Asset.workspace_id == access.workspace_id)
+        .with_for_update()
+    )
+    if asset is None:
+        raise HTTPException(404, "Record not found")
+    previous = await db.scalar(
+        select(AssetCategoryReview)
+        .where(AssetCategoryReview.asset_id == asset_id)
+        .order_by(AssetCategoryReview.version.desc())
+        .limit(1)
+    )
+    if body.version != (previous.version if previous else 0):
+        raise HTTPException(409, "Categories changed. Reopen category review before saving.")
+    categories = None if body.categories is None else category_records(body.categories)
+    if previous and previous.categories == categories:
+        return row_json(previous)
+    review = AssetCategoryReview(
+        workspace_id=access.workspace_id,
+        asset_id=asset_id,
+        user_id=access.user_id,
+        version=body.version + 1,
+        categories=categories,
+    )
+    db.add(review)
+    await db.flush()
+    return row_json(review)
 
 
 @router.get("/source-roots")

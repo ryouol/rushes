@@ -15,6 +15,7 @@ from rushes.exports import export_folder, safe_name
 from rushes.interchange import validate_entries
 from rushes.models import (
     Asset,
+    AssetCategoryReview,
     Collection,
     CollectionItem,
     Export,
@@ -28,6 +29,8 @@ from rushes.organization import (
     CATEGORY_SLUG_PATTERN,
     ORGANIZATION_VERSION,
     category_asset_ids,
+    category_asset_query,
+    latest_category_reviews,
     organization_memberships,
 )
 from rushes.storage import StorageError, require_space
@@ -105,6 +108,21 @@ async def preview_export(project_id: uuid.UUID, body: ExportInput, db: DB, acces
             )
         asset_ids = {item["asset_id"] for item in items}
         if body.category is not None:
+            # Serialize human reviews while freezing this category export's membership.
+            await db.execute(
+                select(Asset.id).where(Asset.id.in_(asset_ids)).with_for_update(read=True)
+            )
+            current_ids = set(
+                await db.scalars(
+                    category_asset_query(access.workspace_id, project_id, body.category).where(
+                        Asset.id.in_(asset_ids)
+                    )
+                )
+            )
+            if current_ids != asset_ids:
+                raise HTTPException(
+                    409, "Category membership changed. Review a new export preview."
+                )
             organization = {
                 "version": ORGANIZATION_VERSION,
                 "category_id": body.category,
@@ -166,6 +184,35 @@ async def preview_export(project_id: uuid.UUID, body: ExportInput, db: DB, acces
                         "review_status": observation.review_status,
                     }
                 )
+            latest_reviews = latest_category_reviews(access.workspace_id, project_id)
+            reviews = await db.scalars(
+                select(AssetCategoryReview)
+                .join(latest_reviews, latest_reviews.c.id == AssetCategoryReview.id)
+                .where(
+                    AssetCategoryReview.asset_id.in_(asset_ids),
+                    AssetCategoryReview.categories.is_not(None),
+                )
+            )
+            for review in reviews:
+                category_name = (
+                    "Uncategorized"
+                    if body.category == "uncategorized"
+                    else next(
+                        item["name"] for item in review.categories if item["id"] == body.category
+                    )
+                )
+                evidence_counts[review.asset_id] = 1
+                category_evidence[review.asset_id] = [
+                    {
+                        "category_review_id": str(review.id),
+                        "version": review.version,
+                        "user_id": str(review.user_id),
+                        "created_at": review.created_at.isoformat(),
+                        "category_name": category_name,
+                        "producer": "human",
+                        "review_status": "reviewed",
+                    }
+                ]
             if body.category != "uncategorized" and category_evidence.keys() != asset_ids:
                 raise HTTPException(
                     409, "Category membership changed. Review a new export preview."

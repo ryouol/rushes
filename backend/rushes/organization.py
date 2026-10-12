@@ -5,8 +5,9 @@ from uuid import UUID
 
 from sqlalchemy import case, cast, exists, func, literal, select, true, type_coerce
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as SQLUUID
 
-from rushes.models import AnalysisRun, AnalysisWindow, Asset, Observation
+from rushes.models import AnalysisRun, AnalysisWindow, Asset, AssetCategoryReview, Observation
 
 ORGANIZATION_VERSION = "categories-v1"
 ORGANIZATION_SCHEMA_VERSION = "observations-v2"
@@ -64,6 +65,21 @@ def latest_organization_runs(workspace_id: UUID, project_id: UUID):
     return select(ranked).where(ranked.c.rank == 1).cte("organization_runs")
 
 
+def latest_category_reviews(workspace_id, project_id):
+    return (
+        select(AssetCategoryReview)
+        .join(Asset, Asset.id == AssetCategoryReview.asset_id)
+        .where(
+            AssetCategoryReview.workspace_id == workspace_id,
+            Asset.workspace_id == workspace_id,
+            Asset.project_id == project_id,
+        )
+        .distinct(AssetCategoryReview.asset_id)
+        .order_by(AssetCategoryReview.asset_id, AssetCategoryReview.version.desc())
+        .cte("category_reviews")
+    )
+
+
 def organization_memberships(workspace_id: UUID, project_id: UUID, runs=None):
     """One row per category/asset/evidence, scoped before any API aggregation."""
     runs = runs if runs is not None else latest_organization_runs(workspace_id, project_id)
@@ -78,12 +94,17 @@ def organization_memberships(workspace_id: UUID, project_id: UUID, runs=None):
         func.jsonb_array_elements(category_array).table_valued("value").lateral("category_values")
     )
     value = type_coerce(values.c.value, JSONB)
-    return (
+    reviews = latest_category_reviews(workspace_id, project_id)
+    reviewed = select(reviews.c.asset_id).where(
+        reviews.c.asset_id == Observation.asset_id, reviews.c.categories.is_not(None)
+    )
+    machine = (
         select(
             Observation.asset_id,
             Observation.id.label("observation_id"),
             value["id"].as_string().label("category_id"),
             value["name"].as_string().label("category_name"),
+            cast(None, SQLUUID).label("category_review_id"),
         )
         .join(runs, runs.c.run_id == Observation.run_id)
         .join(AnalysisWindow, AnalysisWindow.id == Observation.window_id)
@@ -99,9 +120,23 @@ def organization_memberships(workspace_id: UUID, project_id: UUID, runs=None):
             value["id"].as_string().op("~")(CATEGORY_SLUG_PATTERN),
             func.length(value["id"].as_string()) <= 36,
             value["id"].as_string() != "uncategorized",
+            ~exists(reviewed),
         )
-        .cte("organization_memberships")
     )
+    labels = (
+        func.jsonb_array_elements(reviews.c.categories)
+        .table_valued("value")
+        .lateral("review_labels")
+    )
+    label = type_coerce(labels.c.value, JSONB)
+    human = select(
+        reviews.c.asset_id,
+        cast(None, SQLUUID).label("observation_id"),
+        label["id"].as_string().label("category_id"),
+        label["name"].as_string().label("category_name"),
+        reviews.c.id.label("category_review_id"),
+    ).join(labels, true())
+    return machine.union_all(human).cte("organization_memberships")
 
 
 def category_asset_query(workspace_id: UUID, project_id: UUID, category: str):
@@ -205,6 +240,12 @@ async def asset_organizations(db, workspace_id, project_id, asset_ids):
         result[row.asset_id]["categories"].append(
             {"id": row.category_id, "name": row.name, "evidence_count": row.evidence_count}
         )
+    reviews = latest_category_reviews(workspace_id, project_id)
+    for row in await db.execute(select(reviews).where(reviews.c.asset_id.in_(asset_ids))):
+        result[row.asset_id]["category_review"] = {
+            key: getattr(row, key)
+            for key in ("id", "version", "user_id", "created_at", "categories")
+        }
     return result
 
 
@@ -235,8 +276,7 @@ async def project_organization(db, workspace_id, project_id):
     total = sum(state_counts.values())
     return {
         "categories": [
-            {"id": row.id, "name": row.name, "asset_count": row.asset_count}
-            for row in categories
+            {"id": row.id, "name": row.name, "asset_count": row.asset_count} for row in categories
         ],
         "category_total": category_total,
         "has_more": category_total > 100,

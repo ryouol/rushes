@@ -74,7 +74,7 @@ use this policy. The observations endpoint accepts `include_history=true` to
 retrieve retained rows with a `superseded` flag. Direct context links to older
 observations remain available and label their citation and evidence as superseded.
 No rows, original files, provenance, saved collections, or revision history are
-deleted. Whole-file category correction remains a separate backlog item.
+deleted. Whole-file category reviews are stored separately from this evidence.
 
 ## Processing recovery acceptance policy
 
@@ -88,3 +88,19 @@ existing attempt retains progress and does not automatically repeat uncertain
 provider requests. Unfinished steps may use credits. New analysis requires
 reviewing an estimate and explicitly confirming it; opening recovery details
 must never dispatch analysis. These notices do not change billing or job policy.
+
+## Category review acceptance policy
+
+Owners and editors can replace a file's complete category list, including an
+empty list for Uncategorized, or explicitly restore current AI categories.
+Reviews are versioned and retain the reviewer and date. A stale edit must fail
+without overwriting another review. Reviewed categories survive reanalysis and
+control counts, category filters, and new category export previews together.
+Export previews retain the selected human review as provenance; later edits do
+not rewrite an existing preview. Model observations and original files remain
+unchanged. Review saves perform no inference or embedding work.
+
+Schema 0009 adds an isolated, tenant-scoped review history table. Apply it before
+deploying code that queries category reviews. Existing schema-0008 application
+code can continue using the database after this additive migration. History is
+retained until its source asset is explicitly deleted through the normal flow.
