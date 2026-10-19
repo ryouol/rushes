@@ -104,3 +104,12 @@ Schema 0009 adds an isolated, tenant-scoped review history table. Apply it befor
 deploying code that queries category reviews. Existing schema-0008 application
 code can continue using the database after this additive migration. History is
 retained until its source asset is explicitly deleted through the normal flow.
+
+## Upload queue acceptance policy
+
+The two upload lanes advance and finish based on their upload responses. Library
+refreshes run independently: a stalled read must not keep the batch marked as
+uploading or prevent selecting another batch after the transfers settle.
+Per-file success and rejection states remain visible, and refresh failures never
+retry an upload. This does not add resumable transfer or change server-side
+upload validation, processing, credit use, or retention.
