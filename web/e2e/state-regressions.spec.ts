@@ -1201,6 +1201,81 @@ test("clearing search aborts a late response; upload validation remains readable
   expect(errors).toEqual([]);
 });
 
+test("upload lanes keep moving while library refresh stalls without retrying rejected files", async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.locator(".workspace-project-row").first().click();
+  await page
+    .getByRole("button", { name: "Import footage", exact: true })
+    .first()
+    .click();
+  const names = ["first.mp4", "rejected.mp4", "third.mp4", "last.mp4"];
+  const uploads: string[] = [];
+  let releaseRefresh!: () => void, releaseUpload!: () => void;
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  const uploadGate = new Promise<void>((resolve) => {
+    releaseUpload = resolve;
+  });
+  const accepted = names
+    .filter((name) => name !== "rejected.mp4")
+    .map((name) => fixtureAsset(name));
+  await page.route("**/projects/p0/assets?**", async (route) => {
+    await refreshGate;
+    await route
+      .fulfill({ json: { items: accepted, total: accepted.length } })
+      .catch(() => {});
+  });
+  await page.route("**/upload?**", async (route) => {
+    const name = new URL(route.request().url()).searchParams.get("filename")!;
+    uploads.push(name);
+    if (name === "last.mp4") await uploadGate;
+    await route.fulfill(
+      name === "rejected.mp4"
+        ? { status: 422, json: { detail: "Synthetic file rejected" } }
+        : { status: 202, json: { asset_id: name, state: "queued" } },
+    );
+  });
+  try {
+    await page
+      .locator("input[type=file]")
+      .first()
+      .setInputFiles(
+        names.map((name) => ({
+          name,
+          mimeType: "video/mp4",
+          buffer: Buffer.from("Synthetic upload bytes"),
+        })),
+      );
+    await expect.poll(() => uploads.length).toBe(4);
+    await expect(
+      page.getByRole("button", { name: "Choose videos" }),
+    ).toBeDisabled();
+    releaseUpload();
+    await expect(page.locator(".upload-list [role=status]")).toHaveText(
+      "Uploads finished. 3 of 4 files queued for processing.",
+    );
+    await expect(
+      page.getByText("Synthetic file rejected", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Choose videos" }),
+    ).toBeEnabled();
+    releaseRefresh();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
+    await expect(page.locator(".asset-card")).toHaveCount(3);
+    expect(uploads.slice().sort()).toEqual(names.slice().sort());
+  } finally {
+    releaseUpload();
+    releaseRefresh();
+  }
+});
+
 test("switching workspaces discards delayed settings", async ({ page }) => {
   await fixture(page);
   let release!: () => void;

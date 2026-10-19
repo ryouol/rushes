@@ -166,7 +166,15 @@ export function ImportDialog({
           };
           request.send(file);
         });
-        if (!disposed.current) await onImported();
+        // Refreshing the library must not hold a transfer lane or the batch open.
+        // The upload response above is authoritative, even if this read stalls.
+        if (!disposed.current)
+          void onImported().catch(() => {
+            if (!disposed.current)
+              setError(
+                "The library could not refresh. Upload results above are unchanged; reopen the project to refresh it.",
+              );
+          });
       }
     }
     try {
