@@ -51,6 +51,7 @@ jobs:
       - run: uv run ruff check backend scripts deploy tests
       - run: uv run pytest -q -m "not provider"
       - run: npm ci --prefix web
+      - run: npm audit --prefix web --audit-level=high
       - run: uv run python scripts/build_web.py
       - run: npm run typecheck --prefix web
       - run: npx playwright install --with-deps chromium
