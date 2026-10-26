@@ -113,3 +113,12 @@ uploading or prevent selecting another batch after the transfers settle.
 Per-file success and rejection states remain visible, and refresh failures never
 retry an upload. This does not add resumable transfer or change server-side
 upload validation, processing, credit use, or retention.
+
+## Frontend dependency acceptance policy
+
+Dependency maintenance uses the committed lockfile and reviews upstream fixes.
+CI audits the complete frontend dependency tree, including build tools, and fails
+on reported high or critical advisories. The static export, type checks, and
+browser regressions must still pass before shipment. A clear audit result is a
+dated dependency check, not proof that the application has no vulnerabilities.
+Production continues serving the exported frontend from the Python runtime.
