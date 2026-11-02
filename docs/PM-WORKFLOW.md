@@ -114,6 +114,14 @@ Per-file success and rejection states remain visible, and refresh failures never
 retry an upload. This does not add resumable transfer or change server-side
 upload validation, processing, credit use, or retention.
 
+Each waiting or active file has a keyboard-accessible Stop control. Waiting files
+stop before a request is sent; active requests are aborted and their lane moves
+to the next waiting file. Accepted files keep their result and are never retried
+by this action. An aborted request can have an uncertain server outcome, so the
+UI directs users to check footage before reselecting it. Stop does not undo an
+accepted import or cancel its processing. The final active transfer settling,
+including being stopped, releases the batch controls and navigation warning.
+
 ## Frontend dependency acceptance policy
 
 Dependency maintenance uses the committed lockfile and reviews upstream fixes.

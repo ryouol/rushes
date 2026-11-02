@@ -89,6 +89,7 @@ button {
   color: inherit;
 }
 button:focus-visible,
+.upload-row:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
@@ -933,16 +934,19 @@ progress::-moz-progress-bar {
 .upload-list > div {
   display: grid;
   gap: 8px;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 .upload-list strong {
+  grid-column: 1/-1;
+  overflow-wrap: anywhere;
   font-size: 0.8rem;
   font-weight: 500;
 }
 .upload-list span {
   font-size: 0.75rem;
   color: var(--muted);
-  max-width: 160px;
+  overflow-wrap: anywhere;
 }
 .upload-list progress {
   width: 100%;

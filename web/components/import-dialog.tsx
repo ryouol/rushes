@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, Upload } from "lucide-react";
 import { api, apiErrorMessage } from "@/lib/api";
 import { storageSize } from "@/lib/format";
@@ -20,11 +20,13 @@ export function ImportDialog({
 }) {
   const disposed = useRef(false);
   const uploadPending = useRef(false);
+  const uploadStops = useRef(new Map<number, () => void>());
+  const progressId = useId();
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null),
     directory = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<
-      { name: string; percent: number; state: string }[]
+      { name: string; percent: number; state: string; canStop: boolean }[]
     >([]),
     [busy, setBusy] = useState(false),
     [checkingStorage, setCheckingStorage] = useState(false),
@@ -108,14 +110,46 @@ export function ImportDialog({
     }
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener("beforeunload", warn);
+    const stopped = new Set<number>();
+    const update = (
+      index: number,
+      percent: number,
+      state: string,
+      canStop = true,
+    ) => {
+      if (disposed.current) return;
+      setProgress((rows) =>
+        rows[index]?.percent === percent &&
+        rows[index]?.state === state &&
+        rows[index]?.canStop === canStop
+          ? rows
+          : rows.map((row, i) =>
+              i === index ? { ...row, percent, state, canStop } : row,
+            ),
+      );
+    };
+    uploadStops.current.clear();
+    list.forEach((_, index) => {
+      uploadStops.current.set(index, () => {
+        stopped.add(index);
+        uploadStops.current.delete(index);
+        update(index, 0, "Stopped before upload", false);
+      });
+    });
     setProgress(
-      list.map((file) => ({ name: file.name, percent: 0, state: "Waiting" })),
+      list.map((file) => ({
+        name: file.name,
+        percent: 0,
+        state: "Waiting",
+        canStop: true,
+      })),
     );
     let cursor = 0;
     async function next() {
       while (cursor < list.length) {
         const index = cursor++,
           file = list[index];
+        if (stopped.has(index)) continue;
         await new Promise<void>((resolve) => {
           const request = new XMLHttpRequest();
           request.open(
@@ -123,23 +157,24 @@ export function ImportDialog({
             `/api${base}/projects/${projectId}/upload?filename=${encodeURIComponent(file.name)}&relative_path=${encodeURIComponent(file.webkitRelativePath || file.name)}`,
           );
           request.setRequestHeader("Content-Type", "application/octet-stream");
-          const update = (percent: number, state: string) => {
-            if (disposed.current) return;
-            setProgress((rows) =>
-              rows[index]?.percent === percent && rows[index]?.state === state
-                ? rows
-                : rows.map((row, i) =>
-                    i === index ? { ...row, percent, state } : row,
-                  ),
-            );
+          let settled = false;
+          const finish = (percent: number, state: string) => {
+            if (settled) return;
+            settled = true;
+            uploadStops.current.delete(index);
+            update(index, percent, state, false);
+            resolve();
           };
-          request.upload.onprogress = (event) =>
-            update(
-              event.lengthComputable
-                ? Math.round((event.loaded / event.total) * 100)
-                : 0,
-              "Uploading",
-            );
+          request.upload.onprogress = (event) => {
+            if (!settled)
+              update(
+                index,
+                event.lengthComputable
+                  ? Math.round((event.loaded / event.total) * 100)
+                  : 0,
+                "Uploading",
+              );
+          };
           request.onload = () => {
             let detail = "Upload failed; reselect this file";
             try {
@@ -148,22 +183,25 @@ export function ImportDialog({
                 detail,
               );
             } catch {}
-            update(
+            finish(
               100,
               request.status >= 200 && request.status < 300
                 ? "Queued for processing"
                 : detail,
             );
-            resolve();
           };
           request.onerror = () => {
-            update(0, "Disconnected; reselect this file");
-            resolve();
+            finish(0, "Disconnected; reselect this file");
           };
           request.onabort = () => {
-            update(0, "Upload interrupted; reselect this file");
-            resolve();
+            finish(0, "Upload stopped; check footage before reselecting.");
           };
+          uploadStops.current.set(index, () => {
+            request.abort();
+            // abort() need not emit an event if the request has already finished.
+            finish(0, "Upload stopped; check footage before reselecting.");
+          });
+          update(index, 0, "Uploading");
           request.send(file);
         });
         // Refreshing the library must not hold a transfer lane or the batch open.
@@ -272,11 +310,13 @@ export function ImportDialog({
         </p>
         <p className="small muted">
           Keep this tab open until uploads finish. Completed files process in
-          the background. Interrupted uploads require file reselection.
-          Configured Gemini analysis sends derived clips and transcript context
-          to Google and uses processing credits. When enabled, Modal processes
-          derived audio, worklog text and search queries. Settings shows the
-          active processing services.
+          the background. Interrupted uploads require file reselection. Stopping
+          an upload cannot undo a file the server already accepted; check
+          footage before reselecting a stopped file. Configured Gemini analysis
+          sends derived clips and transcript context to Google and uses
+          processing credits. When enabled, Modal processes derived audio,
+          worklog text and search queries. Settings shows the active processing
+          services.
         </p>
         {progress.length > 0 && (
           <div className="upload-list">
@@ -290,12 +330,35 @@ export function ImportDialog({
               of {progress.length} files queued for processing.
             </p>
             {progress.map((file, index) => (
-              <div key={index}>
+              <div
+                key={index}
+                className="upload-row"
+                role="group"
+                aria-label={`${file.name} upload`}
+                aria-describedby={`${progressId}-${index}`}
+                tabIndex={-1}
+              >
                 <strong>{file.name}</strong>
                 <span>
-                  {file.state}{" "}
-                  {file.state === "Uploading" ? `${file.percent}%` : ""}
+                  <span id={`${progressId}-${index}`} role="status">
+                    {file.state}
+                  </span>
+                  {file.state === "Uploading" ? ` ${file.percent}%` : ""}
                 </span>
+                {file.canStop && (
+                  <button
+                    className="secondary"
+                    aria-label={`Stop upload ${file.name}`}
+                    onClick={(event) => {
+                      event.currentTarget
+                        .closest<HTMLElement>(".upload-row")
+                        ?.focus();
+                      uploadStops.current.get(index)?.();
+                    }}
+                  >
+                    Stop
+                  </button>
+                )}
                 <progress
                   value={file.percent}
                   max={100}
