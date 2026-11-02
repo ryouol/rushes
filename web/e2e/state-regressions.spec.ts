@@ -1254,7 +1254,7 @@ test("upload lanes keep moving while library refresh stalls without retrying rej
       page.getByRole("button", { name: "Choose videos" }),
     ).toBeDisabled();
     releaseUpload();
-    await expect(page.locator(".upload-list [role=status]")).toHaveText(
+    await expect(page.locator(".upload-list > [role=status]")).toHaveText(
       "Uploads finished. 3 of 4 files queued for processing.",
     );
     await expect(
@@ -1273,6 +1273,136 @@ test("upload lanes keep moving while library refresh stalls without retrying rej
   } finally {
     releaseUpload();
     releaseRefresh();
+  }
+});
+
+test("stopping waiting and active uploads preserves accepted files and frees the queue", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await fixture(page);
+  await page.locator(".workspace-project-row").first().click();
+  await page
+    .getByRole("button", { name: "Import footage", exact: true })
+    .first()
+    .click();
+  const uploads: string[] = [],
+    aborted: string[] = [];
+  const gates = new Map<string, () => void>();
+  page.on("requestfailed", (request) => {
+    if (request.url().includes("/upload?"))
+      aborted.push(new URL(request.url()).searchParams.get("filename")!);
+  });
+  await page.route("**/upload?**", async (route) => {
+    const name = new URL(route.request().url()).searchParams.get("filename")!;
+    uploads.push(name);
+    if (name !== "replacement.mp4")
+      await new Promise<void>((resolve) => gates.set(name, resolve));
+    await route
+      .fulfill({ status: 202, json: { asset_id: name, state: "queued" } })
+      .catch(() => {});
+  });
+  const choose = (names: string[]) =>
+    page
+      .locator("input[type=file]")
+      .first()
+      .setInputFiles(
+        names.map((name) => ({
+          name,
+          mimeType: "video/mp4",
+          buffer: Buffer.from("Synthetic upload bytes"),
+        })),
+      );
+  try {
+    await choose(["active.mp4", "accepted.mp4", "waiting.mp4", "last.mp4"]);
+    await expect
+      .poll(() => uploads.slice().sort())
+      .toEqual(["accepted.mp4", "active.mp4"]);
+    expect(
+      await page.evaluate(
+        () =>
+          !window.dispatchEvent(
+            new Event("beforeunload", { cancelable: true }),
+          ),
+      ),
+    ).toBe(true);
+    const waitingStop = page.getByRole("button", {
+      name: "Stop upload waiting.mp4",
+      exact: true,
+    });
+    await waitingStop.focus();
+    await waitingStop.press("Enter");
+    const waiting = page.getByRole("group", {
+      name: "waiting.mp4 upload",
+      exact: true,
+    });
+    await expect(waiting).toBeFocused();
+    await expect(waiting).toContainText("Stopped before upload");
+    await expect(waitingStop).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Stop upload active.mp4", exact: true })
+      .click();
+    await expect.poll(() => aborted).toContain("active.mp4");
+    await expect
+      .poll(() => uploads.slice().sort())
+      .toEqual(["accepted.mp4", "active.mp4", "last.mp4"]);
+    gates.get("active.mp4")!(); // A late server acceptance must not become confirmed browser success.
+    gates.get("accepted.mp4")!();
+    await expect(
+      page.getByRole("group", { name: "accepted.mp4 upload", exact: true }),
+    ).toContainText("Queued for processing");
+    await expect(
+      page.getByRole("button", {
+        name: "Stop upload accepted.mp4",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Choose videos" }),
+    ).toBeDisabled();
+    await page
+      .getByRole("button", { name: "Stop upload last.mp4", exact: true })
+      .click();
+    await expect(page.locator(".upload-list > [role=status]")).toHaveText(
+      "Uploads finished. 1 of 4 files queued for processing.",
+    );
+    await expect(
+      page.getByText("Upload stopped; check footage before reselecting.", {
+        exact: true,
+      }),
+    ).toHaveCount(2);
+    await expect(
+      page.getByRole("button", { name: "Choose videos" }),
+    ).toBeEnabled();
+    expect(
+      await page.evaluate(
+        () =>
+          !window.dispatchEvent(
+            new Event("beforeunload", { cancelable: true }),
+          ),
+      ),
+    ).toBe(false);
+    expect(
+      await page
+        .getByRole("dialog")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    gates.get("last.mp4")!();
+    await choose(["replacement.mp4"]);
+    await expect(page.locator(".upload-list > [role=status]")).toHaveText(
+      "Uploads finished. 1 of 1 files queued for processing.",
+    );
+    expect(uploads.slice().sort()).toEqual([
+      "accepted.mp4",
+      "active.mp4",
+      "last.mp4",
+      "replacement.mp4",
+    ]);
+    expect(errors).toEqual([]);
+  } finally {
+    gates.forEach((release) => release());
   }
 });
 
