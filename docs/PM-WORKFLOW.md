@@ -122,6 +122,17 @@ UI directs users to check footage before reselecting it. Stop does not undo an
 accepted import or cancel its processing. The final active transfer settling,
 including being stopped, releases the batch controls and navigation warning.
 
+## Project refresh acceptance policy
+
+Footage, collections, exports, and organization apply successful reads independently.
+A failed or stalled panel must not hold up another panel's results. Each failed
+panel retains its last valid content with a visible freshness notice and a retry
+that reads only that panel. An initial failure must not be presented as an empty
+library, collection list, or export queue. Superseded responses cannot replace newer
+results, and footage from an older page or category stays inactive until the
+requested view loads. Export page labels follow the displayed results. Refresh
+and retry perform reads only; they never repeat an upload or paid processing.
+
 ## Frontend dependency acceptance policy
 
 Dependency maintenance uses the committed lockfile and reviews upstream fixes.

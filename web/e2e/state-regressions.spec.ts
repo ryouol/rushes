@@ -179,6 +179,373 @@ async function fixture(
   await page.goto("/app");
 }
 
+for (const failed of ["collections", "exports"] as const) {
+  test(`project panels stay independent when ${failed} fails and another panel stalls`, async ({
+    page,
+  }) => {
+    await fixture(page, [fixtureAsset("available")]);
+    const held = failed === "collections" ? "exports" : "collections";
+    const label = failed === "collections" ? "Collections" : "Exports";
+    let fail = true;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const counts = { assets: 0, collections: 0, exports: 0, organization: 0 };
+    page.on("request", (request) => {
+      const part = new URL(request.url()).pathname.split("/").pop();
+      if (part && part in counts) counts[part as keyof typeof counts]++;
+    });
+    const contents = (kind: "collections" | "exports") =>
+      kind === "collections"
+        ? [{ id: "c", name: "Recovered collection", instructions: "Synthetic" }]
+        : {
+            items: [
+              {
+                id: "e",
+                name: "Recovered export",
+                state: "completed",
+                created_at: "2026-11-09T14:00:00Z",
+                provenance: {},
+              },
+            ],
+            total: 1,
+          };
+    await page.route(`**/projects/p0/${failed}*`, (route) =>
+      route.fulfill(
+        fail
+          ? { status: 503, json: { detail: `Synthetic ${failed} outage` } }
+          : { json: contents(failed) },
+      ),
+    );
+    await page.route(`**/projects/p0/${held}*`, async (route) => {
+      await gate;
+      await route.fulfill({ json: contents(held) }).catch(() => {});
+    });
+    try {
+      await page.locator(".workspace-project-row").first().click();
+      await expect(
+        page.getByRole("heading", { name: "Synthetic available", exact: true }),
+      ).toBeVisible({ timeout: 5000 });
+      await expect(
+        page.locator(".organization-asset-grid"),
+      ).not.toHaveAttribute("inert", "");
+      await page.getByRole("tab", { name: label, exact: true }).click();
+      const panel = page.getByRole("tabpanel");
+      await expect(panel.getByRole("alert")).toContainText(
+        `Synthetic ${failed} outage`,
+      );
+      await expect(panel.getByRole("alert")).toContainText(
+        "haven’t loaded yet",
+      );
+      await expect(panel.locator(".empty-state")).toHaveCount(0);
+      const before = { ...counts };
+      fail = false;
+      await panel
+        .getByRole("button", { name: `Retry ${failed}`, exact: true })
+        .focus();
+      await panel
+        .getByRole("button", { name: `Retry ${failed}`, exact: true })
+        .press("Enter");
+      await expect(
+        panel.getByRole("heading", {
+          name:
+            failed === "collections"
+              ? "Recovered collection"
+              : "Recovered export",
+        }),
+      ).toBeVisible();
+      await expect(panel.getByRole("alert")).toHaveCount(0);
+      await expect(panel).toBeFocused();
+      expect(counts[failed]).toBe(before[failed] + 1);
+      for (const key of Object.keys(counts) as (keyof typeof counts)[])
+        if (key !== failed) expect(counts[key]).toBe(before[key]);
+      release();
+      await page
+        .getByRole("tab", {
+          name: held === "collections" ? "Collections" : "Exports",
+          exact: true,
+        })
+        .click();
+      await expect(
+        panel.getByRole("heading", {
+          name:
+            held === "collections"
+              ? "Recovered collection"
+              : "Recovered export",
+        }),
+      ).toBeVisible();
+    } finally {
+      release();
+    }
+  });
+}
+
+test("project refresh retains failed panels, labels stale content, and recovers independently", async ({
+  page,
+}) => {
+  const coast = { id: "coast", name: "Coastline" };
+  const library = [fixtureAsset("first", [coast])];
+  await fixture(page, library);
+  let outage = false;
+  let footageOutage = false;
+  let version = 1;
+  await page.route("**/projects/p0/collections", (route) =>
+    route.fulfill(
+      outage
+        ? { status: 503, json: { detail: "Synthetic collection outage" } }
+        : {
+            json: [
+              {
+                id: "c",
+                name: `Collection version ${version}`,
+                instructions: "Synthetic",
+              },
+            ],
+          },
+    ),
+  );
+  await page.route("**/projects/p0/exports?**", (route) =>
+    route.fulfill(
+      outage
+        ? { status: 503, json: { detail: "Synthetic export outage" } }
+        : {
+            json: {
+              items: [
+                {
+                  id: "e",
+                  name: `Export version ${version}`,
+                  state: "completed",
+                  created_at: "2026-11-09T14:00:00Z",
+                  provenance: {},
+                },
+              ],
+              total: 1,
+            },
+          },
+    ),
+  );
+  await page.route("**/projects/p0/organization", (route) =>
+    outage
+      ? route.fulfill({
+          status: 503,
+          json: { detail: "Synthetic category outage" },
+        })
+      : route.fallback(),
+  );
+  await page.route("**/projects/p0/assets?**", (route) =>
+    footageOutage
+      ? route.fulfill({
+          status: 503,
+          json: { detail: "Synthetic footage outage" },
+        })
+      : route.fallback(),
+  );
+  await page.locator(".workspace-project-row").first().click();
+  const panel = page.getByRole("tabpanel");
+  await expect(
+    page.getByRole("heading", { name: "Synthetic first", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Collections", exact: true }).click();
+  await expect(
+    panel.getByRole("heading", { name: "Collection version 1" }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Exports", exact: true }).click();
+  await expect(
+    panel.getByRole("heading", { name: "Export version 1" }),
+  ).toBeVisible();
+  outage = true;
+  library.push(fixtureAsset("new", [coast]));
+  await page.getByRole("tab", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Coastline 1", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Synthetic new", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".organization-asset-grid")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
+  await expect(
+    page.getByText(
+      "AI organization could not refresh. Showing the last loaded categories.",
+    ),
+  ).toBeVisible();
+  for (const [tab, singular] of [
+    ["Collections", "Collection"],
+    ["Exports", "Export"],
+  ]) {
+    await page.getByRole("tab", { name: tab, exact: true }).click();
+    await expect(panel.getByRole("alert")).toContainText(
+      `Showing the last loaded ${tab.toLowerCase()}.`,
+    );
+    await expect(
+      panel.getByRole("heading", { name: `${singular} version 1` }),
+    ).toBeVisible();
+    await expect(panel.locator(".empty-state")).toHaveCount(0);
+  }
+  await page.screenshot({
+    path: test.info().outputPath("refresh-desktop.png"),
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    panel.getByRole("button", { name: "Retry exports", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: test.info().outputPath("refresh-mobile.png") });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  outage = false;
+  version = 2;
+  await panel
+    .getByRole("button", { name: "Retry exports", exact: true })
+    .click();
+  await expect(
+    panel.getByRole("heading", { name: "Export version 2" }),
+  ).toBeVisible();
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Collections", exact: true }).click();
+  await expect(panel.getByRole("alert")).toBeVisible();
+  await panel
+    .getByRole("button", { name: "Retry collections", exact: true })
+    .click();
+  await expect(
+    panel.getByRole("heading", { name: "Collection version 2" }),
+  ).toBeVisible();
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  footageOutage = true;
+  version = 3;
+  await page.getByRole("tab", { name: "Library", exact: true }).click();
+  await page
+    .getByRole("button", { name: "All footage 1", exact: true })
+    .click();
+  await expect(
+    panel.getByText(/This footage view could not load\./),
+  ).toBeVisible();
+  await expect(page.locator(".organization-asset-grid")).toHaveAttribute(
+    "inert",
+    "",
+  );
+  await page.getByRole("tab", { name: "Collections", exact: true }).click();
+  await expect(
+    panel.getByRole("heading", { name: "Collection version 3" }),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Library", exact: true }).click();
+  footageOutage = false;
+  await panel.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.locator(".organization-asset-grid")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
+  await expect(
+    panel.getByText(/This footage view could not load\./),
+  ).toHaveCount(0);
+});
+
+test("export paging labels retained results and ignores superseded responses", async ({
+  page,
+}) => {
+  await fixture(page, [
+    fixtureAsset("coast", [{ id: "coast", name: "Coastline" }]),
+  ]);
+  let phase: "failed" | "held" | "current" = "failed";
+  let heldRequests = 0;
+  let abortedRequests = 0;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  page.on("requestfailed", (request) => {
+    if (request.url().includes("/exports?offset=100")) abortedRequests++;
+  });
+  await page.route("**/projects/p0/exports?**", async (route) => {
+    const older =
+      new URL(route.request().url()).searchParams.get("offset") === "100";
+    const snapshot = phase;
+    if (older && snapshot === "failed") {
+      await route.fulfill({
+        status: 503,
+        json: { detail: "Synthetic older-page outage" },
+      });
+      return;
+    }
+    if (older && snapshot === "held") {
+      heldRequests++;
+      await gate;
+    }
+    await route
+      .fulfill({
+        json: {
+          items: [
+            {
+              id: older ? "older" : "newest",
+              name: older
+                ? snapshot === "held"
+                  ? "Obsolete older export"
+                  : "Current older export"
+                : "Newest export",
+              state: "completed",
+              created_at: "2026-11-09T14:00:00Z",
+              provenance: {},
+            },
+          ],
+          total: 101,
+        },
+      })
+      .catch(() => {});
+  });
+  try {
+    await page.locator(".workspace-project-row").first().click();
+    await page.getByRole("tab", { name: "Exports", exact: true }).click();
+    const panel = page.getByRole("tabpanel");
+    await expect(
+      panel.getByRole("heading", { name: "Newest export" }),
+    ).toBeVisible();
+    await panel
+      .getByRole("button", { name: "Older exports", exact: true })
+      .click();
+    await expect(panel.getByRole("alert")).toContainText(
+      "Showing the last loaded exports",
+    );
+    await expect(panel.getByText("Page 1 of 2", { exact: true })).toBeVisible();
+    await expect(
+      panel.getByRole("heading", { name: "Newest export" }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: "Older exports", exact: true }),
+    ).toBeDisabled();
+    phase = "held";
+    await panel
+      .getByRole("button", { name: "Retry exports", exact: true })
+      .click();
+    await expect.poll(() => heldRequests).toBeGreaterThan(0);
+    await expect(
+      panel.getByText("Refreshing exports…", { exact: true }),
+    ).toBeVisible();
+    phase = "current";
+    await page.getByRole("tab", { name: "Library", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Coastline 1", exact: true })
+      .click();
+    await page.getByRole("tab", { name: "Exports", exact: true }).click();
+    await expect(
+      panel.getByRole("heading", { name: "Current older export" }),
+    ).toBeVisible();
+    await expect(panel.getByText("Page 2 of 2", { exact: true })).toBeVisible();
+    await expect.poll(() => abortedRequests).toBeGreaterThan(0);
+    release();
+    await expect(panel.getByRole("alert")).toHaveCount(0);
+    await expect(
+      panel.getByRole("heading", { name: "Obsolete older export" }),
+    ).toHaveCount(0);
+    await expect(
+      panel.getByRole("heading", { name: "Current older export" }),
+    ).toBeVisible();
+  } finally {
+    release();
+  }
+});
+
 test("category reviews retain a conflicting draft, save explicitly, refresh the library, and restore AI labels", async ({
   page,
 }) => {

@@ -89,6 +89,7 @@ button {
   color: inherit;
 }
 button:focus-visible,
+#project-panel:focus-visible,
 .upload-row:focus-visible,
 a:focus-visible,
 input:focus-visible,
