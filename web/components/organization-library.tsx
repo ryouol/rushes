@@ -32,7 +32,11 @@ export function OrganizationStatus({
         className="organization-status organization-unavailable"
         role="status"
       >
-        <p>AI organization could not load. Your footage is still available.</p>
+        <p>
+          {organization
+            ? "AI organization could not refresh. Showing the last loaded categories."
+            : "AI organization could not load. Your footage is still available."}
+        </p>
         <button className="text-button" onClick={onRetry}>
           Try again
         </button>
@@ -166,6 +170,7 @@ export function OrganizationLibrary({
   base,
   category,
   loading,
+  error,
   stale,
   total,
   page,
@@ -181,6 +186,7 @@ export function OrganizationLibrary({
   base: string;
   category: string;
   loading: boolean;
+  error: string;
   stale: boolean;
   total: number;
   page: number;
@@ -199,7 +205,7 @@ export function OrganizationLibrary({
         <Loader2 className="spin" size={20} /> Loading footage…
       </div>
     );
-  if (!assets.length && !stale)
+  if (!assets.length && !stale && !error)
     return (
       <div className="empty-state organization-empty">
         <Film size={38} strokeWidth={1.2} />
@@ -222,9 +228,14 @@ export function OrganizationLibrary({
       <p className="sr-only" role="status">
         {loading ? "Loading footage…" : ""}
       </p>
-      {!loading && stale && (
+      {!loading && (stale || error) && (
         <div className="organization-unavailable" role="status">
-          <p>This footage view could not load.</p>
+          <p>
+            {stale
+              ? "This footage view could not load."
+              : "Footage could not refresh. Showing the last loaded footage."}
+            {error && ` ${error}`}
+          </p>
           <button className="text-button" onClick={onRefresh}>
             Try again
           </button>

@@ -55,6 +55,8 @@ const activeStates = new Set([
   "running",
   "cancel_requested",
 ]);
+type ProjectPanel = "footage" | "collections" | "exports" | "organization";
+type PanelState = { loading: boolean; loaded: boolean; error: string };
 export function ProjectView({
   project,
   workspace,
@@ -85,21 +87,26 @@ export function ProjectView({
   const [organization, setOrganization] = useState<ProjectOrganization | null>(
     null,
   );
-  const [organizationError, setOrganizationError] = useState("");
+  const [panels, setPanels] = useState<Record<ProjectPanel, PanelState>>({
+    footage: { loading: true, loaded: false, error: "" },
+    collections: { loading: true, loaded: false, error: "" },
+    exports: { loading: true, loaded: false, error: "" },
+    organization: { loading: true, loaded: false, error: "" },
+  });
   const [jobs, setJobs] = useState<Job[]>([]),
     [connected, setConnected] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]),
     [exports, setExports] = useState<ExportRecord[]>([]);
   const [exportPage, setExportPage] = useState(0),
     [exportTotal, setExportTotal] = useState(0);
+  const [renderedPage, setRenderedPage] = useState(0);
   const [selected, setSelected] = useState<{
     id: string;
     seek?: number;
   } | null>(null);
   const [importOpen, setImportOpen] = useState(false),
     [newCollection, setNewCollection] = useState(false);
-  const [error, setError] = useState(""),
-    [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [query, setQuery] = useState(""),
     [searching, setSearching] = useState(false);
   const [resultQuery, setResultQuery] = useState("");
@@ -133,7 +140,9 @@ export function ProjectView({
     }
   }
 
-  const refreshRequest = useRef<AbortController | null>(null);
+  const refreshRequests = useRef<
+    Partial<Record<ProjectPanel, AbortController>>
+  >({});
   const searchRequest = useRef<AbortController | null>(null);
   const applySearch = useCallback((value: string, response: SearchResponse) => {
     setQuery(value);
@@ -153,63 +162,90 @@ export function ProjectView({
         .join(" "),
     );
   }, []);
-  const refresh = useCallback(async () => {
-    refreshRequest.current?.abort();
-    const request = new AbortController();
-    refreshRequest.current = request;
-    const options = { signal: request.signal };
-    try {
-      const [footage, groups, rendered, organized] = await Promise.all([
-        api<{ items: Asset[]; total: number }>(
+  const refresh = useCallback(
+    async (only?: ProjectPanel) => {
+      async function load<T>(
+        panel: ProjectPanel,
+        url: string,
+        apply: (data: T) => void,
+      ) {
+        if (only && panel !== only) return;
+        refreshRequests.current[panel]?.abort();
+        const request = new AbortController();
+        refreshRequests.current[panel] = request;
+        setPanels((current) => ({
+          ...current,
+          [panel]: { ...current[panel], loading: true },
+        }));
+        try {
+          const data = await api<T>(url, { signal: request.signal });
+          if (request.signal.aborted) return;
+          // Apply each response immediately; unrelated panels may still be pending.
+          apply(data);
+          setPanels((current) => ({
+            ...current,
+            [panel]: { loading: false, loaded: true, error: "" },
+          }));
+        } catch (failure) {
+          if (request.signal.aborted) return;
+          setPanels((current) => ({
+            ...current,
+            [panel]: {
+              ...current[panel],
+              loading: false,
+              error:
+                failure instanceof Error
+                  ? failure.message
+                  : "Please try again.",
+            },
+          }));
+        }
+      }
+      await Promise.all([
+        load<{ items: Asset[]; total: number }>(
+          "footage",
           `${base}/projects/${project.id}/assets?offset=${page * 40}${category ? `&category=${encodeURIComponent(category)}` : ""}`,
-          options,
+          (data) => {
+            if (page > 0 && page * 40 >= data.total) {
+              setPage(Math.max(0, Math.ceil(data.total / 40) - 1));
+              return;
+            }
+            setFootage({ ...data, page, category });
+          },
         ),
-        api<Collection[]>(
+        load<Collection[]>(
+          "collections",
           `${base}/projects/${project.id}/collections`,
-          options,
+          setCollections,
         ),
-        api<{ items: ExportRecord[]; total: number }>(
+        load<{ items: ExportRecord[]; total: number }>(
+          "exports",
           `${base}/projects/${project.id}/exports?offset=${exportPage * 100}`,
-          options,
+          (data) => {
+            if (exportPage > 0 && exportPage * 100 >= data.total) {
+              setExportPage(Math.max(0, Math.ceil(data.total / 100) - 1));
+              return;
+            }
+            setExports(data.items);
+            setExportTotal(data.total);
+            setRenderedPage(exportPage);
+          },
         ),
-        api<ProjectOrganization>(
+        load<ProjectOrganization>(
+          "organization",
           `${base}/projects/${project.id}/organization`,
-          options,
-        ).then(
-          (data) => ({ data, error: "" }),
-          (failure: unknown) => ({
-            data: null,
-            error:
-              failure instanceof Error
-                ? failure.message
-                : "AI organization could not load. Try again.",
-          }),
+          setOrganization,
         ),
       ]);
-      if (request.signal.aborted) return;
-      if (page > 0 && page * 40 >= footage.total) {
-        setPage(Math.max(0, Math.ceil(footage.total / 40) - 1));
-        return;
-      }
-      if (exportPage > 0 && exportPage * 100 >= rendered.total) {
-        setExportPage(Math.max(0, Math.ceil(rendered.total / 100) - 1));
-      }
-      setFootage({ ...footage, page, category });
-      setCollections(groups);
-      setExports(rendered.items);
-      setExportTotal(rendered.total);
-      setOrganization(organized.data);
-      setOrganizationError(organized.error);
-    } catch (e) {
-      if (!request.signal.aborted) setError((e as Error).message);
-    } finally {
-      if (!request.signal.aborted) setLoading(false);
-    }
-  }, [base, project.id, page, category, exportPage]);
+    },
+    [base, project.id, page, category, exportPage],
+  );
   useEffect(() => {
-    setLoading(true);
     void refresh();
-    return () => refreshRequest.current?.abort();
+    return () =>
+      Object.values(refreshRequests.current).forEach((request) =>
+        request.abort(),
+      );
   }, [refresh]);
   useEffect(() => () => searchRequest.current?.abort(), []);
   useEffect(() => {
@@ -422,8 +458,8 @@ export function ProjectView({
       )}
       <OrganizationStatus
         organization={organization}
-        error={organizationError}
-        onRetry={() => void refresh()}
+        error={panels.organization.error}
+        onRetry={() => void refresh("organization")}
       />
       {active.length > 0 && (
         <div className="processing-strip" role="status">
@@ -538,7 +574,39 @@ export function ProjectView({
           {(organization?.total_assets ?? total) === 1 ? "file" : "files"}
         </span>
       </div>
-      <div id="project-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+      <div
+        id="project-panel"
+        role="tabpanel"
+        aria-labelledby={`tab-${tab}`}
+        tabIndex={-1}
+      >
+        {tab !== "footage" && panels[tab].error && (
+          <div className="notice danger" role="alert">
+            <p>
+              {tab === "collections" ? "Collections" : "Exports"} could not
+              refresh.{" "}
+              {panels[tab].loaded
+                ? `Showing the last loaded ${tab}.`
+                : `Your ${tab} haven’t loaded yet.`}{" "}
+              {panels[tab].error}
+            </p>
+            <button
+              className="secondary"
+              disabled={panels[tab].loading}
+              onClick={() => {
+                document.getElementById("project-panel")?.focus();
+                void refresh(tab);
+              }}
+            >
+              Retry {tab}
+            </button>
+          </div>
+        )}
+        {tab !== "footage" && panels[tab].loading && (
+          <p className="notice" role="status">
+            {panels[tab].loaded ? "Refreshing" : "Loading"} {tab}…
+          </p>
+        )}
         {tab === "footage" && (
           <>
             <OrganizationCategories
@@ -667,7 +735,8 @@ export function ProjectView({
                 assets={assets}
                 base={base}
                 category={footage?.category ?? category}
-                loading={loading}
+                loading={panels.footage.loading}
+                error={panels.footage.error}
                 stale={!footageCurrent}
                 total={total}
                 page={footage?.page ?? page}
@@ -682,11 +751,7 @@ export function ProjectView({
                   })
                 }
                 onPageChange={setPage}
-                onRefresh={() => {
-                  setError("");
-                  setLoading(true);
-                  void refresh();
-                }}
+                onRefresh={() => void refresh("footage")}
                 onRetry={(id) =>
                   void action(
                     id,
@@ -776,7 +841,7 @@ export function ProjectView({
                   </article>
                 ))}
               </div>
-            ) : (
+            ) : panels.collections.loaded && !panels.collections.error ? (
               <div className="empty-state compact">
                 <Folder size={32} />
                 <h2>Create a collection for your project</h2>
@@ -785,7 +850,7 @@ export function ProjectView({
                   categories remain available in the Library.
                 </p>
               </div>
-            )}
+            ) : null}
           </>
         )}
         {tab === "exports" && (
@@ -794,18 +859,26 @@ export function ProjectView({
               <div className="button-row" aria-label="Export pages">
                 <button
                   className="secondary"
-                  disabled={exportPage === 0}
-                  onClick={() => setExportPage((page) => page - 1)}
+                  disabled={
+                    panels.exports.loading ||
+                    renderedPage !== exportPage ||
+                    renderedPage === 0
+                  }
+                  onClick={() => setExportPage(renderedPage - 1)}
                 >
                   Newer exports
                 </button>
                 <span>
-                  Page {exportPage + 1} of {Math.ceil(exportTotal / 100)}
+                  Page {renderedPage + 1} of {Math.ceil(exportTotal / 100)}
                 </span>
                 <button
                   className="secondary"
-                  disabled={(exportPage + 1) * 100 >= exportTotal}
-                  onClick={() => setExportPage((page) => page + 1)}
+                  disabled={
+                    panels.exports.loading ||
+                    renderedPage !== exportPage ||
+                    (renderedPage + 1) * 100 >= exportTotal
+                  }
+                  onClick={() => setExportPage(renderedPage + 1)}
                 >
                   Older exports
                 </button>
@@ -908,7 +981,7 @@ export function ProjectView({
                   </article>
                 ))}
               </div>
-            ) : (
+            ) : panels.exports.loaded && !panels.exports.error ? (
               <div className="empty-state compact">
                 <ArrowDownToLine size={32} />
                 <h2>Your organized footage, ready to take with you</h2>
@@ -917,7 +990,7 @@ export function ProjectView({
                   project’s worklog.
                 </p>
               </div>
-            )}
+            ) : null}
           </>
         )}
       </div>
