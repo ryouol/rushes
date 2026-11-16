@@ -27,6 +27,7 @@ import {
   type ExportPreview,
   type ExportRecord,
   type Job,
+  type OrganizationCategory,
   type Project,
   type ProjectOrganization,
   type SearchResult,
@@ -82,6 +83,8 @@ export function ProjectView({
   const total = footage?.total ?? 0;
   const [page, setPage] = useState(0);
   const [category, setCategory] = useState("");
+  const [pickedCategory, setPickedCategory] =
+    useState<OrganizationCategory | null>(null);
   const footageCurrent =
     footage?.page === page && footage.category === category;
   const [organization, setOrganization] = useState<ProjectOrganization | null>(
@@ -364,9 +367,9 @@ export function ProjectView({
     category ||
     results !== null ||
     searching;
-  const selectedCategory = organization?.categories.find(
-    (item) => item.id === category,
-  );
+  const selectedCategory =
+    organization?.categories.find((item) => item.id === category) ??
+    (pickedCategory?.id === category ? pickedCategory : undefined);
 
   return (
     <section className="project-view organizer-project">
@@ -610,10 +613,13 @@ export function ProjectView({
         {tab === "footage" && (
           <>
             <OrganizationCategories
+              base={base}
+              projectId={project.id}
               organization={organization}
               value={category}
               onChange={(value) => {
-                setCategory(value);
+                setCategory(value.id);
+                setPickedCategory(value);
                 setPage(0);
                 clearSearch();
               }}

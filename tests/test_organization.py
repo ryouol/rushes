@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -18,6 +19,7 @@ from rushes.models import (
     AnalysisRun,
     AnalysisWindow,
     Asset,
+    Export,
     Job,
     MediaTimeline,
     Observation,
@@ -29,6 +31,7 @@ from rushes.organization import (
     category_asset_ids,
     category_records,
 )
+from rushes.storage import fingerprint
 from sqlalchemy import func, select
 
 
@@ -346,6 +349,18 @@ async def test_organization_member_read_cross_project_and_tenant_isolation(authe
             {"id": "coastline", "name": "Coastline", "asset_count": 1}
         ]
     assert (await clients[2].get(endpoint)).status_code == 404
+    category_endpoint = f"/api/workspaces/{ws}/projects/{project}/categories"
+    for client in clients[:2]:
+        response = await client.get(category_endpoint)
+        assert response.status_code == 200
+        assert response.json() == {
+            "items": [{"id": "coastline", "name": "Coastline", "asset_count": 1}],
+            "next_cursor": None,
+        }
+    assert (await clients[2].get(category_endpoint)).status_code == 404
+    assert (
+        await clients[0].get(f"/api/workspaces/{ws}/projects/{other_project_id}/categories")
+    ).status_code == 404
     assert (
         await clients[0].get(f"/api/workspaces/{ws}/projects/{other_project_id}/organization")
     ).status_code == 404
@@ -374,6 +389,58 @@ async def test_category_inventory_is_bounded_with_true_total(authenticated):
     assert len(detail["organization"]["categories"]) == 100
     assert detail["organization"]["category_total"] == 103
     assert detail["organization"]["has_more"] is True
+
+
+@pytest.mark.integration
+async def test_category_pages_reach_the_tail_with_stable_cursors_and_export_provenance(
+    authenticated, monkeypatch
+):
+    clients, ws, _, project, asset_id, _ = authenticated
+    monkeypatch.setattr(settings(), "min_free_bytes", 0)
+    async with tenant_session(ws) as db:
+        asset = await db.get(Asset, asset_id)
+        source = Path(asset.source_root) / asset.relative_path
+        original = source.read_bytes()
+        with source.open("rb") as file:
+            asset.fingerprint = fingerprint(file)
+        asset.source_size = len(original)
+        await make_run(db, asset, [[f"Scene {i:03d}"] for i in range(103)])
+    base = f"/api/workspaces/{ws}/projects/{project}"
+    endpoint = base + "/categories"
+    first = (await clients[0].get(endpoint)).json()
+    assert len(first["items"]) == 50 and first["next_cursor"] == "scene-049"
+    # File-count changes must not reorder the cursor or skip a later category.
+    async with tenant_session(ws) as db:
+        extra = await make_asset(db, ws, project)
+        await make_run(db, extra, [["Scene 051", "Scene 101"]])
+    second = (await clients[0].get(endpoint, params={"after": first["next_cursor"]})).json()
+    assert len(second["items"]) == 50 and second["next_cursor"] == "scene-099"
+    third = (await clients[0].get(endpoint, params={"after": second["next_cursor"]})).json()
+    assert len(third["items"]) == 3 and third["next_cursor"] is None
+    rows = first["items"] + second["items"] + third["items"]
+    assert [row["id"] for row in rows] == [f"scene-{i:03d}" for i in range(103)]
+    assert next(row for row in rows if row["id"] == "scene-101")["asset_count"] == 2
+    assert (await clients[0].get(endpoint, params={"after": "scene-102"})).json() == {
+        "items": [],
+        "next_cursor": None,
+    }
+    assert len((await clients[0].get(endpoint, params={"limit": 100})).json()["items"]) == 100
+    for params in [{"limit": 0}, {"limit": 101}, {"after": "../private"}, {"after": ""}]:
+        assert (await clients[0].get(endpoint, params=params)).status_code == 422
+    filtered = (await clients[0].get(base + "/assets?category=scene-102")).json()
+    assert [item["id"] for item in filtered["items"]] == [str(asset_id)]
+    preview = await clients[0].post(
+        base + "/export-preview", json={"kind": "copies", "category": "scene-102"}
+    )
+    assert preview.status_code == 201, preview.text
+    async with tenant_session(ws) as db:
+        export = await db.get(Export, preview.json()["id"])
+        assert export.state == "draft" and len(export.plan["entries"]) == 1
+        entry = export.plan["entries"][0]
+        assert entry["asset_id"] == str(asset_id)
+        assert entry["organization"]["category_id"] == "scene-102"
+        assert entry["organization"]["evidence"][0]["model"] == "synthetic-no-provider"
+    assert source.read_bytes() == original
 
 
 @pytest.mark.integration
