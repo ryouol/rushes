@@ -45,6 +45,7 @@ async def test_review_controls_counts_filters_exports_and_survives_reanalysis(
     assert review["categories"] == [{"id": "coast", "name": "Coast"}]
     summary = (await client.get(project_base + "/organization")).json()
     assert summary["categories"] == [{"id": "coast", "name": "Coast", "asset_count": 1}]
+    assert (await client.get(project_base + "/categories")).json()["items"] == summary["categories"]
     assert (await client.get(project_base + "/assets?category=wrong")).json()["total"] == 0
     assert (await client.get(project_base + "/assets?category=coast")).json()["total"] == 1
     preview = await client.post(
@@ -71,12 +72,14 @@ async def test_review_controls_counts_filters_exports_and_survives_reanalysis(
     organization = (await client.get(path)).json()["organization"]
     assert [item["id"] for item in organization["categories"]] == ["coast"]
     assert organization["category_review"]["version"] == 1
+    assert (await client.get(project_base + "/categories")).json()["items"] == summary["categories"]
     assert source.read_bytes() == b"0123456789"
     # Explicit empty review suppresses machine labels, including later runs.
     assert (
         await client.put(path + "/categories", json={"version": 1, "categories": []})
     ).status_code == 200
     assert (await client.get(project_base + "/assets?category=uncategorized")).json()["total"] == 1
+    assert (await client.get(project_base + "/categories")).json()["items"] == []
     # Explicit reset restores the newest model labels without deleting reviews.
     uncategorized = await client.post(
         project_base + "/export-preview", json={"kind": "copies", "category": "uncategorized"}

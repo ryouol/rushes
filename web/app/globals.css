@@ -90,6 +90,7 @@ button {
 }
 button:focus-visible,
 #project-panel:focus-visible,
+.category-browser-results:focus-visible,
 .upload-row:focus-visible,
 a:focus-visible,
 input:focus-visible,

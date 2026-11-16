@@ -122,6 +122,17 @@ UI directs users to check footage before reselecting it. Stop does not undo an
 accepted import or cancel its processing. The final active transfer settling,
 including being stopped, releases the batch controls and navigation warning.
 
+## Category browsing acceptance policy
+
+The category browser must reach categories beyond the summary's first 100 and
+keep their names available for footage filtering and export previews. Additional
+pages use authenticated, project-scoped reads capped at 100 rows, ordered by
+category ID so file-count changes cannot reorder the cursor. They use the same
+current-evidence and human-review membership rules as counts, filters, and exports.
+Failed reads retain loaded categories with an explicit retry. Closing the browser
+aborts its pending request; reopening or Refresh categories starts a fresh list.
+Browsing performs no inference, changes no memberships, and starts no export.
+
 ## Project refresh acceptance policy
 
 Footage, collections, exports, and organization apply successful reads independently.

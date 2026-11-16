@@ -546,6 +546,208 @@ test("export paging labels retained results and ignores superseded responses", a
   }
 });
 
+test("category browsing reaches past 100, retries a failed page, and previews the selected category", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const categories = Array.from({ length: 103 }, (_, i) => ({
+    id: `scene-${String(i).padStart(3, "0")}`,
+    name: `Scene ${String(i).padStart(3, "0")}`,
+    asset_count: 1,
+  }));
+  await fixture(
+    page,
+    categories.map((category, i) => fixtureAsset(`clip-${i}`, [category])),
+  );
+  await page.route("**/projects/p0/organization", (route) =>
+    route.fulfill({
+      json: {
+        categories: categories.slice(0, 100),
+        category_total: 103,
+        has_more: true,
+        total_assets: 103,
+        categorized_assets: 103,
+        uncategorized_assets: 0,
+        processing_assets: 0,
+        partial_assets: 0,
+        not_analyzed_assets: 0,
+        analysis_configured: true,
+      },
+    }),
+  );
+  let fail = true;
+  const requested: (string | null)[] = [];
+  await page.route("**/projects/p0/categories*", (route) => {
+    const after = new URL(route.request().url()).searchParams.get("after");
+    requested.push(after);
+    if (after === "scene-049" && fail)
+      return route.fulfill({
+        status: 503,
+        json: { detail: "Synthetic category failure" },
+      });
+    const rows = categories.filter((c) => !after || c.id > after);
+    const items = rows.slice(0, 50);
+    return route.fulfill({
+      json: { items, next_cursor: rows.length > 50 ? items.at(-1)!.id : null },
+    });
+  });
+  const previews: unknown[] = [];
+  await page.route("**/projects/p0/export-preview", (route) => {
+    previews.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 201,
+      json: {
+        id: "synthetic-export",
+        notice: "Synthetic preview only",
+        entries: [],
+        estimated_bytes: 10,
+        output_folder: "/synthetic/export",
+      },
+    });
+  });
+  await page.locator(".workspace-project-row").first().click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  const browser = page.getByRole("group", {
+    name: "Browse all categories",
+    exact: true,
+  });
+  await expect(browser.getByRole("button", { name: /^Scene / })).toHaveCount(
+    50,
+  );
+  await page
+    .getByRole("button", { name: "Load more categories", exact: true })
+    .press("Enter");
+  await expect(page.getByRole("tabpanel").getByRole("alert")).toContainText(
+    "Synthetic category failure",
+  );
+  await expect(browser.getByRole("button", { name: /^Scene / })).toHaveCount(
+    50,
+  );
+  fail = false;
+  await page
+    .getByRole("button", { name: "Retry categories", exact: true })
+    .press("Enter");
+  await expect(browser.getByRole("button", { name: /^Scene / })).toHaveCount(
+    100,
+  );
+  await page
+    .getByRole("button", { name: "Load more categories", exact: true })
+    .press("Enter");
+  await expect(browser.getByRole("button", { name: /^Scene / })).toHaveCount(
+    103,
+  );
+  await expect(browser).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Load more categories", exact: true }),
+  ).toHaveCount(0);
+  expect(requested).toEqual([null, "scene-049", "scene-049", "scene-099"]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await page.locator(".organization-categories").screenshot({
+    path: testInfo.outputPath("category-browser-mobile.png"),
+  });
+  await browser
+    .getByRole("button", { name: "Scene 102 1", exact: true })
+    .click();
+  await expect(
+    page.locator(".organization-asset-grid .asset-card"),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("heading", { name: "Synthetic clip-102", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Grouped by AI · Scene 102", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Export category", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Review export", exact: true }),
+  ).toBeVisible();
+  expect(previews).toEqual([{ kind: "copies", category: "scene-102" }]);
+});
+
+test("closing category browsing aborts a pending read and reopening ignores its obsolete result", async ({
+  page,
+}) => {
+  await fixture(page, [fixtureAsset("available")]);
+  await page.route("**/projects/p0/organization", (route) =>
+    route.fulfill({
+      json: {
+        categories: [],
+        category_total: 101,
+        has_more: true,
+        total_assets: 1,
+        categorized_assets: 1,
+        uncategorized_assets: 0,
+        processing_assets: 0,
+        partial_assets: 0,
+        not_analyzed_assets: 0,
+        analysis_configured: true,
+      },
+    }),
+  );
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requests = 0;
+  let aborted = 0;
+  page.on("requestfailed", (request) => {
+    if (request.url().endsWith("/categories")) aborted++;
+  });
+  await page.route("**/projects/p0/categories", async (route) => {
+    const held = requests++ === 0;
+    if (held) await gate;
+    await route
+      .fulfill({
+        json: {
+          items: [
+            {
+              id: held ? "obsolete" : "fresh",
+              name: held ? "Obsolete" : "Fresh",
+              asset_count: 1,
+            },
+          ],
+          next_cursor: null,
+        },
+      })
+      .catch(() => {});
+  });
+  try {
+    await page.locator(".workspace-project-row").first().click();
+    const more = page.getByRole("button", { name: "More", exact: true });
+    await more.click();
+    await expect.poll(() => requests).toBe(1);
+    await more.click();
+    await expect.poll(() => aborted).toBe(1);
+    await more.click();
+    const browser = page.getByRole("group", {
+      name: "Browse all categories",
+      exact: true,
+    });
+    await expect(
+      browser.getByRole("button", { name: "Fresh 1", exact: true }),
+    ).toBeVisible();
+    release();
+    await expect(
+      browser.getByRole("button", { name: "Obsolete 1", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      browser.getByRole("button", { name: "Fresh 1", exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Refresh categories", exact: true })
+      .press("Enter");
+    await expect.poll(() => requests).toBe(3);
+    await expect(browser.getByRole("button")).toHaveCount(1);
+    await expect(browser).toBeFocused();
+  } finally {
+    release();
+  }
+});
+
 test("category reviews retain a conflicting draft, save explicitly, refresh the library, and restore AI labels", async ({
   page,
 }) => {

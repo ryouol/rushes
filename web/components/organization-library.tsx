@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ProcessingNotice } from "./processing-notice";
+import { CategoryBrowser } from "./category-browser";
 import {
   ChevronDown,
   FileVideo,
@@ -95,13 +96,17 @@ export function OrganizationStatus({
 }
 
 export function OrganizationCategories({
+  base,
+  projectId,
   organization,
   value,
   onChange,
 }: {
+  base: string;
+  projectId: string;
   organization: ProjectOrganization | null;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (category: OrganizationCategory) => void;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   if (!organization || !organization.total_assets) return null;
@@ -112,7 +117,7 @@ export function OrganizationCategories({
       key={category.id}
       type="button"
       aria-pressed={value === category.id}
-      onClick={() => onChange(category.id)}
+      onClick={() => onChange(category)}
     >
       {category.name} <span>{category.asset_count}</span>
     </button>
@@ -151,14 +156,21 @@ export function OrganizationCategories({
           id="organization-more-categories"
           className="organization-more-categories"
         >
-          <div role="group" aria-label="More categories">
-            {remaining.map(categoryButton)}
-          </div>
-          <p>
-            A file can appear in more than one category.
-            {organization.has_more &&
-              ` Showing ${organization.categories.length} of ${organization.category_total} categories.`}
-          </p>
+          {organization.has_more ? (
+            <CategoryBrowser
+              base={base}
+              projectId={projectId}
+              value={value}
+              onChange={onChange}
+            />
+          ) : (
+            <>
+              <div role="group" aria-label="More categories">
+                {remaining.map(categoryButton)}
+              </div>
+              <p>A file can appear in more than one category.</p>
+            </>
+          )}
         </div>
       )}
     </div>

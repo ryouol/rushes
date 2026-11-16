@@ -249,9 +249,8 @@ async def asset_organizations(db, workspace_id, project_id, asset_ids):
     return result
 
 
-async def project_organization(db, workspace_id, project_id):
-    memberships = organization_memberships(workspace_id, project_id)
-    counts = (
+def category_counts(memberships):
+    return (
         select(
             memberships.c.category_id.label("id"),
             func.min(memberships.c.category_name).label("name"),
@@ -260,6 +259,25 @@ async def project_organization(db, workspace_id, project_id):
         .group_by(memberships.c.category_id)
         .subquery()
     )
+
+
+async def project_categories(db, workspace_id, project_id, *, after=None, limit=50):
+    """Bounded category pages; changing file counts cannot reorder the cursor."""
+    counts = category_counts(organization_memberships(workspace_id, project_id))
+    query = select(counts).order_by(counts.c.id).limit(limit + 1)
+    if after is not None:
+        query = query.where(counts.c.id > after)
+    rows = (await db.execute(query)).all()
+    page = rows[:limit]
+    return {
+        "items": [{"id": row.id, "name": row.name, "asset_count": row.asset_count} for row in page],
+        "next_cursor": page[-1].id if len(rows) > limit else None,
+    }
+
+
+async def project_organization(db, workspace_id, project_id):
+    memberships = organization_memberships(workspace_id, project_id)
+    counts = category_counts(memberships)
     categories = (
         await db.execute(
             select(counts, func.count().over().label("category_total"))
