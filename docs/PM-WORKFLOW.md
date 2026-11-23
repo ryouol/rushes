@@ -107,6 +107,14 @@ retained until its source asset is explicitly deleted through the normal flow.
 
 ## Upload queue acceptance policy
 
+Upload preflight reads current shared-disk capacity through an authenticated,
+workspace-scoped endpoint without a workflow connection, export-disk probe, or
+workspace usage aggregation. It uses the same reserve calculation as Settings.
+Each file selection gets a fresh advisory reading: known insufficient space blocks
+the selection, while an unavailable reading leaves acceptance to the upload
+route's existing storage and size checks. A rejected upload remains visible and
+is never automatically retried. Workflow readiness remains separate in Settings.
+
 The two upload lanes advance and finish based on their upload responses. Library
 refreshes run independently: a stalled read must not keep the batch marked as
 uploading or prevent selecting another batch after the transfers settle.

@@ -164,7 +164,14 @@ async function fixture(
       };
     } else if (url.pathname.endsWith("/exports"))
       body = { items: [], total: 0 };
-    else if (url.pathname.endsWith("/settings")) body = fixtureSettings();
+    else if (url.pathname.endsWith("/storage-capacity")) {
+      const settings = fixtureSettings();
+      body = {
+        disk_free_bytes: settings.disk_free_bytes,
+        minimum_free_bytes: settings.minimum_free_bytes,
+        usable_storage_bytes: settings.usable_storage_bytes,
+      };
+    } else if (url.pathname.endsWith("/settings")) body = fixtureSettings();
     else if (url.pathname.endsWith("/usage"))
       body = { unique_source_duration_us: 0, metrics: [], ledger: [] };
     else if (url.pathname.endsWith("/events")) {
@@ -1768,6 +1775,102 @@ test("clearing search aborts a late response; upload validation remains readable
     page.getByText("Invalid filename", { exact: true }),
   ).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("upload preflight ignores slow workflow health, refreshes capacity, and preserves server rejection", async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.locator(".workspace-project-row").first().click();
+  let settingsReads = 0,
+    capacityReads = 0,
+    available = 0,
+    capacityFails = false;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/settings", async (route) => {
+    settingsReads++;
+    await gate;
+    await route
+      .fulfill({ json: { ...fixtureSettings(), temporal_connected: false } })
+      .catch(() => {});
+  });
+  await page.route("**/storage-capacity", (route) => {
+    capacityReads++;
+    return route.fulfill(
+      capacityFails
+        ? { status: 503, json: { detail: "Synthetic unavailable capacity" } }
+        : {
+            json: {
+              disk_free_bytes: available + 100,
+              minimum_free_bytes: 100,
+              usable_storage_bytes: available,
+            },
+          },
+    );
+  });
+  const uploads: string[] = [];
+  await page.route("**/upload?**", (route) => {
+    const name = new URL(route.request().url()).searchParams.get("filename")!;
+    uploads.push(name);
+    return route.fulfill(
+      name === "server-rejected.mp4"
+        ? {
+            status: 507,
+            json: { detail: "Server storage is full; file was not accepted." },
+          }
+        : { status: 202, json: { asset_id: "synthetic", state: "queued" } },
+    );
+  });
+  try {
+    await page
+      .getByRole("button", { name: "Import footage", exact: true })
+      .first()
+      .click();
+    const fileInput = page.locator("input[type=file]").first();
+    const file = {
+      name: "synthetic.mp4",
+      mimeType: "video/mp4",
+      buffer: Buffer.from("Synthetic upload bytes"),
+    };
+    await fileInput.setInputFiles(file);
+    await expect.poll(() => capacityReads).toBe(1);
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("alert")).toContainText(
+      "Not enough server storage for this selection",
+    );
+    await expect(
+      dialog.getByRole("button", { name: "Choose videos" }),
+    ).toBeEnabled();
+    expect(uploads).toEqual([]);
+    expect(settingsReads).toBe(0);
+    // Each selection gets a current reading rather than reusing the blocked result.
+    available = 1_000_000;
+    await fileInput.setInputFiles(file);
+    await expect(dialog.locator(".upload-list > [role=status]")).toHaveText(
+      "Uploads finished. 1 of 1 files queued for processing.",
+    );
+    expect(capacityReads).toBe(2);
+    expect(uploads).toEqual(["synthetic.mp4"]);
+    // The advisory read failing must not bypass the upload route's own storage checks.
+    capacityFails = true;
+    await fileInput.setInputFiles({ ...file, name: "server-rejected.mp4" });
+    await expect(
+      dialog.getByText("Server storage is full; file was not accepted.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Choose videos" }),
+    ).toBeEnabled();
+    expect(capacityReads).toBe(3);
+    expect(settingsReads).toBe(0);
+    expect(uploads).toEqual(["synthetic.mp4", "server-rejected.mp4"]);
+  } finally {
+    release();
+  }
 });
 
 test("upload lanes keep moving while library refresh stalls without retrying rejected files", async ({

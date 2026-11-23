@@ -19,12 +19,28 @@ from rushes.storage import StorageError, authorized_source_root, fingerprint, op
 router = APIRouter(prefix="/api/workspaces/{workspace_id}")
 
 
+def storage_capacity():
+    config = settings()
+    config.storage_root.mkdir(parents=True, exist_ok=True)
+    free = shutil.disk_usage(config.storage_root).free
+    return {
+        "disk_free_bytes": free,
+        "minimum_free_bytes": config.min_free_bytes,
+        "usable_storage_bytes": max(0, free - config.min_free_bytes),
+    }
+
+
+@router.get("/storage-capacity")
+async def workspace_storage_capacity(access: Access):
+    # Access closes its authentication session before this filesystem-only read.
+    return await asyncio.to_thread(storage_capacity)
+
+
 @router.get("/settings")
 async def workspace_settings(db: DB, access: Access):
     config = settings()
+    capacity = await asyncio.to_thread(storage_capacity)
     storage = config.storage_root
-    storage.mkdir(parents=True, exist_ok=True)
-    usage = shutil.disk_usage(storage)
     output = config.output_root
     output.mkdir(parents=True, exist_ok=True)
     export_usage = shutil.disk_usage(output)
@@ -55,9 +71,7 @@ async def workspace_settings(db: DB, access: Access):
         "workspace": {"id": workspace.id, "name": workspace.name, "role": access.role},
         "storage_root": str(storage),
         "output_root": str(config.output_root),
-        "disk_free_bytes": usage.free,
-        "minimum_free_bytes": config.min_free_bytes,
-        "usable_storage_bytes": max(0, usage.free - config.min_free_bytes),
+        **capacity,
         "export_disk_free_bytes": export_usage.free,
         "export_usable_storage_bytes": max(0, export_usage.free - config.min_free_bytes),
         "export_storage_separate_volume": storage.stat().st_dev != output.stat().st_dev,

@@ -79,7 +79,7 @@ export function ImportDialog({
     const capacity = await api<{
       usable_storage_bytes?: number;
       minimum_free_bytes?: number;
-    }>(`${base}/settings`, {
+    }>(`${base}/storage-capacity`, {
       signal: AbortSignal.timeout(4000),
       cache: "no-store",
     }).catch(() => null);
